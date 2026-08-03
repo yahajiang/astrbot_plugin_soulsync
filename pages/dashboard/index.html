@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>心旅知音 SoulSync</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f5f6fa;--card:#fff;--border:#e2e5ec;--text:#1a1d26;--dim:#7a8299;--pink:#e84393;--green:#00b894;--blue:#3869d8;--red:#e55039;--orange:#f0932b;--purple:#6c5ce7}
+body{background:var(--bg);color:var(--text);font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:20px}
+.grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.card-hd h2{font-size:16px;font-weight:700}
+.card-bd{padding:16px 18px}
+.btn{border:1px solid var(--border);border-radius:6px;background:#fff;padding:6px 14px;cursor:pointer;font-size:13px;transition:.15s}
+.btn:hover{background:#eef2ff;border-color:#b8c9f0;color:var(--blue)}
+.btn.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn.pri:hover{background:#2756b8}
+.btn.dan{background:var(--red);color:#fff;border-color:var(--red)}
+.btn.sm{padding:4px 10px;font-size:12px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat .ic{font-size:20px}.stat .v{font-size:20px;font-weight:800;margin-top:4px}.stat .l{font-size:11px;color:var(--dim)}
+.c-pink .v{color:var(--pink)}.c-green .v{color:var(--green)}.c-blue .v{color:var(--blue)}.c-purple .v{color:var(--purple)}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:.15s}
+.row:hover{border-color:var(--blue);background:#f8faff}
+.row-info{flex:1;min-width:0}
+.row-name{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-id{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-stage{font-size:11px;color:var(--dim);margin-top:2px}
+.bar{height:4px;background:#edf0f5;border-radius:2px;overflow:hidden;margin-top:4px}
+.bar-fg{height:100%;border-radius:2px;transition:width .3s}
+.row-r{text-align:center;min-width:48px}
+.row-r .v{font-size:14px;font-weight:800}.row-r .l{font-size:10px;color:var(--dim)}
+.empty{text-align:center;padding:40px;color:var(--dim)}
+.empty .ic{font-size:36px;margin-bottom:8px}
+.act{display:flex;flex-direction:column;gap:8px}
+.act-btn{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;font-weight:600;font-size:13px;text-align:left;transition:.15s}
+.act-btn:hover{background:#f0f4ff;border-color:#b8c9f0;color:var(--blue)}
+.act-btn .d{font-size:11px;font-weight:400;color:var(--dim)}
+.act-btn.hot{background:linear-gradient(135deg,var(--pink),#fd79a8);color:#fff;border-color:var(--pink)}
+.act-btn.hot:hover{background:linear-gradient(135deg,#d63384,#e84393)}
+.sys{font-size:12px;color:var(--dim);line-height:1.8}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(10,14,24,.4);z-index:10}
+.ov.on{display:flex}
+.modal{width:min(800px,100%);max-height:min(640px,calc(100vh - 40px));display:grid;grid-template-rows:auto 1fr;background:#fff;border-radius:10px;border:1px solid var(--border);box-shadow:0 16px 40px rgba(10,14,24,.2);overflow:hidden}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.modal-hd h3{font-size:15px;font-weight:700}
+.modal-bd{overflow:auto;padding:16px}
+.modal-sm{width:min(460px,100%)}
+.cs{margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.cs:last-child{border-bottom:0}
+.cs-t{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:8px}
+.cr{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;padding:6px 0}
+.cn{font-weight:600;font-size:12px;margin-bottom:2px}
+.ch{color:var(--dim);font-size:11px;line-height:1.4}
+.fld{width:100%;border:1px solid #c8ceda;border-radius:6px;padding:6px 8px;font-size:12px;background:#fff}
+.fld:focus{outline:2px solid rgba(56,105,216,.15);border-color:var(--blue)}
+textarea.fld{min-height:56px;resize:vertical}
+.sw{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px}
+.sw input{width:14px;height:14px}
+.sl{display:flex;align-items:center;gap:6px}
+.sl input[type=range]{flex:1}
+.sl .sv{font-weight:700;font-size:12px;min-width:32px;text-align:right}
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.det-c{background:var(--bg);border-radius:8px;padding:10px}
+.det-c .l{font-size:11px;color:var(--dim)}.det-c .v{font-size:18px;font-weight:800;margin-top:2px}
+.emo{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.ei{background:var(--bg);border-radius:6px;padding:8px;text-align:center}
+.ei .n{font-size:10px;color:var(--dim)}.ei .v{font-size:14px;font-weight:800}
+.ei .eb{height:3px;background:#edf0f5;border-radius:2px;margin-top:3px;overflow:hidden}
+.ei .ef{height:100%;border-radius:2px}
+.bh{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.bc{background:var(--bg);border-radius:6px;padding:8px;text-align:center}
+.bc .ic{font-size:16px}.bc .v{font-size:15px;font-weight:800}.bc .l{font-size:10px;color:var(--dim)}
+.lb-r{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f2f5}
+.lb-r:last-child{border-bottom:0}
+.lb-rk{font-size:15px;min-width:24px;text-align:center}
+.lb-i{flex:1;min-width:0}.lb-n{font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-s{font-size:10px;color:var(--dim)}.lb-sc{font-weight:800;font-size:13px}
+.tst{min-height:16px;color:var(--dim);font-size:12px;margin-top:8px}
+.tst.err{color:var(--red)}
+.next-tag{display:inline-block;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:12px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:8px}
+.sec-t{font-size:13px;font-weight:700;margin:12px 0 8px;color:var(--text)}
+.sec-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px}
+.sec-box .item{font-size:12px;padding:3px 0;display:flex;align-items:center;gap:4px}
+.sec-box .ic{flex-shrink:0}
+.mem-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px}
+.mem-box .hd{font-weight:700;font-size:13px;margin-bottom:4px}
+.advice{background:linear-gradient(135deg,#fff3e0,#fff8e1);border:1px solid #ffe0b2;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px}
+.advice .hd{font-weight:700;font-size:13px;margin-bottom:4px;color:#e65100}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.det-grid{grid-template-columns:1fr}.cr{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stats">
+    <div class="stat c-pink"><div class="ic">💝</div><div class="v" id="xTotal">0</div><div class="l">情感档案</div></div>
+    <div class="stat c-green"><div class="ic">✨</div><div class="v" id="xFav">0</div><div class="l">平均好感</div></div>
+    <div class="stat c-blue"><div class="ic">🤝</div><div class="v" id="xInt">0</div><div class="l">平均亲密</div></div>
+    <div class="stat c-purple"><div class="ic">🏆</div><div class="v" id="xStage">-</div><div class="l">最高阶段</div></div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-hd"><h2>💝 情感档案</h2><button class="btn" id="bRefresh">刷新</button></div>
+      <div class="card-bd"><div class="list" id="pList"></div></div>
+    </div>
+    <aside>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-hd"><h2>⚙️ 控制台</h2></div>
+        <div class="card-bd">
+          <div class="act">
+            <button class="act-btn hot" id="bCfg">🎛️ 插件配置<div class="d">58 项参数可视化编辑</div></button>
+            <button class="act-btn" id="bLB">🏆 好感排行榜</button>
+            <button class="act-btn" id="bNeg">💀 负好感排行</button>
+            <button class="act-btn" id="bFest">📅 节日与纪念日</button>
+            <button class="act-btn" id="bRole">🎭 关系角色</button>
+            <button class="act-btn" id="bAdm">🔧 管理员工具<div class="d">设置好感/亲密/重置</div></button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><h2>📊 系统状态</h2></div>
+        <div class="card-bd"><div class="sys" id="xSys">加载中...</div></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="ov" id="oCfg"><div class="modal"><div class="modal-hd"><h3>🎛️ 插件配置</h3><div><button class="btn pri" id="cSave">保存</button> <button class="btn" id="cCan">取消</button></div></div><div class="modal-bd"><div id="cForm"></div><div class="tst" id="cTst"></div></div></div></div>
+<div class="ov" id="oDet"><div class="modal"><div class="modal-hd"><h3 id="dTitle">💝 档案</h3><button class="btn" id="dCan">关闭</button></div><div class="modal-bd"><div id="dBody"></div></div></div></div>
+<div class="ov" id="oLB"><div class="modal modal-sm"><div class="modal-hd"><h3 id="lTitle">🏆 排行榜</h3><button class="btn" id="lCan">关闭</button></div><div class="modal-bd"><div id="lBody"></div></div></div></div>
+<div class="ov" id="oFest"><div class="modal modal-sm"><div class="modal-hd"><h3>📅 节日与纪念日</h3><button class="btn" id="fCan">关闭</button></div><div class="modal-bd"><div id="fBody"></div></div></div></div>
+<div class="ov" id="oRole"><div class="modal"><div class="modal-hd"><h3>🎭 关系角色</h3><button class="btn" id="rCan">关闭</button></div><div class="modal-bd"><div id="rBody"></div><div class="tst" id="rTst"></div></div></div></div>
+<div class="ov" id="oAdm"><div class="modal modal-sm"><div class="modal-hd"><h3>🔧 管理员</h3><button class="btn" id="aCan">关闭</button></div><div class="modal-bd">
+  <div class="cs"><div class="cs-t">📝 设置好感度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aFId"></div></div><div class="cr"><div><div class="cn">好感 (-100~100)</div></div><div><input class="fld" type="number" id="aFV"></div></div><button class="btn pri" id="aFB" style="margin-top:6px">设置</button></div>
+  <div class="cs"><div class="cs-t">💕 设置亲密度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aIId"></div></div><div class="cr"><div><div class="cn">亲密 (0~100)</div></div><div><input class="fld" type="number" id="aIV"></div></div><button class="btn pri" id="aIB" style="margin-top:6px">设置</button></div>
+  <div class="cs"><div class="cs-t">🔄 重置用户</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aRId"></div></div><button class="btn dan" id="aRB" style="margin-top:6px">⚠️ 重置</button></div>
+  <div class="tst" id="aTst"></div>
+</div></div></div>
+
+<script type="module">
+const B = window.AstrBotPluginPage;
+await B.ready();
+
+const S=['🌱 初识期','🌿 好感期','🤝 信任期','💛 深化期','🌳 承诺期','🌸 共生期'];
+const N=['😐 冷淡','😠 反感','💢 厌恶','🔥 敌对'];
+const DM={joy:'喜悦',sadness:'悲伤',anger:'愤怒',fear:'恐惧',surprise:'惊讶',disgust:'厌恶',trust:'信任',anticipation:'期待'};
+const DC={joy:'#fdcb6e',sadness:'#74b9ff',anger:'#e17055',fear:'#a29bfe',surprise:'#ffeaa7',disgust:'#55efc4',trust:'#00b894',anticipation:'#6c5ce7'};
+
+let P=[],Bp=[],schema={},draft={},Fest=[],Roles=[];
+
+const $=id=>document.getElementById(id);
+const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
+const fc=v=>v>20?'var(--green)':v>0?'var(--blue)':v>-20?'var(--orange)':'var(--red)';
+const pc=(v,a,b)=>Math.round(Math.max(0,Math.min(1,(v-a)/(b-a)))*100);
+const stg=p=>{if(p.favorability<0){if(p.favorability>=-15)return N[0];if(p.favorability>=-40)return N[1];if(p.favorability>=-70)return N[2];return N[3]}return S[Math.max(0,Math.min(p.stage_index||0,5))]};
+const tst=(id,m,e)=>{const el=$(id);if(el){el.textContent=m||'';el.classList.toggle('error',!!e)}};
+
+async function load(){
+  try{
+    const r=await B.apiGet('data');
+    P=r.profiles||[];Bp=r.behavior_profiles||[];Fest=r.festivals||[];Roles=r.relationship_roles||[];
+    summary();list();status();
+  }catch(e){$('pList').innerHTML=`<div class="empty"><div class="ic">⚠️</div>${esc(e.message||String(e))}</div>`}
+}
+
+function summary(){
+  $('xTotal').textContent=P.length;
+  if(P.length){
+    $('xFav').textContent=(P.reduce((s,p)=>s+p.favorability,0)/P.length).toFixed(1);
+    $('xInt').textContent=(P.reduce((s,p)=>s+p.intimacy,0)/P.length).toFixed(1);
+    $('xStage').textContent=S[Math.max(...P.map(p=>p.stage_index||0))]??"-";
+  }else{$('xFav').textContent=$('xInt').textContent='0';$('xStage').textContent='-'};
+}
+
+function list(){
+  const c=$('pList');
+  if(!P.length){c.innerHTML='<div class="empty"><div class="ic">💬</div>暂无档案<br><span style="font-size:12px">用户发消息后自动创建</span></div>';return}
+  const sorted=[...P].sort((a,b)=>b.favorability-a.favorability);
+  c.innerHTML='';
+  for(const p of sorted){
+    const bp=Bp.find(b=>b.user_id===p.user_id);
+    const co=fc(p.favorability),sg=stg(p);
+    const sk=bp&&bp.current_streak_count>1?` · ${bp.current_streak_type==='positive'?'✨':'⚡'}×${bp.current_streak_count}`:'';
+    const r=document.createElement('div');r.className='row';
+    r.onclick=()=>detail(p.user_id);
+    r.innerHTML=`<div class="row-info"><div class="row-name">${esc(p.user_name||p.user_id)}</div><div class="row-id">${esc(p.user_id)}</div><div class="row-stage">${sg}${sk}</div><div class="bar"><div class="bar-fg" style="width:${pc(p.favorability,-100,100)}%;background:${co}"></div></div></div><div class="row-r"><div class="v" style="color:${co}">${p.favorability>=0?'+':''}${p.favorability.toFixed(1)}</div><div class="l">好感</div></div><div class="row-r"><div class="v">${p.intimacy.toFixed(0)}</div><div class="l">亲密</div></div>`;
+    c.append(r);
+  }
+}
+
+function status(){
+  const sk=Bp.filter(b=>b.current_streak_count>=3);
+  const bt=Bp.reduce((s,b)=>s+(b.betrayal_count||0),0);
+  const cb=Bp.reduce((s,b)=>s+(b.comeback_count||0),0);
+  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.8 · 六阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
+}
+
+function detail(uid){
+  const p=P.find(x=>x.user_id===uid);if(!p)return;
+  $('oDet').dataset.uid=uid;
+  const bp=Bp.find(b=>b.user_id===uid);
+  $('dTitle').textContent=`🖼️ ${p.user_name||p.user_id} 的情感自画像`;
+  const fav=p.favorability;
+
+  // ── 核心数值 ──
+  let h='<div class="det-grid">';
+  h+=dc('好感度',`${fav>=0?'+':''}${fav.toFixed(1)}`,fav,-100,100,fc(fav));
+  h+=dc('亲密度',p.intimacy.toFixed(1),p.intimacy,0,100,'var(--purple)');
+  h+=dc('复合评分',p.composite_score.toFixed(1),null,0,0,'var(--blue)');
+  h+=dc('阶段进度',`${p.stage_progress.toFixed(1)}%`,p.stage_progress,0,100,'var(--green)');
+  h+='</div>';
+
+  // ── 关系阶段 + 距下一阶段 + 关系角色 ──
+  h+=`<div style="margin-bottom:12px;font-size:13px">🧬 当前关系：${stg(p)}`;
+  if(p.stage_index>=0&&p.stage_index<5){
+    const thresholds=[15,32,50,68,82,95];
+    const nxt=thresholds[p.stage_index+1];
+    const need=nxt-p.composite_score;
+    if(need>0)h+=`<span class="next-tag">还需 ${need.toFixed(1)} 分进阶</span>`;
+  }else if(p.stage_index>=5){
+    h+=`<span class="next-tag">🌸 最高阶段</span>`;
+  }
+  h+='</div>';
+  // 关系角色（与用户侧同步）
+  if(p.rel_active){
+    const rk=Roles.find(x=>x.key===p.rel_active);
+    const rel=p.relationships?p.relationships.find(x=>x.key===p.rel_active):null;
+    const lockTag=rel&&rel.locked?'（🔒 已锁定）':'';
+    if(rk)h+=`<div id="dRole" style="margin-bottom:12px;font-size:13px">🎭 关系角色：${rk.emoji} ${esc(rk.name)}${lockTag}</div>`;
+  }
+
+  // ── 态度/关系描述 ──
+  if(p.attitude_text||p.relationship_text){
+    h+='<div class="sec-box">';
+    if(p.attitude_text)h+=`<div class="item"><span class="ic">💭</span>AI 态度：${esc(p.attitude_text)}</div>`;
+    if(p.relationship_text)h+=`<div class="item"><span class="ic">🤝</span>关系描述：${esc(p.relationship_text)}</div>`;
+    h+='</div>';
+  }
+
+  // ── 8 维情感 ──
+  h+='<div class="sec-t">🎭 情感画像</div><div class="emo">';
+  const dimIc={joy:'😊',sadness:'😢',anger:'😠',fear:'😨',surprise:'😲',disgust:'🤢',trust:'🤗',anticipation:'✨'};
+  for(const d of Object.keys(DM)){const v=(p.emotions&&p.emotions[d])||50;h+=`<div class="ei"><div class="n">${dimIc[d]||''} ${DM[d]}</div><div class="v" style="color:${DC[d]}">${v.toFixed(0)}</div><div class="eb"><div class="ef" style="width:${v}%;background:${DC[d]}"></div></div></div>`}
+  h+='</div>';
+
+  // ── 互动统计 ──
+  h+='<div class="sec-box">';
+  h+=`<div class="item"><span class="ic">💬</span>总互动 <strong>${p.total_interactions}</strong> 次 · 正面 <strong>${p.positive_interactions}</strong> · 负面 <strong>${p.negative_interactions}</strong> · 对话 <strong>${p.conversation_turns}</strong> 轮</div>`;
+  h+='</div>';
+
+  // ── 纪念日 ──
+  if(p.anniversaries&&p.anniversaries.length){
+    h+='<div class="sec-t">📅 纪念日</div><div class="sec-box">';
+    for(const a of p.anniversaries){
+      const tag=a.is_today?' · <span style="color:#e84393;font-weight:700">就是今天 🎉</span>':(a.days_left>=0?` · 还有 ${a.days_left} 天`:'');
+      const ic=a.kind==='birthday'?'🎂':a.kind==='first_meet'?'🤝':'💝';
+      h+=`<div class="item"><span class="ic">${ic}</span>${esc(a.name)}${tag}</div>`;
+    }
+    h+='</div>';
+  }
+
+  // ── 近7天趋势 ──
+  if(p.trend&&p.trend.dates&&p.trend.dates.length>1){
+    h+='<div class="sec-t">📈 近7天趋势</div><div class="sec-box" style="font-size:11px">';
+    const mn=Math.min(...p.trend.fav),mx=Math.max(...p.trend.fav);
+    for(let i=0;i<p.trend.dates.length;i++){
+      const v=p.trend.fav[i],r=Math.round((v-mn)/((mx-mn)||1)*100);
+      h+=`<div class="item" style="justify-content:space-between"><span>${p.trend.dates[i]}</span><div style="flex:1;margin:0 8px;height:6px;background:#edf0f5;border-radius:3px;overflow:hidden"><div style="width:${r}%;height:100%;background:var(--blue)"></div></div><span style="min-width:44px;text-align:right">${v>=0?'+':''}${v.toFixed(1)}</span></div>`;
+    }
+    h+='</div>';
+  }
+
+  // ── 行为模式 ──
+  if(bp){
+    h+='<div class="sec-t">🎯 行为模式</div><div class="bh">';
+    h+=bc('🔥',bp.current_streak_count,bp.current_streak_type==='positive'?'正面势头':bp.current_streak_type==='negative'?'负面势头':'中性');
+    h+=bc('💔',bp.betrayal_count,'背叛');h+=bc('💫',bp.comeback_count,'回归');
+    h+=bc('🕊️',bp.apology_count,'道歉');h+=bc('📈',bp.total_reward_accumulated.toFixed(1),'奖励');h+=bc('📉',bp.total_penalty_accumulated.toFixed(1),'惩罚');
+    h+='</div>';
+
+    // 势头详情
+    if(bp.current_streak_count>1){
+      const skType=bp.current_streak_type==='positive'?'正面 ✨':'负面 ⚡';
+      h+=`<div class="sec-box"><div class="item"><span class="ic">🔥</span>当前势头：${skType} ×${bp.current_streak_count}</div>`;
+      h+=`<div class="item"><span class="ic">📊</span>最长正面连续 ${bp.max_positive_streak} 次 · 最长负面连续 ${bp.max_negative_streak} 次</div></div>`;
+    }
+
+    // 里程碑
+    const milestones={first_positive:'🎉 首次正面互动',fifty_interactions:'🎉 50次互动',hundred_interactions:'🎉 100次互动',two_hundred:'🎉 200次互动'};
+    if(bp.achieved_milestones&&bp.achieved_milestones.length){
+      h+='<div class="sec-box"><div class="item"><span class="ic">🏆</span>已达成里程碑：</div>';
+      for(const m of bp.achieved_milestones)h+=`<div style="padding-left:20px">${milestones[m]||m}</div>`;
+      h+='</div>';
+    }
+  }
+
+  // ── 长期记忆 ──
+  if(p.user_id){
+    const memBox=document.createElement('div');
+    h+='<div class="mem-box" id="dMem"><div class="hd">📜 情感记忆</div>加载中...</div>';
+  }
+
+  // ── 关系建议 ──
+  let advice='';
+  if(fav<-50)advice='你们的关系处于敌对状态，需要真诚的道歉和长时间的修复才能缓和。';
+  else if(fav<-20)advice='关系有些紧张，试着多表达善意，减少负面言辞，信任需要慢慢重建。';
+  else if(fav<0)advice='关系偏冷淡，多一些温暖的互动可以改善，不要急于求成。';
+  else if(fav<25)advice='初识阶段，保持真诚和耐心，关系会随着互动慢慢加深。';
+  else if(fav<55)advice='好感在增长中，继续用心互动，信任正在稳步建立。';
+  else if(fav<80)advice='关系不错！深化期需要更多真诚和陪伴，珍惜这份信任。';
+  else if(fav<95)advice='关系很亲密了，继续保持真诚，维护这份深层的情感连接。';
+  else advice='已达共生阶段，这是最深层的情感连接 🌸 珍惜彼此。';
+  h+=`<div class="advice"><div class="hd">💡 关系建议</div>${advice}</div>`;
+
+  // ── 底部信息 ──
+  h+=`<div style="font-size:11px;color:var(--dim);text-align:center">UID: ${esc(p.user_id)} · 数据更新于 ${p.last_update_ts?new Date(p.last_update_ts*1000).toLocaleString('zh-CN'):'未知'}</div>`;
+
+  $('dBody').innerHTML=h;
+  $('oDet').classList.add('on');
+
+  // 异步加载长期记忆
+  if(p.user_id)loadMem(p.user_id);
+}
+
+async function loadMem(uid){
+  try{
+    const r=await B.apiGet('data');
+    // 长期记忆在 data 接口已有，但目前不在返回中，直接用已有数据
+    // 这里展示行为档案中的里程碑和统计数据
+    const el=document.getElementById('dMem');
+    if(!el)return;
+    const bp=Bp.find(b=>b.user_id===uid);
+    if(bp&&bp.achieved_milestones&&bp.achieved_milestones.length){
+      el.innerHTML=`<div class="hd">📜 情感记忆</div><div>已达成 ${bp.achieved_milestones.length} 个里程碑，累计奖励 ${bp.total_reward_accumulated.toFixed(1)}，累计惩罚 ${bp.total_penalty_accumulated.toFixed(1)}</div>`;
+    }else{
+      el.innerHTML=`<div class="hd">📜 情感记忆</div><div>暂无长期记忆记录</div>`;
+    }
+  }catch(e){}
+}
+function dc(l,v,bv,mn,mx,c){let h=`<div class="det-c"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div>`;if(bv!==null)h+=`<div class="bar" style="margin-top:4px"><div class="bar-fg" style="width:${pc(bv,mn,mx)}%;background:${c}"></div></div>`;return h+'</div>'}
+function bc(ic,v,l){return`<div class="bc"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`}
+
+function lb(neg){
+  const sorted=neg?[...P].sort((a,b)=>a.favorability-b.favorability).slice(0,15):[...P].sort((a,b)=>b.favorability-a.favorability).slice(0,15);
+  $('lTitle').textContent=neg?'💀 负好感排行':'🏆 好感排行榜';
+  const m=['🥇','🥈','🥉'];
+  $('lBody').innerHTML=sorted.length?sorted.map((p,i)=>`<div class="lb-r"><div class="lb-rk">${i<3?m[i]:i+1+'.'}</div><div class="lb-i"><div class="lb-n">${esc(p.user_name||p.user_id)}</div><div class="lb-s">${stg(p)} · 亲密 ${p.intimacy.toFixed(0)}</div></div><div class="lb-sc" style="color:${fc(p.favorability)}">${p.favorability>=0?'+':''}${p.favorability.toFixed(1)}</div></div>`).join(''):'<div class="empty">暂无数据</div>';
+  $('oLB').classList.add('on');
+}
+
+function fest(){
+  const today=new Date().toISOString().slice(0,10);
+  const lf=Fest.filter(f=>f.lunar);
+  const sf=Fest.filter(f=>!f.lunar);
+  $('fBody').innerHTML=`<div class="sec-t">🗓️ 节日（${Fest.length}）</div><div class="sec-box">${Fest.map(f=>`<div class="item"><span class="ic">${f.lunar?'🌙':'☀️'}</span>${esc(f.name)} · ${f.lunar?'农历':'公历'} · ${String(f.month).padStart(2,'0')}-${String(f.day).padStart(2,'0')}</div>`).join('')}</div>`+
+  `<div class="sec-t">💝 用户纪念日</div>`+(P.length?P.map(p=>{
+    const av=p.anniversaries||[];
+    if(!av.length)return '';
+    return `<div class="sec-box"><div class="item" style="font-weight:700">${esc(p.user_name||p.user_id)}</div>`+av.map(a=>`<div class="item" style="padding-left:14px"><span class="ic">${a.is_today?'🎉':'📅'}</span>${esc(a.name)}${a.is_today?' · 今天':a.days_left>=0?` · ${a.days_left}天后`:''}</div>`).join('')+`</div>`;
+  }).join(''):'<div class="empty">暂无数据</div>');
+  $('oFest').classList.add('on');
+}
+
+function role(){
+  const prev=$('rUser')?$('rUser').value:'';
+  const users=P.map(p=>`<option value="${esc(p.user_id)}">${esc(p.user_name||p.user_id)}</option>`).join('');
+  $('rBody').innerHTML=`<div class="sec-t">👤 选择用户查看解锁状态</div><div class="sec-box"><div class="item"><select class="fld" id="rUser"><option value="">— 选择用户 —</option>${users}</select></div></div><div class="sec-t">🎭 系统关系角色（管理员手动调整 · 强制解锁/切换并清除用户锁定）</div>`+
+  Roles.map(r=>`<div class="cs"><div class="cs-t">${r.emoji} ${esc(r.name)} <span style="font-size:11px;color:#888">· 好感≥${r.fav} · 亲密≥${r.int} · 互动≥${r.it}</span></div><div class="ch" style="font-size:12px;color:#666;line-height:1.7">${esc(r.desc)}</div><div class="ch" style="font-size:11px;color:#999;line-height:1.6">${esc(r.persona||'')}</div><div class="cr"><button class="btn" data-a="switch" data-n="${esc(r.name)}">⚙️ 设置为</button> <span class="ch" id="rs-${r.key}" style="font-size:12px;color:#e84393"></span></div></div>`).join('')+
+  `<div style="font-size:11px;color:var(--dim);text-align:center;margin-top:6px">💡 用户侧切换关系后不可逆（锁定）；管理员的「设置为」解除锁定并固定生效（双向实时同步）。</div>`+
+  `<div id="rTst" style="font-size:12px;color:#666;text-align:center;margin-top:8px"></div>`;
+  const rUser=$('rUser');
+  rUser.value=prev;
+  rUser.onchange=refreshRoleStatus;
+  $('oRole').classList.add('on');
+  refreshRoleStatus();
+}
+function refreshRoleStatus(){
+  const rUser=$('rUser');
+  if(!rUser)return;
+  const uid=rUser.value;
+  for(const p of P){
+    if(p.user_id===uid){
+      const rels=p.relationships||[];
+      for(const rr of rels){
+        const el=$('rs-'+rr.key);
+        if(el){
+          if(rr.active)el.textContent=rr.locked?'🔒 已锁定':'✅ 使用中';
+          else el.textContent=rr.unlocked?'🔓 已解锁':(rr.can_unlock?'🔑 可解锁':'🔒 未解锁');
+        }
+      }
+    }
+  }
+}
+async function rAdm(name){
+  const sel=$('rUser');const uid=sel?sel.value:'';
+  const fb=$('rTst');
+  if(!fb)return;
+  if(!uid){fb.textContent='⚠️ 请先选择用户';fb.classList.add('error');return}
+  try{
+    fb.textContent='⏳ 处理中...';fb.classList.remove('error');
+    const r=await B.apiPost('admin',{action:'switch_relationship',user_id:uid,value:name});
+    fb.textContent=(r.data&&r.data.message)||r.message||'✅ 成功';
+    fb.classList.toggle('error',!((r.data&&r.data.ok)||r.data));
+    await load();
+    role();
+    // 若自画像弹窗已打开，实时同步关系角色信息
+    if($('oDet')&&$('oDet').classList.contains('on')&&$('rUser'))detail(uid);
+  }catch(e){if(fb){fb.textContent='❌ '+(e.message||String(e));fb.classList.add('error')}}
+}
+// 双向实时同步：刷新角色徽章与自画像角色行
+function refreshRoleSync(){
+  const rUser=$('rUser');
+  if(rUser){
+    const p=P.find(x=>x.user_id===rUser.value);
+    if(p&&p.relationships){
+      for(const rr of p.relationships){
+        const el=$('rs-'+rr.key);
+        if(el)el.textContent=rr.active?(rr.locked?'🔒 已锁定':'✅ 使用中'):(rr.unlocked?'🔓 已解锁':(rr.can_unlock?'🔑 可解锁':'🔒 未解锁'));
+      }
+    }
+  }
+  const oDet=$('oDet');
+  if(oDet&&oDet.classList.contains('on')&&oDet.dataset.uid){
+    const p=P.find(x=>x.user_id===oDet.dataset.uid);
+    const dRole=$('dRole');
+    if(dRole){
+      if(p&&p.rel_active){
+        const rk=Roles.find(x=>x.key===p.rel_active);
+        const rel=p.relationships?p.relationships.find(x=>x.key===p.rel_active):null;
+        const lockTag=rel&&rel.locked?'（🔒 已锁定）':'';
+        dRole.innerHTML=rk?`🎭 关系角色：${rk.emoji} ${esc(rk.name)}${lockTag}`:'';
+      }else if(dRole){dRole.innerHTML='';}
+    }
+  }
+}
+// 轮询：指令端（/设置关系角色 等）的调整实时反映到 WebUI
+let _poll=null;
+function startPoll(){
+  if(_poll)return;
+  _poll=setInterval(async()=>{
+    try{await load();refreshRoleSync();}catch(e){}
+  },5000);
+}
+startPoll();
+$('rBody').onclick=e=>{
+  const b=e.target.closest('button[data-a]');
+  if(!b)return;
+  rAdm(b.dataset.n);
+};
+
+async function openCfg(){
+  try{
+    const r=await B.apiGet('config');
+    draft=JSON.parse(JSON.stringify(r.config||{}));schema=r.schema||{};
+    renderCfg();tst('cTst','');$('oCfg').classList.add('on');
+  }catch(e){alert('加载失败: '+(e.message||e))}
+}
+function renderCfg(){
+  const f=$('cForm');f.innerHTML='';
+  const secs={'⚡ 功能开关':['enable_attitude_system','enable_ai_text_generation','enable_secondary_llm','enable_smart_update','show_status_default'],'💝 情感参数':['default_favorability','default_intimacy','keyword_sensitivity','micro_change_favorability','micro_change_intimacy'],'🧠 智能更新':['force_update_interval','keyword_update_threshold','time_update_threshold_sec'],'🤖 辅助 LLM':['llm_provider_id','llm_weight','llm_call_timeout_sec','llm_recent_messages_count','attitude_max_length','relationship_max_length'],'💾 记忆':['emotional_significance_threshold','max_long_term_events','auto_save_interval_sec'],'🔒 隐私':['global_privacy_level','session_based','anti_manipulation_prompt','admin_ids'],'🎯 惩罚奖励':['pr_enable_momentum','pr_enable_cold_penalty','pr_enable_comeback_reward','pr_enable_milestone_reward','pr_enable_betrayal_penalty','pr_enable_apology_recovery','pr_cold_threshold_hours','pr_comeback_threshold_hours','pr_decay_half_life_hours','pr_momentum_reward_per_level','pr_momentum_penalty_per_level','pr_weight'],'📅 纪念日/节日':['enable_anniversary_system','anniv_fav_bonus','anniv_int_bonus','festival_fav_bonus','festival_int_bonus','anniv_inject_context'],'⏰ 时间感知':['timezone','enable_time_perception','enable_holiday_perception','enable_lunar_perception','holiday_country'],'📈 数据统计':['enable_stats_tracking','stats_history_days','trend_default_days'],'🎭 关系角色':['enable_relationship_roles','relationship_auto_assign'],'🖼️ 图片输出':['enable_image_output','image_output_default','image_output_global']};
+  for(const[t,keys]of Object.entries(secs)){
+    const sec=document.createElement('div');sec.className='cs';
+    sec.innerHTML=`<div class="cs-t">${t}</div>`;
+    for(const k of keys){const m=schema[k];if(!m||m.invisible)continue;const r=document.createElement('div');r.className='cr';r.innerHTML=`<div><div class="cn">${esc(m.description||k)}</div><div class="ch">${esc(m.hint||'')}</div></div>`;const c=document.createElement('div');c.append(ctrl(k,m));r.append(c);sec.append(r)}
+    f.append(sec);
+  }
+}
+function ctrl(k,m){
+  const w=document.createElement('div');
+  if(m.type==='bool'){const l=document.createElement('label');l.className='sw';const i=document.createElement('input');i.type='checkbox';i.checked=Boolean(draft[k]??m.default);const s=document.createElement('span');s.textContent=i.checked?'启用':'关闭';i.onchange=()=>{draft[k]=i.checked;s.textContent=i.checked?'启用':'关闭'};l.append(i,s);w.append(l)}
+  else if(m.options){const s=document.createElement('select');s.className='fld';(Array.isArray(m.options)?m.options:[]).forEach(o=>{const opt=document.createElement('option');opt.value=o;opt.textContent=o;s.append(opt)});s.value=draft[k]??m.default??'';s.onchange=()=>{draft[k]=m.type==='int'?Number(s.value):s.value};w.append(s)}
+  else if(m.type==='text'){const t=document.createElement('textarea');t.className='fld';t.value=String(draft[k]??m.default??'').replace(/\\n/g,'\n');t.oninput=()=>{draft[k]=t.value};w.append(t)}
+  else if(m.slider){const r=document.createElement('div');r.className='sl';const i=document.createElement('input');i.type='range';i.min=m.slider.min;i.max=m.slider.max;i.step=m.slider.step;i.value=draft[k]??m.default??0;const sv=document.createElement('span');sv.className='sv';sv.textContent=i.value;i.oninput=()=>{const v=m.type==='float'?parseFloat(i.value):parseInt(i.value,10);draft[k]=v;sv.textContent=v};r.append(i,sv);w.append(r)}
+  else{const i=document.createElement('input');i.className='fld';i.type=m.type==='int'||m.type==='float'?'number':'text';if(m.type==='int')i.step='1';if(m.type==='float')i.step='0.01';i.value=draft[k]??m.default??'';i.oninput=()=>{draft[k]=m.type==='int'?parseInt(i.value||'0',10):m.type==='float'?parseFloat(i.value||'0'):i.value};w.append(i)}
+  return w;
+}
+async function saveCfg(){try{tst('cTst','保存中...');await B.apiPost('config',{config:draft});$('oCfg').classList.remove('on');await load()}catch(e){tst('cTst',e.message||String(e),true)}}
+
+async function adm(act,uid,val){
+  try{tst('aTst','');const r=await B.apiPost('admin',{action:act,user_id:uid,value:val});tst('aTst',(r.data&&r.data.message)||r.message||'✅ 成功');await load()}catch(e){tst('aTst',e.message||String(e),true)}
+}
+
+$('bRefresh').onclick=load;
+$('bCfg').onclick=openCfg;
+$('bLB').onclick=()=>lb(false);
+$('bNeg').onclick=()=>lb(true);
+$('bFest').onclick=fest;
+$('bRole').onclick=role;
+$('bAdm').onclick=()=>{tst('aTst','');$('oAdm').classList.add('on')};
+$('cSave').onclick=saveCfg;
+$('cCan').onclick=()=>$('oCfg').classList.remove('on');
+$('dCan').onclick=()=>$('oDet').classList.remove('on');
+$('lCan').onclick=()=>$('oLB').classList.remove('on');
+$('fCan').onclick=()=>$('oFest').classList.remove('on');
+$('rCan').onclick=()=>$('oRole').classList.remove('on');
+$('aCan').onclick=()=>$('oAdm').classList.remove('on');
+$('aFB').onclick=()=>adm('set_favorability',$('aFId').value.trim(),parseFloat($('aFV').value));
+$('aIB').onclick=()=>adm('set_intimacy',$('aIId').value.trim(),parseFloat($('aIV').value));
+$('aRB').onclick=()=>{const id=$('aRId').value.trim();if(id&&confirm(`确认重置 ${id}？`))adm('reset',id)};
+for(const id of['oCfg','oDet','oLB','oFest','oRole','oAdm']){$(id).onclick=e=>{if(e.target===$(id))$(id).classList.remove('on')}}
+
+await load();
+</script>
+</body>
+</html>

@@ -1,0 +1,458 @@
+{
+  "_info_header": {
+    "description": "══════ EmotionAI Pro v4.4.0 配置 ══════",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+
+  "enable_attitude_system": {
+    "description": "启用态度关系系统",
+    "hint": "开启后会在情感上下文中注入 AI 对用户的态度描述和关系描述",
+    "type": "bool",
+    "default": true
+  },
+  "enable_ai_text_generation": {
+    "description": "AI 自动生成态度/关系描述",
+    "hint": "由辅助 LLM 动态生成自然语言的态度和关系描述，关闭后需手动设置",
+    "type": "bool",
+    "default": true
+  },
+  "enable_secondary_llm": {
+    "description": "启用辅助 LLM 情感分析",
+    "hint": "调用 LLM 做深度情感分析。可在下方选择专用模型，留空则使用当前会话模型。关闭后仅使用关键词分析",
+    "type": "bool",
+    "default": true
+  },
+  "enable_smart_update": {
+    "description": "启用四维智能更新",
+    "hint": "由关键词强度+时间+计数器+LLM标记 决定是否触发深度分析，关闭后每轮都调用辅助LLM",
+    "type": "bool",
+    "default": true
+  },
+  "show_status_default": {
+    "description": "默认显示情感状态行",
+    "hint": "新用户默认是否在每次对话后显示情感状态摘要，用户可自行用 /状态显示 切换",
+    "type": "bool",
+    "default": false
+  },
+
+  "_section_emotion": {
+    "description": "═══ 情感参数 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "default_favorability": {
+    "description": "初始好感度",
+    "hint": "新用户的默认好感度，范围 -100 ~ 100",
+    "type": "float",
+    "default": 0.0,
+    "slider": {"min": -100, "max": 100, "step": 1}
+  },
+  "default_intimacy": {
+    "description": "初始亲密度",
+    "hint": "新用户的默认亲密度，范围 0 ~ 100",
+    "type": "float",
+    "default": 0.0,
+    "slider": {"min": 0, "max": 100, "step": 1}
+  },
+  "keyword_sensitivity": {
+    "description": "关键词敏感度倍率",
+    "hint": "控制关键词对好感度变化的影响强度，1.0 为标准",
+    "type": "float",
+    "default": 1.0,
+    "slider": {"min": 0.1, "max": 3.0, "step": 0.1}
+  },
+  "micro_change_favorability": {
+    "description": "无关键词时微变化（好感）",
+    "hint": "普通对话未命中任何情绪关键词时，每轮好感度的微弱正向变化量（模拟互动积累）",
+    "type": "float",
+    "default": 0.21,
+    "slider": {"min": 0.0, "max": 2.0, "step": 0.05}
+  },
+  "micro_change_intimacy": {
+    "description": "无关键词时微变化（亲密）",
+    "hint": "普通对话未命中任何情绪关键词时，每轮亲密度的微弱正向变化量",
+    "type": "float",
+    "default": 0.07,
+    "slider": {"min": 0.0, "max": 1.0, "step": 0.02}
+  },
+
+  "_section_smart_update": {
+    "description": "═══ 智能更新参数 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "force_update_interval": {
+    "description": "强制更新间隔（轮数）",
+    "hint": "每隔多少轮对话强制触发一次辅助 LLM 深度分析",
+    "type": "int",
+    "default": 5,
+    "slider": {"min": 2, "max": 20, "step": 1}
+  },
+  "keyword_update_threshold": {
+    "description": "关键词触发阈值",
+    "hint": "消息中情绪关键词累计分数达到此值时触发深度分析",
+    "type": "float",
+    "default": 2.0,
+    "slider": {"min": 0.5, "max": 10.0, "step": 0.5}
+  },
+  "time_update_threshold_sec": {
+    "description": "时间触发阈值（秒）",
+    "hint": "距上次深度分析超过此时间后，下一条消息将触发深度分析",
+    "type": "int",
+    "default": 120,
+    "slider": {"min": 30, "max": 600, "step": 30}
+  },
+
+  "_section_llm": {
+    "description": "═══ 辅助 LLM 参数 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "llm_provider_id": {
+    "description": "辅助 LLM 模型提供商",
+    "hint": "选择情感分析使用的模型。留空则使用当前会话的模型",
+    "type": "string",
+    "default": "",
+    "_special": "select_provider"
+  },
+  "llm_weight": {
+    "description": "LLM 分析权重",
+    "hint": "辅助 LLM 分析结果的融合权重（0~1），关键词权重 = 1 - 此值",
+    "type": "float",
+    "default": 0.4,
+    "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
+  },
+  "llm_call_timeout_sec": {
+    "description": "LLM 调用超时（秒）",
+    "hint": "辅助 LLM 调用的最大等待时间，超时则降级为纯关键词分析",
+    "type": "int",
+    "default": 15,
+    "slider": {"min": 5, "max": 60, "step": 5}
+  },
+  "llm_recent_messages_count": {
+    "description": "传入 LLM 的近期消息数",
+    "hint": "辅助 LLM 分析时携带的最近 N 轮对话",
+    "type": "int",
+    "default": 5,
+    "slider": {"min": 1, "max": 10, "step": 1}
+  },
+  "attitude_max_length": {
+    "description": "态度描述最大字数",
+    "hint": "AI 生成的态度描述截断长度",
+    "type": "int",
+    "default": 25,
+    "slider": {"min": 10, "max": 50, "step": 5}
+  },
+  "relationship_max_length": {
+    "description": "关系描述最大字数",
+    "hint": "AI 生成的关系描述截断长度",
+    "type": "int",
+    "default": 25,
+    "slider": {"min": 10, "max": 50, "step": 5}
+  },
+
+  "_section_memory": {
+    "description": "═══ 记忆与存储 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "emotional_significance_threshold": {
+    "description": "长期记忆记入阈值",
+    "hint": "LLM 判定事件重要性达到此值时记入长期记忆（0~10）",
+    "type": "float",
+    "default": 5.0,
+    "slider": {"min": 1.0, "max": 10.0, "step": 0.5}
+  },
+  "max_long_term_events": {
+    "description": "每用户长期记忆上限",
+    "hint": "每个用户最多保留的重要情感事件数",
+    "type": "int",
+    "default": 50,
+    "slider": {"min": 10, "max": 200, "step": 10}
+  },
+  "auto_save_interval_sec": {
+    "description": "自动保存间隔（秒）",
+    "hint": "情感数据定时落盘的间隔",
+    "type": "int",
+    "default": 300,
+    "slider": {"min": 60, "max": 1800, "step": 60}
+  },
+
+  "_section_privacy": {
+    "description": "═══ 隐私与安全 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "global_privacy_level": {
+    "description": "全局隐私级别",
+    "hint": "0=完全保密（不注入上下文） 1=基础（注入好感/阶段） 2=详细（注入完整信息）",
+    "type": "int",
+    "default": 1,
+    "options": [0, 1, 2]
+  },
+  "session_based": {
+    "description": "按会话隔离情感",
+    "hint": "开启后每个会话（群/私聊）独立维护情感，关闭则按用户ID全局共享",
+    "type": "bool",
+    "default": false
+  },
+  "anti_manipulation_prompt": {
+    "description": "启用抵御操纵提示",
+    "hint": "当好感度较低时，注入提示让 LLM 保持自然态度，不被刻意讨好",
+    "type": "bool",
+    "default": true
+  },
+  "admin_ids": {
+    "description": "额外管理员 ID 列表",
+    "hint": "除 AstrBot 管理员外，额外允许使用管理命令的用户ID（每行一个）",
+    "type": "text",
+    "default": ""
+  },
+
+  "_section_penalty_reward": {
+    "description": "═══ 惩罚奖励机制 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "pr_enable_momentum": {
+    "description": "启行为势头",
+    "hint": "连续正面/负面行为形成递增的奖励或惩罚，连续越久效果越强",
+    "type": "bool",
+    "default": true
+  },
+  "pr_enable_cold_penalty": {
+    "description": "启用冷落惩罚",
+    "hint": "用户长时间不互动时，好感度会因被冷落而下降（在乎才会受伤）",
+    "type": "bool",
+    "default": true
+  },
+  "pr_enable_comeback_reward": {
+    "description": "启用回归奖励",
+    "hint": "用户长时间冷落后重新互动，会获得回归奖励（越久回归越珍贵）",
+    "type": "bool",
+    "default": true
+  },
+  "pr_enable_milestone_reward": {
+    "description": "启用里程碑奖励",
+    "hint": "互动次数达到特定里程碑（10/50/100/200次）时给予额外好感奖励",
+    "type": "bool",
+    "default": true
+  },
+  "pr_enable_betrayal_penalty": {
+    "description": "启用背叛惩罚",
+    "hint": "检测到背叛/欺骗相关关键词时，触发严重好感惩罚",
+    "type": "bool",
+    "default": true
+  },
+  "pr_enable_apology_recovery": {
+    "description": "启用道歉恢复",
+    "hint": "检测到道歉关键词时，好感度获得一定恢复（好感越低恢复越明显）",
+    "type": "bool",
+    "default": true
+  },
+  "pr_cold_threshold_hours": {
+    "description": "冷落判定阈值（小时）",
+    "hint": "超过多少小时未互动视为被冷落",
+    "type": "float",
+    "default": 24,
+    "slider": {"min": 6, "max": 168, "step": 6}
+  },
+  "pr_comeback_threshold_hours": {
+    "description": "回归奖励阈值（小时）",
+    "hint": "冷落超过此时长后回归才给予回归奖励",
+    "type": "float",
+    "default": 48,
+    "slider": {"min": 12, "max": 336, "step": 12}
+  },
+  "pr_decay_half_life_hours": {
+    "description": "惩罚奖励半衰期（小时）",
+    "hint": "惩罚/奖励效果随时间衰减的半衰期，越短衰减越快",
+    "type": "float",
+    "default": 72,
+    "slider": {"min": 12, "max": 336, "step": 12}
+  },
+  "pr_momentum_reward_per_level": {
+    "description": "每层正面势头奖励",
+    "hint": "连续正面行为每增加一层，额外增加的好感度",
+    "type": "float",
+    "default": 0.34,
+    "slider": {"min": 0.1, "max": 2.0, "step": 0.1}
+  },
+  "pr_momentum_penalty_per_level": {
+    "description": "每层负面势头惩罚",
+    "hint": "连续负面行为每增加一层，额外扣除的好感度（负值，绝对值越大越严厉）",
+    "type": "float",
+    "default": -0.76,
+    "slider": {"min": -3.0, "max": -0.1, "step": 0.1}
+  },
+  "pr_weight": {
+    "description": "惩罚奖励融合权重",
+    "hint": "惩罚奖励机制结果的融合权重（0~1），权重越高影响越大",
+    "type": "float",
+    "default": 0.6,
+    "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
+  },
+
+  "_section_anniversary": {
+    "description": "═══ 纪念日/节日系统 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "enable_anniversary_system": {
+    "description": "启用纪念日/节日系统",
+    "hint": "纪念日/节日当天触发好感奖励，并向 LLM 注入节日氛围提示（含农历节日自动换算）",
+    "type": "bool",
+    "default": true
+  },
+  "anniv_fav_bonus": {
+    "description": "纪念日好感奖励",
+    "hint": "用户自定义纪念日/生日/初次相识周年当天的好感度奖励（认识里程碑按天数和比例缩放）",
+    "type": "float",
+    "default": 2.5,
+    "slider": {"min": 0.0, "max": 10.0, "step": 0.1}
+  },
+  "anniv_int_bonus": {
+    "description": "纪念日亲密奖励",
+    "hint": "纪念日当天的亲密度奖励",
+    "type": "float",
+    "default": 1.5,
+    "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
+  },
+  "festival_fav_bonus": {
+    "description": "节日好感奖励",
+    "hint": "节日（公历+农历）当天的好感度奖励",
+    "type": "float",
+    "default": 1.8,
+    "slider": {"min": 0.0, "max": 10.0, "step": 0.1}
+  },
+  "festival_int_bonus": {
+    "description": "节日亲密奖励",
+    "hint": "节日当天的亲密度奖励",
+    "type": "float",
+    "default": 1.0,
+    "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
+  },
+  "anniv_inject_context": {
+    "description": "注入节日氛围提示",
+    "hint": "纪念日/节日当天在感知信息块中注入特别日子提示，让 AI 自然呼应节日氛围",
+    "type": "bool",
+    "default": true
+  },
+
+  "_section_perception": {
+    "description": "═══ 时间感知（仿 LLMPerception）═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "timezone": {
+    "description": "时区设置",
+    "hint": "时间感知使用的时区，例如：Asia/Shanghai, Asia/Tokyo 等",
+    "type": "string",
+    "default": "Asia/Shanghai"
+  },
+  "enable_time_perception": {
+    "description": "启用时间感知",
+    "hint": "每次请求注入发送时间、星期与时段（如：周三, 下午）",
+    "type": "bool",
+    "default": true
+  },
+  "enable_holiday_perception": {
+    "description": "启用节假日感知",
+    "hint": "注入法定节假日/调休/周末信息（安装 chinese-calendar 后支持调休判断，否则降级为周末判断）",
+    "type": "bool",
+    "default": true
+  },
+  "enable_lunar_perception": {
+    "description": "启用农历感知",
+    "hint": "注入农历日期（如：农历丙午年(马年)七月二十；安装 lunarcalendar 后更精确）",
+    "type": "bool",
+    "default": true
+  },
+  "holiday_country": {
+    "description": "节假日国家/地区",
+    "hint": "节假日判断的国家代码，如 CN(中国)、JP(日本) 等",
+    "type": "string",
+    "default": "CN"
+  },
+
+  "_section_stats": {
+    "description": "═══ 情感数据统计 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "enable_stats_tracking": {
+    "description": "启用数据统计",
+    "hint": "每天记录一次好感/亲密度快照，支持 /趋势 命令查看",
+    "type": "bool",
+    "default": true
+  },
+  "stats_history_days": {
+    "description": "统计保留天数",
+    "hint": "每用户保留多少天的历史快照（超出自动清理）",
+    "type": "int",
+    "default": 30,
+    "slider": {"min": 7, "max": 180, "step": 1}
+  },
+  "trend_default_days": {
+    "description": "/趋势 默认天数",
+    "hint": "不带参数时 /趋势 默认展示的天数",
+    "type": "int",
+    "default": 14,
+    "slider": {"min": 3, "max": 60, "step": 1}
+  },
+
+  "_section_relationship_roles": {
+    "description": "═══ 关系角色解锁 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "enable_relationship_roles": {
+    "description": "启用关系角色解锁",
+    "hint": "AI 扮演用户解锁的关系角色（哥哥/恋人/妹妹/弟弟…），解锁仅限系统内置角色",
+    "type": "bool",
+    "default": true
+  },
+  "relationship_auto_assign": {
+    "description": "根据画像自动生成关系",
+    "hint": "开启后系统根据好感/亲密/互动等画像数据自动推荐并解锁最合适的关系角色（用户也可手动解锁/切换）",
+    "type": "bool",
+    "default": true
+  },
+
+  "_section_image_output": {
+    "description": "═══ 图片输出 ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "enable_image_output": {
+    "description": "启用图片输出（总开关）",
+    "hint": "需要安装 Pillow（pip install Pillow）并具备中文字体。用户可自行用 /图片模式 切换",
+    "type": "bool",
+    "default": true
+  },
+  "image_output_default": {
+    "description": "新用户默认图片输出",
+    "hint": "新用户默认是否启用图片输出，用户可自行用 /图片模式 切换",
+    "type": "bool",
+    "default": false
+  },
+  "image_output_global": {
+    "description": "全局图片输出（所有信息命令强制图片）",
+    "hint": "管理员可用 /全局图片模式 切换；开启后所有信息展示命令均以图片输出",
+    "type": "bool",
+    "default": false
+  }
+}

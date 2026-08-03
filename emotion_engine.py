@@ -1,0 +1,304 @@
+"""EmotionAI Pro - 8 维情感模型 + 好感/亲密度双核引擎（六阶段版）"""
+
+from __future__ import annotations
+
+import random
+from dataclasses import dataclass, field, asdict
+from typing import Dict, List, Optional
+
+# ─── 8 维情感模型 ───────────────────────────────────────────────
+EMOTION_DIMENSIONS = [
+    "joy",        # 喜悦
+    "sadness",    # 悲伤
+    "anger",      # 愤怒
+    "fear",       # 恐惧
+    "surprise",   # 惊讶
+    "disgust",    # 厌恶
+    "trust",      # 信任
+    "anticipation",  # 期待
+]
+
+# 8 维情感中文名/图标（单一来源，供 main/llm_analyzer 引用）
+DIM_LABELS = {
+    "joy": "喜悦", "sadness": "悲伤", "anger": "愤怒", "fear": "恐惧",
+    "surprise": "惊讶", "disgust": "厌恶", "trust": "信任", "anticipation": "期待",
+}
+DIM_ICONS = {
+    "joy": "😊", "sadness": "😢", "anger": "😠", "fear": "😨",
+    "surprise": "😲", "disgust": "🤢", "trust": "🤗", "anticipation": "✨",
+}
+
+# ─── 关系阶段定义（六阶段）──────────────────────────────────────
+@dataclass
+class StageConfig:
+    name: str
+    label: str
+    fav_weight: float       # 好感权重
+    int_weight: float       # 亲密权重
+    composite_threshold: float  # 进入该阶段的复合评分阈值
+    hysteresis_buffer: float    # 滞后带缓冲分
+    intimacy_gain: float        # 亲密度增益倍率
+
+STAGES: List[StageConfig] = [
+    StageConfig("initial",      "🌱 初识期", 0.75, 0.25, 15,  2, 4.0),
+    StageConfig("favorable",    "🌿 好感期", 0.60, 0.40, 32,  3, 3.6),
+    StageConfig("trust",        "🤝 信任期", 0.50, 0.50, 50,  4, 3.2),
+    StageConfig("deepening",    "💛 深化期", 0.40, 0.60, 68,  5, 2.8),
+    StageConfig("commitment",   "🌳 承诺期", 0.30, 0.70, 82,  6, 2.2),
+    StageConfig("symbiosis",    "🌸 共生期", 0.50, 0.50, 95,  8, 1.0),
+]
+
+# 负好感专属阶段（好感 < 0）
+NEGATIVE_STAGES = [
+    (-15, "😐 冷淡"),
+    (-40, "😠 反感"),
+    (-70, "💢 厌恶"),
+    (-100, "🔥 敌对"),
+]
+
+# ─── 关键词情绪映射（已下调 15%）────────────────────────────────
+POSITIVE_KEYWORDS = {  # 正面下调 15%
+    "喜欢": 3, "爱你": 4, "开心": 3, "高兴": 2, "感谢": 3,
+    "谢谢": 2, "棒": 2, "厉害": 2, "可爱": 3, "漂亮": 2,
+    "有趣": 2, "温暖": 3, "陪伴": 3, "想念": 3, "想你": 3,
+    "加油": 2, "支持": 2, "信任": 3, "感动": 3, "幸福": 3,
+    "甜": 3, "心动": 3, "拥抱": 3, "亲亲": 3, "宝贝": 3,
+    "亲爱的": 3, "最好的": 3, "太好了": 2, "哈哈哈": 2, "嘻嘻": 2,
+}
+
+NEGATIVE_KEYWORDS = {  # 负面上调 8%
+    "讨厌": -3, "恨": -5, "生气": -3, "烦": -2, "滚": -5,
+    "无聊": -2, "无语": -2, "失望": -3, "难过": -3, "伤心": -3,
+    "冷漠": -3, "忽视": -3, "欺骗": -5, "背叛": -5, "恶心": -5,
+    "垃圾": -4, "废物": -4, "笨": -2, "丑": -3, "吵": -2,
+    "闭嘴": -3, "别烦我": -3, "不想理你": -3, "走开": -3,
+}
+
+INTIMACY_KEYWORDS = {  # 正面下调 15%
+    "秘密": 3, "私密": 3, "只有你知道": 3, "告诉你一件事": 3,
+    "私下": 2, "悄悄话": 3, "内心话": 3, "真心话": 3,
+    "一起": 2, "我们": 2, "约定": 3, "永远": 3,
+}
+
+
+# ─── 用户情感档案 ───────────────────────────────────────────────
+@dataclass
+class EmotionProfile:
+    """单个用户的情感档案"""
+    user_id: str = ""
+    user_name: str = ""
+
+    # 好感度 -100 ~ 100
+    favorability: float = 0.0
+    # 亲密度 0 ~ 100
+    intimacy: float = 0.0
+
+    # 8 维情感值 (0~100)
+    emotions: Dict[str, float] = field(default_factory=lambda: {d: 50.0 for d in EMOTION_DIMENSIONS})
+
+    # 关系阶段索引 (0~5)，负好感用 -1
+    stage_index: int = 0
+    # 阶段内进度百分比
+    stage_progress: float = 0.0
+
+    # 态度/关系描述（AI 生成或自定义）
+    attitude_text: str = ""
+    relationship_text: str = ""
+
+    # 互动统计
+    positive_interactions: int = 0
+    negative_interactions: int = 0
+    total_interactions: int = 0
+
+    # 复合评分
+    composite_score: float = 0.0
+
+    # 最近更新时间戳
+    last_update_ts: float = 0.0
+    # 对话轮数计数
+    conversation_turns: int = 0
+    # 自上次智能更新后的轮数
+    turns_since_update: int = 0
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "EmotionProfile":
+        valid = {f.name for f in cls.__dataclass_fields__.values()}
+        filtered = {k: v for k, v in d.items() if k in valid}
+        return cls(**filtered)
+
+
+# ─── 核心引擎 ───────────────────────────────────────────────────
+class EmotionEngine:
+    """情感计算核心：负责好感/亲密度变更、阶段判定、复合评分"""
+
+    def __init__(self, sensitivity: float = 1.0):
+        self.sensitivity = max(0.5, min(2.0, sensitivity))
+
+    # ── 关键词情绪分析 ──
+    def analyze_keywords(self, text: str) -> dict:
+        """返回 {fav_delta, int_delta, emotion_deltas, matched_keywords}"""
+        fav_delta = 0.0
+        int_delta = 0.0
+        matched = []
+
+        for kw, val in POSITIVE_KEYWORDS.items():
+            if kw in text:
+                fav_delta += val * self.sensitivity
+                matched.append((kw, val))
+
+        for kw, val in NEGATIVE_KEYWORDS.items():
+            if kw in text:
+                fav_delta += val * self.sensitivity  # val is negative
+                matched.append((kw, val))
+
+        for kw, val in INTIMACY_KEYWORDS.items():
+            if kw in text:
+                int_delta += val * self.sensitivity * 0.5
+                matched.append((kw, val))
+
+        # 情感维度微调（正面下调 15%，负面上调 8%）
+        emotion_deltas = {}
+        if any(kw in text for kw in ["开心", "高兴", "哈哈", "嘻嘻", "太好了"]):
+            emotion_deltas["joy"] = min(3, abs(fav_delta) * 0.6)       # 正面 -15%
+        if any(kw in text for kw in ["难过", "伤心", "失望", "哭"]):
+            emotion_deltas["sadness"] = min(4, abs(fav_delta) * 0.76)  # 负面 +8%
+        if any(kw in text for kw in ["生气", "愤怒", "烦", "恨"]):
+            emotion_deltas["anger"] = min(4, abs(fav_delta) * 0.76)    # 负面 +8%
+        if any(kw in text for kw in ["信任", "相信", "依靠"]):
+            emotion_deltas["trust"] = min(3, abs(fav_delta) * 0.4)     # 正面 -15%
+        if any(kw in text for kw in ["期待", "希望", "盼"]):
+            emotion_deltas["anticipation"] = min(3, abs(fav_delta) * 0.34)  # 正面 -15%
+
+        return {
+            "fav_delta": round(fav_delta, 2),
+            "int_delta": round(int_delta, 2),
+            "emotion_deltas": emotion_deltas,
+            "matched_keywords": matched,
+        }
+
+    # ── 复合评分 ──
+    def calc_composite(self, profile: EmotionProfile) -> float:
+        """根据当前阶段权重计算复合评分"""
+        stage = self._get_stage_config(profile)
+        if profile.favorability < 0:
+            # 负好感：好感权重 100%
+            return round(profile.favorability, 2)
+        score = (profile.favorability * stage.fav_weight +
+                 profile.intimacy * stage.int_weight)
+        return round(score, 2)
+
+    # ── 阶段判定（带滞后带保护）──
+    def evaluate_stage(self, profile: EmotionProfile) -> int:
+        """返回应处于的阶段索引 (0~5)，负好感返回 -1"""
+        if profile.favorability < 0:
+            return -1
+
+        composite = profile.composite_score
+        current = profile.stage_index
+
+        # 从低到高检查是否达到阈值（含滞后带）
+        for i in range(len(STAGES) - 1, -1, -1):
+            stage = STAGES[i]
+            if i > current:
+                # 上升需要超过 阈值 + 滞后带
+                if composite >= stage.composite_threshold + stage.hysteresis_buffer:
+                    return i
+            else:
+                # 已在该阶段或更低，只需超过阈值
+                if composite >= stage.composite_threshold:
+                    return max(current, i)
+
+        return 0
+
+    # ── 阶段进度 ──
+    def calc_stage_progress(self, profile: EmotionProfile) -> float:
+        """计算当前阶段内的进度百分比 (0~100)"""
+        if profile.favorability < 0:
+            return 0.0
+
+        stage = self._get_stage_config(profile)
+        idx = profile.stage_index
+
+        # 当前阶段的起始阈值
+        lower = STAGES[idx].composite_threshold
+        # 下一阶段的阈值（如果是最终阶段则 +15）
+        upper = STAGES[min(idx + 1, len(STAGES) - 1)].composite_threshold
+        if idx == len(STAGES) - 1:
+            upper = lower + 15
+
+        if upper <= lower:
+            return 100.0
+
+        progress = (profile.composite_score - lower) / (upper - lower) * 100
+        return round(max(0, min(100, progress)), 1)
+
+    # ── 应用情感变更 ──
+    def apply_change(
+        self,
+        profile: EmotionProfile,
+        fav_delta: float,
+        int_delta: float,
+        emotion_deltas: Dict[str, float],
+        llm_emotion_adjust: Optional[Dict[str, float]] = None,
+    ) -> EmotionProfile:
+        """应用情感变更，含边界保护和阶段跃迁"""
+        old_fav = profile.favorability
+        old_stage = profile.stage_index
+
+        # 好感度变更
+        profile.favorability = max(-100, min(100, profile.favorability + fav_delta))
+
+        # 亲密度变更（受阶段增益影响）
+        stage = self._get_stage_config(profile)
+        gain = stage.intimacy_gain if profile.stage_index >= 0 else 1.0
+        profile.intimacy = max(0, min(100, profile.intimacy + int_delta * gain))
+
+        # 8 维情感变更
+        if llm_emotion_adjust:
+            for dim, adj in llm_emotion_adjust.items():
+                if dim in profile.emotions:
+                    profile.emotions[dim] = max(0, min(100, profile.emotions[dim] + adj))
+
+        for dim, delta in emotion_deltas.items():
+            if dim in profile.emotions:
+                profile.emotions[dim] = max(0, min(100, profile.emotions[dim] + delta))
+
+        # 互动统计
+        profile.total_interactions += 1
+        if fav_delta > 0:
+            profile.positive_interactions += 1
+        elif fav_delta < 0:
+            profile.negative_interactions += 1
+
+        # 复合评分
+        profile.composite_score = self.calc_composite(profile)
+
+        # 阶段评估
+        new_stage = self.evaluate_stage(profile)
+
+        # 过渡保护：阶段下降时检查保护分
+        if new_stage < old_stage and new_stage >= 0:
+            protected_min = STAGES[old_stage].composite_threshold - STAGES[old_stage].hysteresis_buffer
+            if profile.composite_score < protected_min:
+                pass
+
+        profile.stage_index = new_stage
+        profile.stage_progress = self.calc_stage_progress(profile)
+
+        return profile
+
+    # ── 负好感描述 ──
+    @staticmethod
+    def get_negative_stage_label(favorability: float) -> str:
+        for threshold, label in NEGATIVE_STAGES:
+            if favorability >= threshold:
+                return label
+        return NEGATIVE_STAGES[-1][1]
+
+    # ── 内部辅助 ──
+    def _get_stage_config(self, profile: EmotionProfile) -> StageConfig:
+        idx = max(0, min(profile.stage_index, len(STAGES) - 1))
+        return STAGES[idx]

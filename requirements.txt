@@ -1,0 +1,7 @@
+# EmotionAI Pro - 核心功能零依赖（标准库 + AstrBot API）
+# 可选依赖：图片输出功能需要 Pillow，未安装时自动降级为纯文本输出
+Pillow>=9.0.0
+# 可选依赖：节假日感知（含调休判断）需要 chinese-calendar，未安装时降级为周末判断
+chinese-calendar>=1.9.0
+# 可选依赖：农历感知需要 lunarcalendar，未安装时使用内置换算表
+lunarcalendar
