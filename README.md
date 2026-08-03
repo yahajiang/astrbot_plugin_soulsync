@@ -1,0 +1,2 @@
+# astrbot_plugin_soulsync
+心旅知音（SoulSync）：融合 EmotionAI 与 FavourPro 精华的情感智能插件，支持 8 维情感模型、六阶段关系演进、智能更新、辅助 LLM、长期记忆、负好感支持、过渡保护、惩罚奖励机制、情感自画像、纪念日/节日系统、数据趋势统计、关系角色、时间感知、图片输出、WebUI 控制台。
