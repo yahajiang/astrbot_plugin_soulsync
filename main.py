@@ -298,9 +298,95 @@ class SoulSyncPro(Star):
             fn = getattr(self.config, "save_config", None)
             if callable(fn):
                 fn()
+            self._sync_runtime_config()
             return json_response({"ok": True, "message": "配置已保存"})
         except Exception as e:
             return error_response(str(e))
+
+    def _sync_runtime_config(self):
+        """将 WebUI 保存的配置同步到运行时缓存属性（支持热更新，无需重载插件）"""
+        try:
+            # ── 功能开关 ──
+            self.enable_attitude = bool(self.config.get("enable_attitude_system", True))
+            self.enable_secondary_llm = bool(self.config.get("enable_secondary_llm", True))
+            self.enable_smart_update = bool(self.config.get("enable_smart_update", True))
+
+            # ── 情感参数 ──
+            self.default_favorability = float(self.config.get("default_favorability", 0.0))
+            self.default_intimacy = float(self.config.get("default_intimacy", 0.0))
+            self.sensitivity = float(self.config.get("keyword_sensitivity", 1.0))
+            self.emotion_engine.sensitivity = self.sensitivity
+
+            # ── 智能更新参数 ──
+            self.force_interval = int(self.config.get("force_update_interval", 5))
+            self.keyword_threshold = float(self.config.get("keyword_update_threshold", 2.0))
+            self.time_threshold_sec = float(self.config.get("time_update_threshold_sec", 120))
+            self.smart_updater.force_interval = self.force_interval
+            self.smart_updater.keyword_threshold = self.keyword_threshold
+            self.smart_updater.time_threshold_sec = self.time_threshold_sec
+            self.smart_updater.sensitivity = self.sensitivity
+
+            # ── 记忆与存储 ──
+            self.significance_threshold = float(self.config.get("emotional_significance_threshold", 5.0))
+            self.max_ltm_events = int(self.config.get("max_long_term_events", 50))
+
+            # ── 隐私与安全 ──
+            self.session_based = bool(self.config.get("session_based", False))
+            self.admin_ids = self._parse_admin_ids(self.config.get("admin_ids", ""))
+
+            # ── 惩罚奖励参数 ──
+            self.pr_enable_momentum = bool(self.config.get("pr_enable_momentum", True))
+            self.pr_enable_cold_penalty = bool(self.config.get("pr_enable_cold_penalty", True))
+            self.pr_enable_comeback_reward = bool(self.config.get("pr_enable_comeback_reward", True))
+            self.pr_enable_milestone_reward = bool(self.config.get("pr_enable_milestone_reward", True))
+            self.pr_enable_betrayal_penalty = bool(self.config.get("pr_enable_betrayal_penalty", True))
+            self.pr_enable_apology_recovery = bool(self.config.get("pr_enable_apology_recovery", True))
+            self.pr_cold_threshold_hours = float(self.config.get("pr_cold_threshold_hours", 24))
+            self.pr_comeback_threshold_hours = float(self.config.get("pr_comeback_threshold_hours", 48))
+            self.pr_decay_half_life_hours = float(self.config.get("pr_decay_half_life_hours", 72))
+            self.pr_momentum_reward_per_level = float(self.config.get("pr_momentum_reward_per_level", 0.5))
+            self.pr_momentum_penalty_per_level = float(self.config.get("pr_momentum_penalty_per_level", -0.8))
+            try:
+                self.penalty_reward_engine.update_config(
+                    cold_threshold_hours=self.pr_cold_threshold_hours,
+                    comeback_threshold_hours=self.pr_comeback_threshold_hours,
+                    decay_half_life_hours=self.pr_decay_half_life_hours,
+                    momentum_reward_per_level=self.pr_momentum_reward_per_level,
+                    momentum_penalty_per_level=self.pr_momentum_penalty_per_level,
+                    enable_cold_penalty=self.pr_enable_cold_penalty,
+                    enable_comeback_reward=self.pr_enable_comeback_reward,
+                    enable_milestone_reward=self.pr_enable_milestone_reward,
+                    enable_betrayal_penalty=self.pr_enable_betrayal_penalty,
+                    enable_apology_recovery=self.pr_enable_apology_recovery,
+                    enable_momentum=self.pr_enable_momentum,
+                )
+            except Exception:
+                pass
+
+            # ── 纪念日/节日参数 ──
+            self.anniv_fav_bonus = float(self.config.get("anniv_fav_bonus", 2.5))
+            self.anniv_int_bonus = float(self.config.get("anniv_int_bonus", 1.5))
+            self.festival_fav_bonus = float(self.config.get("festival_fav_bonus", 1.8))
+            self.festival_int_bonus = float(self.config.get("festival_int_bonus", 1.0))
+
+            # ── 数据统计参数 ──
+            self.stats_history_days = int(self.config.get("stats_history_days", 30))
+            self.trend_default_days = int(self.config.get("trend_default_days", 14))
+
+            # ── 图片输出参数 ──
+            self.image_output_default = bool(self.config.get("image_output_default", False))
+
+            # ── 时区 ──
+            tz_name = self.config.get("timezone", "Asia/Shanghai")
+            try:
+                import zoneinfo
+                self.timezone = zoneinfo.ZoneInfo(tz_name)
+            except Exception:
+                pass
+
+            logger.debug("SoulSync 运行时配置已热同步")
+        except Exception as e:
+            logger.warning(f"SoulSync 配置热同步失败: {e}")
 
     async def _web_admin(self):
         """POST - 管理操作"""

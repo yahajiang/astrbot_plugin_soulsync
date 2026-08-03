@@ -140,6 +140,33 @@ class PenaltyRewardEngine:
         self.enable_apology_recovery = enable_apology_recovery
         self.enable_momentum = enable_momentum
 
+    def update_config(
+        self,
+        cold_threshold_hours: float = COLD_THRESHOLD_HOURS,
+        comeback_threshold_hours: float = COMEBACK_THRESHOLD_HOURS,
+        decay_half_life_hours: float = DECAY_HALF_LIFE_HOURS,
+        momentum_reward_per_level: float = MOMENTUM_REWARD_PER_LEVEL,
+        momentum_penalty_per_level: float = MOMENTUM_PENALTY_PER_LEVEL,
+        enable_cold_penalty: bool = True,
+        enable_comeback_reward: bool = True,
+        enable_milestone_reward: bool = True,
+        enable_betrayal_penalty: bool = True,
+        enable_apology_recovery: bool = True,
+        enable_momentum: bool = True,
+    ):
+        """热更新引擎参数（WebUI 保存配置后调用）"""
+        self.cold_threshold_sec = float(cold_threshold_hours) * 3600
+        self.comeback_threshold_sec = float(comeback_threshold_hours) * 3600
+        self.decay_half_life_sec = float(decay_half_life_hours) * 3600
+        self.momentum_reward_per_level = float(momentum_reward_per_level)
+        self.momentum_penalty_per_level = float(momentum_penalty_per_level)
+        self.enable_cold_penalty = bool(enable_cold_penalty)
+        self.enable_comeback_reward = bool(enable_comeback_reward)
+        self.enable_milestone_reward = bool(enable_milestone_reward)
+        self.enable_betrayal_penalty = bool(enable_betrayal_penalty)
+        self.enable_apology_recovery = bool(enable_apology_recovery)
+        self.enable_momentum = bool(enable_momentum)
+
     def analyze_and_apply(
         self,
         bp: BehaviorProfile,
