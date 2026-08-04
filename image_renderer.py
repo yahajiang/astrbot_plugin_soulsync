@@ -552,13 +552,13 @@ class ImageRenderer:
             draw.text((width - 142, 26), "亲密", font=label_font, fill=(226, 232, 244))
 
             def y_of_fav(v: float) -> float:
-                return pad_t + (100 - v) / 200 * ch
+                return pad_t + (200 - v) / 300 * ch
 
             def y_of_int(v: float) -> float:
                 return pad_t + (100 - v) / 100 * ch
 
-            # 网格 + Y 轴刻度（好感：-100~100；亲密：0~100）
-            for v in (-100, -50, 0, 50, 100):
+            # 网格 + Y 轴刻度（好感：-100~200；亲密：0~100）
+            for v in (-100, -50, 0, 50, 100, 150, 200):
                 y = y_of_fav(v)
                 draw.line([pad_l, y, width - pad_r, y], fill=(42, 50, 72), width=1)
                 draw.text((8, y - 9), f"{v}", font=tick_font, fill=(122, 134, 158))

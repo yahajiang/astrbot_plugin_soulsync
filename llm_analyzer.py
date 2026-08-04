@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 EMOTION_ANALYSIS_PROMPT = """你是一个情感分析专家。你需要分析用户的消息对 AI 助手的情感影响。
 
 当前情感状态：
-- 好感度：{favorability}/100
-- 亲密度：{intimacy}/100
+- 好感度：{favorability}/200
+- 亲密度：{intimacy}/100（按好感度派生）
 - 关系阶段：{stage_label}
 - 8维情感：喜悦={joy}, 悲伤={sadness}, 愤怒={anger}, 恐惧={fear}, 惊讶={surprise}, 厌恶={disgust}, 信任={trust}, 期待={anticipation}
 

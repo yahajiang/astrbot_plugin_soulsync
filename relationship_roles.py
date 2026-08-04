@@ -543,6 +543,8 @@ class RelationshipRoleManager:
             st["active"] = ""
         st.setdefault("locked", False)
         st.setdefault("pinned", "")
+        st.setdefault("custom_relationship", "")
+        st.setdefault("custom_attitude", "")
         return st
 
     def unlocked_roles(self, uid: str) -> List[str]:
@@ -557,6 +559,48 @@ class RelationshipRoleManager:
     def pinned_role(self, uid: str) -> Optional[str]:
         """管理员手动固定（pin）的关系角色 key，无则 None"""
         return self._state(uid).get("pinned") or None
+
+    # ── 自定义关系/态度内容（合并进当前关系角色人设）──
+    CUSTOM_KINDS = ("relationship", "attitude")
+
+    def set_custom(self, uid: str, kind: str, text: str) -> Tuple[bool, str]:
+        """设置用户自定义的关系/态度内容（合并进角色人设生效）"""
+        if kind not in self.CUSTOM_KINDS:
+            return False, "❌ 未知自定义类型"
+        text = (text or "").strip()
+        st = self._state(uid)
+        if kind == "relationship":
+            st["custom_relationship"] = text
+        else:
+            st["custom_attitude"] = text
+        self.save()
+        label = "关系" if kind == "relationship" else "态度"
+        return True, f"✅ 已设置 {uid} 的自定义{label}内容：{text}"
+
+    def custom_content(self, uid: str) -> str:
+        """关系+态度自定义内容拼接（供内容自动判定使用）"""
+        st = self._state(uid)
+        return " ".join(
+            p for p in (st.get("custom_relationship") or "", st.get("custom_attitude") or "")
+            if p
+        )
+
+    def custom_info(self, uid: str) -> dict:
+        st = self._state(uid)
+        return {
+            "relationship": st.get("custom_relationship") or "",
+            "attitude": st.get("custom_attitude") or "",
+        }
+
+    def _custom_lines(self, uid: str) -> str:
+        """自定义内容转人设补充行"""
+        st = self._state(uid)
+        parts = []
+        if st.get("custom_relationship"):
+            parts.append(f"你们的关系：{st['custom_relationship']}")
+        if st.get("custom_attitude"):
+            parts.append(f"你对用户的态度：{st['custom_attitude']}")
+        return "\n".join(parts)
 
     # ── 解锁条件 ──
     @staticmethod
@@ -720,7 +764,11 @@ class RelationshipRoleManager:
         r = SYSTEM_ROLES_BY_KEY.get(key)
         if not r:
             return None
-        return key, r["persona"]
+        persona = r["persona"]
+        custom = self._custom_lines(uid)
+        if custom:
+            persona = persona + "\n" + custom
+        return key, persona
 
     # ── 展示 ──
     def status(self, uid: str, fav: float, int_: float, it: int) -> List[dict]:
@@ -748,4 +796,6 @@ class RelationshipRoleManager:
         r = SYSTEM_ROLES_BY_KEY.get(key) if key else None
         if not r:
             return None
-        return {"key": r["key"], "name": r["name"], "emoji": r["emoji"], "persona": r["persona"]}
+        info = {"key": r["key"], "name": r["name"], "emoji": r["emoji"], "persona": r["persona"]}
+        info.update(self.custom_info(uid))
+        return info

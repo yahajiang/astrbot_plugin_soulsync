@@ -45,17 +45,10 @@
   },
   "default_favorability": {
     "description": "初始好感度",
-    "hint": "新用户的默认好感度，范围 -100 ~ 100",
+    "hint": "新用户的默认好感度，范围 -100 ~ 200（亲密度按好感度派生：亲密度=(好感+100)/3）",
     "type": "float",
     "default": 0.0,
-    "slider": {"min": -100, "max": 100, "step": 1}
-  },
-  "default_intimacy": {
-    "description": "初始亲密度",
-    "hint": "新用户的默认亲密度，范围 0 ~ 100",
-    "type": "float",
-    "default": 0.0,
-    "slider": {"min": 0, "max": 100, "step": 1}
+    "slider": {"min": -100, "max": 200, "step": 1}
   },
   "keyword_sensitivity": {
     "description": "关键词敏感度倍率",

@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v2.9 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v2.10 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -30,6 +30,7 @@ from astrbot.core.agent.message import TextPart
 from .emotion_engine import (
     EmotionEngine, EmotionProfile, STAGES, NEGATIVE_STAGES,
     EMOTION_DIMENSIONS, DIM_LABELS, DIM_ICONS,
+    intimacy_from_favorability, FAVORABILITY_MAX,
 )
 from .smart_updater import SmartUpdater
 from .memory_manager import LongTermMemory
@@ -52,7 +53,7 @@ from .time_perception import (
 
 
 class SoulSyncPro(Star):
-    """心旅知音 (SoulSync) v2.9 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
+    """心旅知音 (SoulSync) v2.10 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
 
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -65,7 +66,6 @@ class SoulSyncPro(Star):
 
         # ── 情感参数 ──
         self.default_favorability: float = config.get("default_favorability", 0.0)
-        self.default_intimacy: float = config.get("default_intimacy", 0.0)
         self.sensitivity: float = config.get("keyword_sensitivity", 1.0)
 
         # ── 智能更新参数 ──
@@ -182,7 +182,7 @@ class SoulSyncPro(Star):
 
         # ── 启动日志 ──
         logger.info(
-            f"SoulSync v2.9 已加载 | "
+            f"SoulSync v2.10 已加载 | "
             f"智能更新={self.enable_smart_update} | "
             f"辅助LLM={self.enable_secondary_llm} | "
             f"态度系统={self.enable_attitude} | "
@@ -204,7 +204,7 @@ class SoulSyncPro(Star):
         if self._save_task and not self._save_task.done():
             self._save_task.cancel()
         self._save_all()
-        logger.info("SoulSync v2.9 已停止，数据已保存")
+        logger.info("SoulSync v2.10 已停止，数据已保存")
 
     # ═══════════════════════════════════════════════════════════════
     #  WebUI
@@ -254,6 +254,7 @@ class SoulSyncPro(Star):
                 d["rel_active"] = self.relationship_manager.active_role(p.user_id)
                 d["rel_locked"] = self.relationship_manager.is_locked(p.user_id)
                 d["rel_pinned"] = self.relationship_manager.pinned_role(p.user_id)
+                d["rel_custom"] = self.relationship_manager.custom_info(p.user_id)
                 d["memory"] = self.long_memory.get_events(p.user_id, 20)
                 profiles.append(d)
             bps = [bp.to_dict() for bp in self.behavior_profiles.values()]
@@ -317,7 +318,6 @@ class SoulSyncPro(Star):
 
             # ── 情感参数 ──
             self.default_favorability = float(self.config.get("default_favorability", 0.0))
-            self.default_intimacy = float(self.config.get("default_intimacy", 0.0))
             self.sensitivity = float(self.config.get("keyword_sensitivity", 1.0))
             self.emotion_engine.sensitivity = self.sensitivity
 
@@ -430,16 +430,14 @@ class SoulSyncPro(Star):
                 return error_response("缺少 user_id")
 
             if act == "set_favorability" and val is not None:
-                val = max(-100, min(100, float(val)))
+                val = max(-100, min(FAVORABILITY_MAX, float(val)))
                 old, _ = self._set_profile_value(uid, fav=val)
                 self._save_all()
                 return json_response({"ok": True, "message": f"好感度 {old:+.1f} → {val:+.1f}"})
 
             elif act == "set_intimacy" and val is not None:
-                val = max(0, min(100, float(val)))
-                old, _ = self._set_profile_value(uid, int_=val)
-                self._save_all()
-                return json_response({"ok": True, "message": f"亲密度 {old:.1f} → {val:.1f}"})
+                # 亲密度已改为按好感度百分比派生，不再独立设置
+                return json_response({"ok": False, "message": "亲密度按好感度百分比派生（亲密度=(好感+100)/3），请调整好感度"})
 
             elif act == "reset":
                 self.profiles.pop(uid, None)
@@ -562,20 +560,20 @@ class SoulSyncPro(Star):
         lines = [
             f"📊 关系阶段详情", f"━" * 24,
             f"当前阶段：{stage.label}",
-            f"好感权重：{int(stage.fav_weight * 100)}% | 亲密权重：{int(stage.int_weight * 100)}%",
             f"阶段进度：{profile.stage_progress:.1f}%",
-            f"复合评分：{profile.composite_score:.1f}/{next_stage.composite_threshold}",
-            f"亲密度增益：×{stage.intimacy_gain}",
+            f"复合评分：{profile.composite_score:.1f}（阶段阈值 {stage.composite_threshold:.0f}）",
+            f"亲密度（按好感度派生）：{profile.intimacy:.1f}",
         ]
         if profile.stage_index < len(STAGES) - 1:
             need = next_stage.composite_threshold - profile.composite_score
             lines.append(f"💡 距下一阶段还需：{need:.1f} 分")
         else:
             lines.append("🌸 已达最高阶段！")
-        if profile.attitude_text:
-            lines.append(f"💭 态度：{profile.attitude_text}")
-        if profile.relationship_text:
-            lines.append(f"🤝 关系：{profile.relationship_text}")
+        custom = self.relationship_manager.custom_info(profile.user_id)
+        if custom["attitude"]:
+            lines.append(f"💭 态度：{custom['attitude']}")
+        if custom["relationship"]:
+            lines.append(f"🤝 关系：{custom['relationship']}")
         # 行为模式信息
         if bp.current_streak_count > 1:
             streak_label = "正面 ✨" if bp.current_streak_type == "positive" else "负面 ⚡"
@@ -978,8 +976,8 @@ class SoulSyncPro(Star):
 
         # ── 核心数值 ──
         fav = profile.favorability
-        fav_icon = "💚" if fav > 20 else "💙" if fav > 0 else "💛" if fav > -20 else "💔"
-        fav_bar = self._progress_bar(fav, -100, 100, 16)
+        fav_icon = "💚" if fav > 40 else "💙" if fav > 0 else "💛" if fav > -20 else "💔"
+        fav_bar = self._progress_bar(fav, -100, 200, 16)
         lines.append(f"{fav_icon} 好感度：{fav:+.1f}  {fav_bar}")
 
         int_bar = self._progress_bar(profile.intimacy, 0, 100, 16)
@@ -1012,7 +1010,7 @@ class SoulSyncPro(Star):
             elif pinned:
                 role_key = pinned
             elif self.config.get("relationship_auto_assign", True):
-                content = (profile.relationship_text or "") + (profile.attitude_text or "")
+                content = self.relationship_manager.custom_content(uid)
                 role_key = (
                     self.relationship_manager.from_content(content)
                     or self.relationship_manager.recommend(
@@ -1032,12 +1030,13 @@ class SoulSyncPro(Star):
                         lines.append(f"  {r['desc']}")
                     lines.append("")
 
-        # ── 态度/关系描述 ──
-        if profile.attitude_text:
-            lines.append(f"💭 AI 对你的态度：{profile.attitude_text}")
-        if profile.relationship_text:
-            lines.append(f"🤝 你们的关系：{profile.relationship_text}")
-        if profile.attitude_text or profile.relationship_text:
+        # ── 自定义态度/关系描述（合并进关系角色系统）──
+        custom = self.relationship_manager.custom_info(profile.user_id)
+        if custom["attitude"]:
+            lines.append(f"💭 AI 对你的态度：{custom['attitude']}")
+        if custom["relationship"]:
+            lines.append(f"🤝 你们的关系：{custom['relationship']}")
+        if custom["attitude"] or custom["relationship"]:
             lines.append("")
 
         # ── 8 维情感 ──
@@ -1088,7 +1087,7 @@ class SoulSyncPro(Star):
             lines.append(ltm)
             lines.append("")
 
-        # ── 关系建议 ──
+        # ── 关系建议（阈值对齐新阶段体系 30/70/115/160/185/200）──
         lines.append("💡 关系建议：")
         if fav < -50:
             lines.append("  你们的关系处于敌对状态，需要真诚的道歉和长时间的修复。")
@@ -1096,16 +1095,20 @@ class SoulSyncPro(Star):
             lines.append("  关系有些紧张，试着多表达善意，减少负面言辞。")
         elif fav < 0:
             lines.append("  关系偏冷淡，多一些温暖的互动可以改善。")
-        elif fav < 25:
+        elif fav < 30:
             lines.append("  初识阶段，保持真诚和耐心，关系会慢慢加深。")
-        elif fav < 55:
+        elif fav < 70:
             lines.append("  好感在增长，继续用心互动，信任正在建立。")
-        elif fav < 80:
+        elif fav < 115:
             lines.append("  关系不错！深化期需要更多真诚和陪伴。")
-        elif fav < 95:
+        elif fav < 160:
             lines.append("  关系很亲密了，珍惜这份信任。")
+        elif fav < 185:
+            lines.append("  已到承诺期，这段感情已非常深厚。")
+        elif fav < 200:
+            lines.append("  已达共生期前夜，这是最深层的情感连接。🌸")
         else:
-            lines.append("  已达共生阶段，这是最深层的情感连接。🌸")
+            lines.append("  已达最高阶段，这是最深层的情感连接。🌸")
 
         lines.append("")
         lines.append("╚═════════════════════════╝")
@@ -1147,7 +1150,7 @@ class SoulSyncPro(Star):
             return
         parts = event.message_str.split()
         if len(parts) < 3:
-            yield event.plain_result("用法：/设置好感 <用户ID> <-100~100的数值>")
+            yield event.plain_result("用法：/设置好感 <用户ID> <-100~200的数值>")
             return
         user_id = parts[1]
         try:
@@ -1155,7 +1158,7 @@ class SoulSyncPro(Star):
         except ValueError:
             yield event.plain_result("❌ 值必须是数字")
             return
-        old, msg = self._set_profile_value(user_id, fav=max(-100, min(100, value)))
+        old, msg = self._set_profile_value(user_id, fav=max(-100, min(FAVORABILITY_MAX, value)))
         yield event.plain_result(f"✅ 已将 {user_id} 好感度从 {old:+.1f} 设置为 {value:+.1f}")
 
     @filter.command("设置亲密")
@@ -1169,23 +1172,20 @@ class SoulSyncPro(Star):
             yield event.plain_result("用法：/设置亲密 <用户ID> <0~100的数值>")
             return
         user_id = parts[1]
-        try:
-            value = float(parts[2])
-        except ValueError:
-            yield event.plain_result("❌ 值必须是数字")
-            return
-        old, msg = self._set_profile_value(user_id, int_=max(0, min(100, value)))
-        yield event.plain_result(f"✅ 已将 {user_id} 亲密度从 {old:.1f} 设置为 {value:.1f}")
+        yield event.plain_result(f"ℹ️ 亲密度已改为按好感度百分比派生（亲密度=(好感+100)/3），请使用 /设置好感 调整")
+        return
 
     def _set_profile_value(self, user_id: str, fav: Optional[float] = None,
                            int_: Optional[float] = None):
-        """管理员设值通用入口：好感/亲密 修改后重算复合评分与阶段"""
+        """管理员设值通用入口：好感/亲密 修改后重算亲密度、复合评分与阶段"""
         profile = self._get_or_create_profile_by_id(user_id)
         old = profile.favorability
         if fav is not None:
-            profile.favorability = fav
+            profile.favorability = max(-100.0, min(FAVORABILITY_MAX, fav))
         if int_ is not None:
-            profile.intimacy = int_
+            profile.intimacy = max(0.0, min(100.0, int_))
+        # 亲密度按好感度派生（与 emotion_engine 保持一致）
+        profile.intimacy = intimacy_from_favorability(profile.favorability)
         profile.composite_score = self.emotion_engine.calc_composite(profile)
         profile.stage_index = self.emotion_engine.evaluate_stage(profile)
         profile.stage_progress = self.emotion_engine.calc_stage_progress(profile)
@@ -1194,11 +1194,11 @@ class SoulSyncPro(Star):
 
     @filter.command("设置态度")
     async def cmd_set_attitude(self, event: AstrMessageEvent):
-        """管理员：自定义用户态度描述。用法：/设置态度 <ID> <文本>"""
-        for res in self._set_user_text(event, "attitude_text", "态度"):
+        """管理员：自定义用户态度描述（合并进关系角色人设）。用法：/设置态度 <ID> <文本>"""
+        for res in self._set_user_text(event, "attitude", "态度"):
             yield res
 
-    def _set_user_text(self, event, field: str, label: str):
+    def _set_user_text(self, event, kind: str, label: str):
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -1207,15 +1207,13 @@ class SoulSyncPro(Star):
             yield event.plain_result(f"用法：/设置{label} <用户ID> <{label}描述文本>")
             return
         user_id, text = parts[1], parts[2]
-        profile = self._get_or_create_profile_by_id(user_id)
-        setattr(profile, field, text)
-        self._save_profile(profile)
-        yield event.plain_result(f"✅ 已设置 {user_id} 的{label}描述：{text}")
+        ok, msg = self.relationship_manager.set_custom(user_id, kind, text)
+        yield event.plain_result(msg)
 
     @filter.command("设置关系")
     async def cmd_set_relationship(self, event: AstrMessageEvent):
-        """管理员：自定义用户关系描述。用法：/设置关系 <ID> <文本>"""
-        for res in self._set_user_text(event, "relationship_text", "关系"):
+        """管理员：自定义用户关系描述（合并进关系角色人设）。用法：/设置关系 <ID> <文本>"""
+        for res in self._set_user_text(event, "relationship", "关系"):
             yield res
 
     @filter.command("重置好感")
@@ -1527,9 +1525,13 @@ class SoulSyncPro(Star):
                             attitude = llm_result.get("attitude", "")
                             relationship = llm_result.get("relationship", "")
                             if attitude:
-                                profile.attitude_text = attitude
+                                self.relationship_manager.set_custom(
+                                    profile.user_id, "attitude", attitude
+                                )
                             if relationship:
-                                profile.relationship_text = relationship
+                                self.relationship_manager.set_custom(
+                                    profile.user_id, "relationship", relationship
+                                )
 
                         significance = llm_result.get("significance", 0)
                         if significance >= self.significance_threshold:
@@ -1590,7 +1592,7 @@ class SoulSyncPro(Star):
 
             # ── 关系角色：聊天内容自动判定 + 注入角色人设到系统提示词 ──
             if self.config.get("enable_relationship_roles", True):
-                content = (profile.relationship_text or "") + (profile.attitude_text or "")
+                content = self.relationship_manager.custom_content(uid)
                 content += " " + " ".join(self.recent_messages.get(uid, [])[-4:])
                 role = self.relationship_manager.resolve_active(
                     uid,
@@ -1666,7 +1668,7 @@ class SoulSyncPro(Star):
         # 角色上下文：让态度/关系描述贴合当前关系角色
         role_context = ""
         if self.config.get("enable_relationship_roles", True):
-            content = (profile.relationship_text or "") + (profile.attitude_text or "")
+            content = self.relationship_manager.custom_content(profile.user_id)
             content += " " + " ".join(self.recent_messages.get(profile.user_id, [])[-4:])
             rk = self.relationship_manager.resolve_active(
                 profile.user_id, profile.favorability, profile.intimacy,
@@ -1819,10 +1821,11 @@ class SoulSyncPro(Star):
                 bar = self._progress_bar(val, 0, 100)
                 lines.append(f"  {DIM_LABELS.get(dim, dim)}：{val:.1f} {bar}")
 
-            if profile.attitude_text:
-                lines.append(f"\n💭 态度：{profile.attitude_text}")
-            if profile.relationship_text:
-                lines.append(f"🤝 关系：{profile.relationship_text}")
+            custom = self.relationship_manager.custom_info(profile.user_id)
+            if custom["attitude"]:
+                lines.append(f"\n💭 态度：{custom['attitude']}")
+            if custom["relationship"]:
+                lines.append(f"🤝 关系：{custom['relationship']}")
 
             ltm = self.long_memory.get_summary(profile.user_id)
             if ltm and ltm != "暂无长期记忆。":
@@ -1841,20 +1844,22 @@ class SoulSyncPro(Star):
             return ""
 
         parts = ["<emotion_context>"]
-        parts.append(f"好感度：{profile.favorability:+.1f}/100")
+        parts.append(f"好感度：{profile.favorability:+.1f}/{FAVORABILITY_MAX:.0f}")
         parts.append(f"亲密度：{profile.intimacy:.1f}/100")
         parts.append(f"关系阶段：{self._get_stage_label(profile)}")
 
-        if profile.attitude_text and enable_att:
-            parts.append(f"你对ta的态度：{profile.attitude_text}")
-        if profile.relationship_text and enable_att:
-            parts.append(f"你们的关系：{profile.relationship_text}")
+        if enable_att:
+            custom = self.relationship_manager.custom_info(profile.user_id)
+            if custom["attitude"]:
+                parts.append(f"你对ta的态度：{custom['attitude']}")
+            if custom["relationship"]:
+                parts.append(f"你们的关系：{custom['relationship']}")
 
         ltm = self.long_memory.get_summary(profile.user_id)
         if ltm and ltm != "暂无长期记忆。":
             parts.append(f"情感记忆：\n{ltm}")
 
-        if anti_manip and profile.favorability < 20:
+        if anti_manip and profile.favorability < 40:
             parts.append("⚠️ 注意：保持自然态度，不要因为用户的刻意讨好而突然改变态度。真实的情感需要时间积累。")
 
         parts.append("</emotion_context>")
@@ -2070,7 +2075,7 @@ class SoulSyncPro(Star):
                 user_id=uid,
                 user_name=event.get_sender_name(),
                 favorability=self.default_favorability,
-                intimacy=self.default_intimacy,
+                intimacy=intimacy_from_favorability(self.default_favorability),
                 last_update_ts=time.time(),
             )
             logger.info(f"SoulSync 创建新档案 [{uid}] ({event.get_sender_name()})")
@@ -2085,7 +2090,7 @@ class SoulSyncPro(Star):
             self.profiles[user_id] = EmotionProfile(
                 user_id=user_id,
                 favorability=self.default_favorability,
-                intimacy=self.default_intimacy,
+                intimacy=intimacy_from_favorability(self.default_favorability),
                 last_update_ts=time.time(),
             )
         return self.profiles[user_id]
@@ -2101,7 +2106,17 @@ class SoulSyncPro(Star):
             try:
                 data = json.loads(f.read_text(encoding="utf-8"))
                 for uid, pdict in data.items():
-                    self.profiles[uid] = EmotionProfile.from_dict(pdict)
+                    profile = EmotionProfile.from_dict(pdict)
+                    # v2.10 → v2.10：旧档案自定义态度/关系描述迁移到关系角色管理器
+                    custom = self.relationship_manager.custom_info(uid)
+                    for kind, old_key in (("attitude", "attitude_text"),
+                                          ("relationship", "relationship_text")):
+                        old_text = (pdict.get(old_key) or "").strip()
+                        if old_text and not custom[kind]:
+                            self.relationship_manager.set_custom(uid, kind, old_text)
+                    # 亲密度改为按好感度派生
+                    profile.intimacy = intimacy_from_favorability(profile.favorability)
+                    self.profiles[uid] = profile
                 logger.info(f"已加载 {len(self.profiles)} 个情感档案")
             except Exception as e:
                 logger.warning(f"加载情感档案失败：{e}")

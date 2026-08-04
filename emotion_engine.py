@@ -28,24 +28,21 @@ DIM_ICONS = {
     "surprise": "😲", "disgust": "🤢", "trust": "🤗", "anticipation": "✨",
 }
 
-# ─── 关系阶段定义（六阶段）──────────────────────────────────────
+# ─── 关系阶段定义（六阶段，好感上限 200 后阈值加大间距）───────────
 @dataclass
 class StageConfig:
     name: str
     label: str
-    fav_weight: float       # 好感权重
-    int_weight: float       # 亲密权重
     composite_threshold: float  # 进入该阶段的复合评分阈值
     hysteresis_buffer: float    # 滞后带缓冲分
-    intimacy_gain: float        # 亲密度增益倍率
 
 STAGES: List[StageConfig] = [
-    StageConfig("initial",      "🌱 初识期", 0.75, 0.25, 15,  2, 4.0),
-    StageConfig("favorable",    "🌿 好感期", 0.60, 0.40, 32,  3, 3.6),
-    StageConfig("trust",        "🤝 信任期", 0.50, 0.50, 50,  4, 3.2),
-    StageConfig("deepening",    "💛 深化期", 0.40, 0.60, 68,  5, 2.8),
-    StageConfig("commitment",   "🌳 承诺期", 0.30, 0.70, 82,  6, 2.2),
-    StageConfig("symbiosis",    "🌸 共生期", 0.50, 0.50, 95,  8, 1.0),
+    StageConfig("initial",      "🌱 初识期", 30,   2),
+    StageConfig("favorable",    "🌿 好感期", 70,   3),
+    StageConfig("trust",        "🤝 信任期", 115,  4),
+    StageConfig("deepening",    "💛 深化期", 160,  5),
+    StageConfig("commitment",   "🌳 承诺期", 185,  6),
+    StageConfig("symbiosis",    "🌸 共生期", 200,  8),
 ]
 
 # 负好感专属阶段（好感 < 0）
@@ -81,6 +78,17 @@ INTIMACY_KEYWORDS = {  # 正面下调 15%
 }
 
 
+# ─── 数值边界 ──────────────────────────────────────────────────
+FAVORABILITY_MIN: float = -100.0   # 好感度下限（负向不变）
+FAVORABILITY_MAX: float = 200.0    # 好感度上限（由 100 调高至 200）
+EMOTION_BONUS_MAX: float = 15.0    # 情感加成上限（参与复合评分）
+
+
+def intimacy_from_favorability(fav: float) -> float:
+    """亲密度按好感度百分比派生：-100~200 好感映射到 0~100 亲密度"""
+    return round(max(0.0, min(100.0, (fav + 100.0) / 3.0)), 1)
+
+
 # ─── 用户情感档案 ───────────────────────────────────────────────
 @dataclass
 class EmotionProfile:
@@ -88,9 +96,9 @@ class EmotionProfile:
     user_id: str = ""
     user_name: str = ""
 
-    # 好感度 -100 ~ 100
+    # 好感度 -100 ~ 200
     favorability: float = 0.0
-    # 亲密度 0 ~ 100
+    # 亲密度 0 ~ 100（按好感度派生：intimacy = (fav + 100) / 3）
     intimacy: float = 0.0
 
     # 8 维情感值 (0~100)
@@ -100,10 +108,6 @@ class EmotionProfile:
     stage_index: int = 0
     # 阶段内进度百分比
     stage_progress: float = 0.0
-
-    # 态度/关系描述（AI 生成或自定义）
-    attitude_text: str = ""
-    relationship_text: str = ""
 
     # 互动统计
     positive_interactions: int = 0
@@ -179,16 +183,27 @@ class EmotionEngine:
             "matched_keywords": matched,
         }
 
-    # ── 复合评分 ──
+    # ── 复合评分（情感画像计算系统 v2）──
     def calc_composite(self, profile: EmotionProfile) -> float:
-        """根据当前阶段权重计算复合评分"""
-        stage = self._get_stage_config(profile)
+        """复合评分：
+        - 负好感：直接以好感值为准（负向阶段不变）
+        - 非负好感：好感值 + 情感加成（喜悦/信任/期待均值 × EMOTION_BONUS_MAX，0~15）
+          好感上限 200 + 情感加成 15 → 复合评分上限 215
+        """
         if profile.favorability < 0:
-            # 负好感：好感权重 100%
             return round(profile.favorability, 2)
-        score = (profile.favorability * stage.fav_weight +
-                 profile.intimacy * stage.int_weight)
-        return round(score, 2)
+        bonus = self._emotion_bonus(profile)
+        return round(profile.favorability + bonus, 2)
+
+    @staticmethod
+    def _emotion_bonus(profile: EmotionProfile) -> float:
+        """正向情感加成：喜悦/信任/期待三项均值映射到 0~EMOTION_BONUS_MAX"""
+        avg = (
+            profile.emotions.get("joy", 50.0)
+            + profile.emotions.get("trust", 50.0)
+            + profile.emotions.get("anticipation", 50.0)
+        ) / 3.0
+        return avg / 100.0 * EMOTION_BONUS_MAX
 
     # ── 阶段判定（带滞后带保护）──
     def evaluate_stage(self, profile: EmotionProfile) -> int:
@@ -245,16 +260,15 @@ class EmotionEngine:
         llm_emotion_adjust: Optional[Dict[str, float]] = None,
     ) -> EmotionProfile:
         """应用情感变更，含边界保护和阶段跃迁"""
-        old_fav = profile.favorability
         old_stage = profile.stage_index
 
-        # 好感度变更
-        profile.favorability = max(-100, min(100, profile.favorability + fav_delta))
+        # 好感度变更（上限 200，下限 -100）
+        profile.favorability = max(
+            FAVORABILITY_MIN, min(FAVORABILITY_MAX, profile.favorability + fav_delta)
+        )
 
-        # 亲密度变更（受阶段增益影响）
-        stage = self._get_stage_config(profile)
-        gain = stage.intimacy_gain if profile.stage_index >= 0 else 1.0
-        profile.intimacy = max(0, min(100, profile.intimacy + int_delta * gain))
+        # 亲密度按好感度百分比派生（int_delta 不再累积，仅用于记忆/日志展示）
+        profile.intimacy = intimacy_from_favorability(profile.favorability)
 
         # 8 维情感变更
         if llm_emotion_adjust:

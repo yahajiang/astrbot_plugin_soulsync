@@ -136,8 +136,8 @@ textarea.fld{min-height:56px;resize:vertical}
 <div class="ov" id="oFest"><div class="modal modal-sm"><div class="modal-hd"><h3>📅 节日与纪念日</h3><button class="btn" id="fCan">关闭</button></div><div class="modal-bd"><div id="fBody"></div></div></div></div>
 <div class="ov" id="oRole"><div class="modal"><div class="modal-hd"><h3>🎭 关系角色</h3><button class="btn" id="rCan">关闭</button></div><div class="modal-bd"><div id="rBody"></div><div class="tst" id="rTst"></div></div></div></div>
 <div class="ov" id="oAdm"><div class="modal modal-sm"><div class="modal-hd"><h3>🔧 管理员</h3><button class="btn" id="aCan">关闭</button></div><div class="modal-bd">
-  <div class="cs"><div class="cs-t">📝 设置好感度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aFId"></div></div><div class="cr"><div><div class="cn">好感 (-100~100)</div></div><div><input class="fld" type="number" id="aFV"></div></div><button class="btn pri" id="aFB" style="margin-top:6px">设置</button></div>
-  <div class="cs"><div class="cs-t">💕 设置亲密度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aIId"></div></div><div class="cr"><div><div class="cn">亲密 (0~100)</div></div><div><input class="fld" type="number" id="aIV"></div></div><button class="btn pri" id="aIB" style="margin-top:6px">设置</button></div>
+  <div class="cs"><div class="cs-t">📝 设置好感度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aFId"></div></div><div class="cr"><div><div class="cn">好感 (-100~200)</div></div><div><input class="fld" type="number" id="aFV"></div></div><button class="btn pri" id="aFB" style="margin-top:6px">设置</button></div>
+  <div class="cs"><div class="cs-t">💕 设置亲密度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aIId"></div></div><div class="cr"><div><div class="cn">亲密 (0~100)</div></div><div><input class="fld" type="number" id="aIV"></div></div><button class="btn pri" id="aIB" style="margin-top:6px">设置</button><div style="font-size:11px;color:var(--dim)">亲密度按好感度百分比派生（=(好感+100)/3），请直接设置好感度</div></div>
   <div class="cs"><div class="cs-t">🔄 重置用户</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aRId"></div></div><button class="btn dan" id="aRB" style="margin-top:6px">⚠️ 重置</button></div>
   <div class="tst" id="aTst"></div>
 </div></div></div>
@@ -155,7 +155,7 @@ let P=[],Bp=[],schema={},draft={},Fest=[],Roles=[];
 
 const $=id=>document.getElementById(id);
 const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
-const fc=v=>v>20?'var(--green)':v>0?'var(--blue)':v>-20?'var(--orange)':'var(--red)';
+const fc=v=>v>40?'var(--green)':v>0?'var(--blue)':v>-20?'var(--orange)':'var(--red)';
 const pc=(v,a,b)=>Math.round(Math.max(0,Math.min(1,(v-a)/(b-a)))*100);
 const stg=p=>{if(p.favorability<0){if(p.favorability>=-15)return N[0];if(p.favorability>=-40)return N[1];if(p.favorability>=-70)return N[2];return N[3]}return S[Math.max(0,Math.min(p.stage_index||0,5))]};
 const tst=(id,m,e)=>{const el=$(id);if(el){el.textContent=m||'';el.classList.toggle('error',!!e)}};
@@ -188,7 +188,7 @@ function list(){
     const sk=bp&&bp.current_streak_count>1?` · ${bp.current_streak_type==='positive'?'✨':'⚡'}×${bp.current_streak_count}`:'';
     const r=document.createElement('div');r.className='row';
     r.onclick=()=>detail(p.user_id);
-    r.innerHTML=`<div class="row-info"><div class="row-name">${esc(p.user_name||p.user_id)}</div><div class="row-id">${esc(p.user_id)}</div><div class="row-stage">${sg}${sk}</div><div class="bar"><div class="bar-fg" style="width:${pc(p.favorability,-100,100)}%;background:${co}"></div></div></div><div class="row-r"><div class="v" style="color:${co}">${p.favorability>=0?'+':''}${p.favorability.toFixed(1)}</div><div class="l">好感</div></div><div class="row-r"><div class="v">${p.intimacy.toFixed(0)}</div><div class="l">亲密</div></div>`;
+    r.innerHTML=`<div class="row-info"><div class="row-name">${esc(p.user_name||p.user_id)}</div><div class="row-id">${esc(p.user_id)}</div><div class="row-stage">${sg}${sk}</div><div class="bar"><div class="bar-fg" style="width:${pc(p.favorability,-100,200)}%;background:${co}"></div></div></div><div class="row-r"><div class="v" style="color:${co}">${p.favorability>=0?'+':''}${p.favorability.toFixed(1)}</div><div class="l">好感</div></div><div class="row-r"><div class="v">${p.intimacy.toFixed(0)}</div><div class="l">亲密</div></div>`;
     c.append(r);
   }
 }
@@ -197,7 +197,7 @@ function status(){
   const sk=Bp.filter(b=>b.current_streak_count>=3);
   const bt=Bp.reduce((s,b)=>s+(b.betrayal_count||0),0);
   const cb=Bp.reduce((s,b)=>s+(b.comeback_count||0),0);
-  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.9 · 六阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
+  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.10 · 六阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
 }
 
 function detail(uid){
@@ -209,7 +209,7 @@ function detail(uid){
 
   // ── 核心数值 ──
   let h='<div class="det-grid">';
-  h+=dc('好感度',`${fav>=0?'+':''}${fav.toFixed(1)}`,fav,-100,100,fc(fav));
+  h+=dc('好感度',`${fav>=0?'+':''}${fav.toFixed(1)}`,fav,-100,200,fc(fav));
   h+=dc('亲密度',p.intimacy.toFixed(1),p.intimacy,0,100,'var(--purple)');
   h+=dc('复合评分',p.composite_score.toFixed(1),null,0,0,'var(--blue)');
   h+=dc('阶段进度',`${p.stage_progress.toFixed(1)}%`,p.stage_progress,0,100,'var(--green)');
@@ -218,7 +218,7 @@ function detail(uid){
   // ── 关系阶段 + 距下一阶段 ──
   h+=`<div style="margin-bottom:12px;font-size:13px">🧬 当前关系：${stg(p)}`;
   if(p.stage_index>=0&&p.stage_index<5){
-    const thresholds=[15,32,50,68,82,95];
+    const thresholds=[30,70,115,160,185,200];
     const nxt=thresholds[p.stage_index+1];
     const need=nxt-p.composite_score;
     if(need>0)h+=`<span class="next-tag">还需 ${need.toFixed(1)} 分进阶</span>`;
@@ -244,11 +244,12 @@ function detail(uid){
     h+='</div>';
   }
 
-  // ── 态度/关系描述 ──
-  if(p.attitude_text||p.relationship_text){
+  // ── 自定义态度/关系描述（合并进关系角色系统）──
+  const rc=p.rel_custom||{};
+  if(rc.attitude||rc.relationship){
     h+='<div class="sec-box">';
-    if(p.attitude_text)h+=`<div class="item"><span class="ic">💭</span>AI 态度：${esc(p.attitude_text)}</div>`;
-    if(p.relationship_text)h+=`<div class="item"><span class="ic">🤝</span>关系描述：${esc(p.relationship_text)}</div>`;
+    if(rc.attitude)h+=`<div class="item"><span class="ic">💭</span>AI 态度：${esc(rc.attitude)}</div>`;
+    if(rc.relationship)h+=`<div class="item"><span class="ic">🤝</span>关系描述：${esc(rc.relationship)}</div>`;
     h+='</div>';
   }
 
@@ -511,7 +512,7 @@ async function openCfg(){
 }
 function renderCfg(){
   const f=$('cForm');f.innerHTML='';
-  const secs={'⚡ 功能开关':['enable_attitude_system','enable_ai_text_generation','enable_secondary_llm','enable_smart_update','show_status_default'],'💝 情感参数':['default_favorability','default_intimacy','keyword_sensitivity','micro_change_favorability','micro_change_intimacy'],'🧠 智能更新':['force_update_interval','keyword_update_threshold','time_update_threshold_sec'],'🤖 辅助 LLM':['llm_provider_id','llm_weight','llm_call_timeout_sec','llm_recent_messages_count','attitude_max_length','relationship_max_length'],'💾 记忆':['emotional_significance_threshold','max_long_term_events','auto_save_interval_sec'],'🔒 隐私':['global_privacy_level','session_based','anti_manipulation_prompt','admin_ids'],'🎯 惩罚奖励':['pr_enable_momentum','pr_enable_cold_penalty','pr_enable_comeback_reward','pr_enable_milestone_reward','pr_enable_betrayal_penalty','pr_enable_apology_recovery','pr_cold_threshold_hours','pr_comeback_threshold_hours','pr_decay_half_life_hours','pr_momentum_reward_per_level','pr_momentum_penalty_per_level','pr_weight'],'📅 纪念日/节日':['enable_anniversary_system','anniv_fav_bonus','anniv_int_bonus','festival_fav_bonus','festival_int_bonus','anniv_inject_context'],'⏰ 时间感知':['timezone','enable_time_perception','enable_holiday_perception','enable_lunar_perception','holiday_country'],'📈 数据统计':['enable_stats_tracking','stats_history_days','trend_default_days'],'🎭 关系角色':['enable_relationship_roles','relationship_auto_assign'],'🖼️ 图片输出':['enable_image_output','image_output_default','image_output_global']};
+  const secs={'⚡ 功能开关':['enable_attitude_system','enable_ai_text_generation','enable_secondary_llm','enable_smart_update','show_status_default'],'💝 情感参数':['default_favorability','keyword_sensitivity','micro_change_favorability','micro_change_intimacy'],'🧠 智能更新':['force_update_interval','keyword_update_threshold','time_update_threshold_sec'],'🤖 辅助 LLM':['llm_provider_id','llm_weight','llm_call_timeout_sec','llm_recent_messages_count','attitude_max_length','relationship_max_length'],'💾 记忆':['emotional_significance_threshold','max_long_term_events','auto_save_interval_sec'],'🔒 隐私':['global_privacy_level','session_based','anti_manipulation_prompt','admin_ids'],'🎯 惩罚奖励':['pr_enable_momentum','pr_enable_cold_penalty','pr_enable_comeback_reward','pr_enable_milestone_reward','pr_enable_betrayal_penalty','pr_enable_apology_recovery','pr_cold_threshold_hours','pr_comeback_threshold_hours','pr_decay_half_life_hours','pr_momentum_reward_per_level','pr_momentum_penalty_per_level','pr_weight'],'📅 纪念日/节日':['enable_anniversary_system','anniv_fav_bonus','anniv_int_bonus','festival_fav_bonus','festival_int_bonus','anniv_inject_context'],'⏰ 时间感知':['timezone','enable_time_perception','enable_holiday_perception','enable_lunar_perception','holiday_country'],'📈 数据统计':['enable_stats_tracking','stats_history_days','trend_default_days'],'🎭 关系角色':['enable_relationship_roles','relationship_auto_assign'],'🖼️ 图片输出':['enable_image_output','image_output_default','image_output_global']};
   for(const[t,keys]of Object.entries(secs)){
     const sec=document.createElement('div');sec.className='cs';
     sec.innerHTML=`<div class="cs-t">${t}</div>`;
