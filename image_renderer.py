@@ -173,6 +173,62 @@ class ImageRenderer:
     # ═══════════════════════════════════════════════════════════════
     #  文本卡片
     # ═══════════════════════════════════════════════════════════════
+    @staticmethod
+    def _wrap_text(text: str, font, body_w: int) -> List[str]:
+        """按宽度自动换行（已去 emoji）"""
+        text = sanitize_text(text)
+        if not text:
+            return [""]
+        lines_out = []
+        for raw in text.split("\n"):
+            cur = ""
+            for ch in raw:
+                if font.getlength(cur + ch) > body_w and cur:
+                    lines_out.append(cur)
+                    cur = ch
+                else:
+                    cur += ch
+            if cur:
+                lines_out.append(cur)
+        return lines_out or [""]
+
+    @staticmethod
+    def _classify_line(line: str) -> str:
+        """识别行类型：div 分隔线 / bar 进度条 / sec 分节标题 / label 标签行 / quote 引用块 / plain 普通"""
+        stripped = line.strip()
+        if not stripped:
+            return "gap"
+        if re.match(r"^[━─═·]{6,}$", stripped):
+            return "div"
+        if "█" in stripped and "░" in stripped:
+            return "bar"
+        if "💬" in line or stripped.startswith((">", "「", "»", "❝")):
+            return "quote"
+        if re.match(r"^.{0,14}：$", stripped):
+            return "sec"
+        ci = line.find("：")
+        if 0 < ci <= 12 and len(line) > ci + 1 and not line[:1].isspace():
+            return "label"
+        return "plain"
+
+    def _draw_num_highlighted(self, draw, x: int, y: int, text: str, font,
+                              base: Tuple[int, int, int],
+                              num: Tuple[int, int, int]) -> float:
+        """绘制文本，数字/百分比/×N 用强调色高亮；返回末端 x"""
+        pat = re.compile(r"[+-]?\d+(?:\.\d+)?%?|×\d+")
+        pos = 0
+        for m in pat.finditer(text):
+            if m.start() > pos:
+                draw.text((x, y), text[pos:m.start()], font=font, fill=base)
+                x += font.getlength(text[pos:m.start()])
+            draw.text((x, y), m.group(), font=font, fill=num)
+            x += font.getlength(m.group())
+            pos = m.end()
+        if pos < len(text):
+            draw.text((x, y), text[pos:], font=font, fill=base)
+            x += font.getlength(text[pos:])
+        return x
+
     def render_card(self, title: str, lines: List[str],
                     file_name: str = "card.png") -> Optional[str]:
         """把文本行渲染成深色卡片图片，返回 PNG 路径；失败返回 None"""
@@ -181,118 +237,149 @@ class ImageRenderer:
         try:
             from PIL import ImageDraw
 
-            width = 760
-            pad = 32
-            title_h = 84
-            line_h = 40
+            width = 800
+            pad = 34
+            title_h = 104
+            line_h = 44
             body_w = width - pad * 2
 
-            # 预计算行高（支持多行文本自动换行）
-            title_font = self._font(26, bold=True)
+            title_font = self._font(27, bold=True)
             body_font = self._font(20)
             label_font = self._font(20, bold=True)
+            date_font = self._font(14)
 
-            def wrap(text: str, font) -> List[str]:
-                text = sanitize_text(text)
-                if not text:
-                    return [""]
-                lines_out = []
-                for raw in text.split("\n"):
-                    cur = ""
-                    for ch in raw:
-                        if font.getlength(cur + ch) > body_w and cur:
-                            lines_out.append(cur)
-                            cur = ch
-                        else:
-                            cur += ch
-                    if cur:
-                        lines_out.append(cur)
-                return lines_out or [""]
-
-            body_lines: List[str] = []
+            # 预分类 + 换行
+            body_lines: List[Tuple[str, str]] = []  # (text, kind)
             for line in lines:
-                body_lines.extend(wrap(line, body_font))
+                kind = self._classify_line(line)
+                if kind == "gap":
+                    body_lines.append(("", "gap"))
+                    continue
+                for piece in self._wrap_text(line, body_font, body_w):
+                    body_lines.append((piece, kind))
 
-            height = title_h + len(body_lines) * line_h + pad * 2
-            img = self._paint_background(self._new_image(width, height))
+            # 高度：分节标题/分隔行/引用块占 1 行，空行占半行
+            height = title_h + pad * 2
+            for text, kind in body_lines:
+                if kind == "gap":
+                    height += line_h // 2
+                elif kind == "div":
+                    height += line_h // 2 + 6
+                elif kind == "quote":
+                    height += line_h + 14
+                else:
+                    height += line_h
+
+            img = self._paint_background(self._new_image(width, height), accent=(232, 96, 140))
             draw = ImageDraw.Draw(img)
 
-            # 标题区（半透明遮罩 + 顶部渐变强调条 + 标题文字阴影）
+            # ── 标题区：主题色竖条 + 大标题 + 右下角日期 + 顶部渐变线 ──
             draw.rectangle([0, 0, width, title_h], fill=(24, 30, 46))
-            grad_w = width
-            for i in range(grad_w):
-                t = i / max(1, grad_w - 1)
-                c = (round(120 - 40 * t), round(70 - 20 * t), round(160 - 60 * t))
-                draw.line([i, 0, i, 5], fill=c)
-            # 标题描边阴影（增强可读性）
+            for i in range(body_w):
+                t = i / max(1, body_w - 1)
+                c = (round(232 - 90 * t), round(96 + 40 * t), round(140 + 90 * t))
+                draw.line([pad + i, 6, pad + i, 8], fill=c)
+            draw.rounded_rectangle([pad - 14, 30, pad - 8, 66], radius=3, fill=(232, 96, 140))
             draw.text((pad + 1, 27), sanitize_text(title), font=title_font, fill=(0, 0, 0))
-            draw.text((pad, 26), sanitize_text(title), font=title_font, fill=(255, 224, 130))
-            # 分隔线
-            draw.rectangle([pad, title_h - 8, width - pad, title_h - 7], fill=(70, 82, 116))
+            draw.text((pad, 26), sanitize_text(title), font=title_font, fill=(255, 236, 190))
+            date_str = time.strftime("%Y-%m-%d %H:%M")
+            draw.text((width - pad - date_font.getlength(date_str), title_h - 26),
+                      date_str, font=date_font, fill=(140, 152, 180))
 
-            div_re = re.compile(r"^[━─═·]{6,}$")
-            bar_re = re.compile(r"^(.*?)([█░]{4,})$")
+            # ── 正文区 ──
+            y = title_h + 20
             sec_re = re.compile(r"^.{0,14}：$")
+            for text, kind in body_lines:
+                if kind == "gap":
+                    y += line_h // 2
+                    continue
 
-            y = title_h + 18
-            for line in body_lines:
-                if div_re.match(line):
+                if kind == "div":
+                    # 居中渐变分隔线
+                    cx = pad + body_w // 2
+                    seg = 10
+                    for i in range(-seg, seg + 1):
+                        a = max(20, 130 - abs(i) * 10)
+                        draw.rounded_rectangle(
+                            [cx + i * 6, y + line_h // 2 - 1, cx + i * 6 + 4, y + line_h // 2 + 1],
+                            radius=2, fill=(232, 96, 140, a))
+                    y += line_h // 2 + 6
+                    continue
+
+                if kind == "sec":
+                    # 分节标题徽章：半透明圆角背景 + 左侧色条 + 琥珀文字
+                    seg = sanitize_text(text.rstrip("："))
+                    seg_w = label_font.getlength(seg)
                     draw.rounded_rectangle(
-                        [pad, y + line_h // 2 - 1, width - pad, y + line_h // 2 + 1],
-                        radius=2, fill=(66, 78, 110),
-                    )
-                    y += line_h
-                    continue
-
-                # 进度条行：`前缀 ████░░`
-                mb = bar_re.match(line)
-                if mb and ("█" in mb.group(2) or "░" in mb.group(2)):
-                    pre, bar_chars = mb.group(1), mb.group(2)
-                    filled = bar_chars.count("█")
-                    total = len(bar_chars)
-                    # 前缀（标签高亮）+ 右侧进度条
-                    pre = sanitize_text(pre)
-                    col_i = pre.find("：")
-                    pre_fill = (226, 232, 244)
-                    if 0 < col_i <= 12:
-                        draw.text((pad, y + 2), pre[:col_i + 1], font=label_font,
-                                  fill=(122, 192, 255))
-                        rest = pre[col_i + 1:]
-                        if rest:
-                            draw.text((pad + label_font.getlength(pre[:col_i + 1]), y + 2),
-                                      rest, font=body_font, fill=pre_fill)
-                        pre_w = pad + label_font.getlength(pre[:col_i + 1]) + body_font.getlength(rest)
-                    else:
-                        draw.text((pad, y + 2), pre, font=body_font, fill=pre_fill)
-                        pre_w = pad + body_font.getlength(pre)
-                    bar_x = pre_w + 16
-                    bar_w = min(300, width - bar_x - pad)
-                    if bar_w > 40:
-                        self._draw_progress_bar(
-                            draw, bar_x, y + 6, filled, total,
-                            self._bar_color_for(pre), bar_w=bar_w, bar_h=14,
-                        )
-                    y += line_h
-                    continue
-
-                # 分节标题（短行且以「：」结尾）：左侧强调条 + 琥珀加粗
-                if sec_re.match(line):
-                    seg = sanitize_text(line.rstrip("："))
-                    draw.rounded_rectangle([pad, y + 8, pad + 4, y + line_h - 16],
+                        [pad, y + 2, pad + seg_w + 30, y + line_h - 12], radius=8,
+                        fill=(232, 96, 140, 46))
+                    draw.rounded_rectangle([pad + 8, y + 10, pad + 12, y + line_h - 20],
                                            radius=2, fill=(232, 96, 140))
-                    draw.text((pad + 14, y), seg, font=label_font, fill=(255, 210, 120))
+                    draw.text((pad + 20, y + 5), seg, font=label_font, fill=(255, 214, 130))
                     y += line_h
                     continue
 
-                # 普通行 / 标签行
-                col_i = line.find("：")
-                if 0 < col_i <= 12 and len(line) > col_i + 1 and not line[:1].isspace():
-                    pre = line[:col_i + 1]
+                if kind == "quote":
+                    # 用户文字引用块：左侧色条 + 半透明圆角背景
+                    qh = line_h + 4
+                    draw.rounded_rectangle([pad, y, pad + body_w, y + qh], radius=10,
+                                           fill=(91, 141, 239, 26))
+                    draw.rounded_rectangle([pad, y + 6, pad + 4, y + qh - 6], radius=2,
+                                           fill=(91, 141, 239))
+                    draw.rounded_rectangle([pad + 10, y + 8, pad + 14, y + qh - 8], radius=2,
+                                           fill=(232, 96, 140))
+                    self._draw_num_highlighted(draw, pad + 24, y + 8, text, body_font,
+                                               (222, 230, 246), (140, 200, 255))
+                    y += qh + 10
+                    continue
+
+                if kind == "bar":
+                    # 进度条行：`前缀 ████░░`
+                    mb = re.match(r"^(.*?)([█░]{4,})$", text)
+                    if mb and ("█" in mb.group(2) or "░" in mb.group(2)):
+                        pre, bar_chars = mb.group(1), mb.group(2)
+                        filled = bar_chars.count("█")
+                        total = len(bar_chars)
+                        pre = sanitize_text(pre)
+                        col_i = pre.find("：")
+                        pre_fill = (226, 232, 244)
+                        if 0 < col_i <= 12:
+                            draw.text((pad, y + 2), pre[:col_i + 1], font=label_font,
+                                      fill=(122, 192, 255))
+                            rest = pre[col_i + 1:]
+                            if rest:
+                                x0 = pad + label_font.getlength(pre[:col_i + 1])
+                                self._draw_num_highlighted(draw, x0, y + 2, rest, body_font,
+                                                           pre_fill, (140, 200, 255))
+                            pre_w = pad + label_font.getlength(pre[:col_i + 1]) + body_font.getlength(rest)
+                        else:
+                            self._draw_num_highlighted(draw, pad, y + 2, pre, body_font,
+                                                       pre_fill, (140, 200, 255))
+                            pre_w = pad + body_font.getlength(pre)
+                        bar_x = pre_w + 16
+                        bar_w = min(300, width - bar_x - pad)
+                        if bar_w > 40:
+                            self._draw_progress_bar(
+                                draw, bar_x, y + 6, filled, total,
+                                self._bar_color_for(pre), bar_w=bar_w, bar_h=14,
+                            )
+                        y += line_h
+                        continue
+
+                if kind == "label":
+                    # 标签行：蓝色标签 + 数值高亮的正文
+                    col_i = text.find("：")
+                    pre = text[:col_i + 1]
                     draw.text((pad, y), pre, font=label_font, fill=(122, 192, 255))
-                    draw.text((pad + label_font.getlength(pre), y), line[col_i + 1:],
-                              font=body_font, fill=(226, 232, 244))
-                else:
-                    draw.text((pad, y), line, font=body_font, fill=(226, 232, 244))
+                    self._draw_num_highlighted(
+                        draw, pad + label_font.getlength(pre), y, text[col_i + 1:],
+                        body_font, (226, 232, 244), (255, 170, 110))
+                    y += line_h
+                    continue
+
+                # 普通行（数字高亮）
+                self._draw_num_highlighted(draw, pad, y, text, body_font,
+                                           (226, 232, 244), (140, 200, 255))
                 y += line_h
 
             # 圆角 + 投影
@@ -313,39 +400,64 @@ class ImageRenderer:
         try:
             from PIL import ImageDraw
 
-            width = 760
+            width = 800
             pad = 32
-            title_h = 92
+            title_h = 104
             row_h = 64
-            title_font = self._font(26, bold=True)
+            title_font = self._font(27, bold=True)
             sub_font = self._font(15)
             name_font = self._font(19, bold=True)
             desc_font = self._font(15)
             rank_font = self._font(15, bold=True)
+            date_font = self._font(14)
 
             img = self._paint_background(
                 self._new_image(width, title_h + len(entries) * row_h + pad),
                 accent=(247, 183, 49))
             draw = ImageDraw.Draw(img)
 
-            # 标题区
+            # 标题区：主题色竖条 + 大标题 + 右下角日期 + 顶部渐变线
             draw.rectangle([0, 0, width, title_h], fill=(24, 30, 46))
+            body_w = width - pad * 2
+            for i in range(body_w):
+                t = i / max(1, body_w - 1)
+                c = (round(247 - 70 * t), round(183 - 30 * t), round(49 + 80 * t))
+                draw.line([pad + i, 6, pad + i, 8], fill=c)
+            draw.rounded_rectangle([pad - 14, 30, pad - 8, 66], radius=3, fill=(247, 183, 49))
             draw.text((pad + 1, 23), sanitize_text(title), font=title_font, fill=(0, 0, 0))
             draw.text((pad, 22), sanitize_text(title), font=title_font, fill=(255, 224, 130))
             if subtitle:
-                draw.text((pad, 58), sanitize_text(subtitle), font=sub_font, fill=(150, 160, 186))
-            draw.rectangle([pad, title_h - 8, width - pad, title_h - 7], fill=(70, 82, 116))
+                draw.text((pad, 60), sanitize_text(subtitle), font=sub_font, fill=(150, 160, 186))
+            date_str = time.strftime("%Y-%m-%d %H:%M")
+            draw.text((width - pad - date_font.getlength(date_str), title_h - 30),
+                      date_str, font=date_font, fill=(140, 152, 180))
 
             colors = [(247, 183, 49), (165, 177, 194), (227, 160, 110)]
-            y = title_h + 8
+            y = title_h + 12
             for i, (name, desc) in enumerate(entries):
-                if i % 2 == 0:
+                # 前三名渐变背景 + 其余行斑马纹
+                if i < 3:
+                    base = colors[i]
+                    for j in range(row_h):
+                        t = j / max(1, row_h - 1)
+                        c = (round(base[0] * 0.16 - t * 4),
+                             round(base[1] * 0.16 - t * 4),
+                             round(base[2] * 0.16 - t * 4))
+                        draw.line([pad, y + j, width - pad, y + j], fill=c)
+                elif i % 2 == 0:
                     draw.rectangle([pad, y, width - pad, y + row_h], fill=(24, 30, 44))
+                # 行间分隔细线
+                if i > 0:
+                    draw.line([pad + 12, y, width - pad - 12, y],
+                              fill=(58, 68, 96))
                 if i < 3:
                     # 前三名左侧渐变色条
                     draw.rectangle([pad, y + 6, pad + 4, y + row_h - 6], fill=colors[i])
                 cx, cy = pad + 19, y + row_h // 2
                 if i < 3:
+                    # 名次徽章：外发光 + 实心圆
+                    draw.ellipse([cx - 20, cy - 20, cx + 20, cy + 20],
+                                 fill=colors[i] + (70,))
                     draw.ellipse([cx - 15, cy - 15, cx + 15, cy + 15], fill=colors[i])
                     draw.ellipse([cx - 15, cy - 15, cx + 15, cy + 15],
                                  outline=(255, 255, 255), width=1)
@@ -383,14 +495,24 @@ class ImageRenderer:
 
             img = self._paint_background(self._new_image(width, height), accent=(91, 141, 239))
             draw = ImageDraw.Draw(img)
-            title_font = self._font(26, bold=True)
+            title_font = self._font(27, bold=True)
             label_font = self._font(16)
             tick_font = self._font(15)
+            date_font = self._font(14)
 
-            # 标题
+            # 标题区：主题色竖条 + 大标题 + 右下角日期 + 顶部渐变线
             draw.rectangle([0, 0, width, 84], fill=(24, 30, 46))
+            body_w = width - pad_l - pad_r
+            for i in range(body_w):
+                t = i / max(1, body_w - 1)
+                c = (round(91 + 120 * t), round(141 - 30 * t), round(239 - 80 * t))
+                draw.line([pad_l + i, 6, pad_l + i, 8], fill=c)
+            draw.rounded_rectangle([pad_l - 14, 30, pad_l - 8, 66], radius=3, fill=(91, 141, 239))
             draw.text((pad_l + 1, 27), sanitize_text(title), font=title_font, fill=(0, 0, 0))
             draw.text((pad_l, 26), sanitize_text(title), font=title_font, fill=(255, 224, 130))
+            date_str = time.strftime("%Y-%m-%d %H:%M")
+            draw.text((width - pad_r - date_font.getlength(date_str), 52),
+                      date_str, font=date_font, fill=(140, 152, 180))
             # 图例
             draw.rounded_rectangle([width - 246, 26, width - 232, 42], radius=3, fill=(91, 141, 239))
             draw.text((width - 222, 26), "好感", font=label_font, fill=(226, 232, 244))
@@ -449,6 +571,7 @@ class ImageRenderer:
                 draw.line(pts, fill=(91, 141, 239), width=3, joint="curve")
             for x, (_, f) in zip(x_pts, zip(pts, favs)):
                 y = y_of_fav(f)
+                draw.ellipse([x - 9, y - 9, x + 9, y + 9], fill=(91, 141, 239, 60))
                 draw.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(91, 141, 239))
 
             # 亲密线（粉）
@@ -457,6 +580,7 @@ class ImageRenderer:
                 draw.line(pts2, fill=(240, 101, 149), width=3, joint="curve")
             for x, v in zip(x_pts, ints):
                 y = y_of_int(v)
+                draw.ellipse([x - 8, y - 8, x + 8, y + 8], fill=(240, 101, 149, 55))
                 draw.ellipse([x - 3, y - 3, x + 3, y + 3], fill=(240, 101, 149))
 
             # 首尾数值标注
