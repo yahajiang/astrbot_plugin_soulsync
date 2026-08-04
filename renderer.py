@@ -282,7 +282,10 @@ class MenuRenderer:
         title = sanitize_text(self.cfg.get("menu_title", "功能菜单"))
         subtitle = sanitize_text(self.cfg.get("menu_subtitle", ""))
         footer = sanitize_text(self.cfg.get("menu_footer", ""))
-        fs = max(14, int(self.cfg.get("font_size", 30)))
+        try:
+            fs = max(14, int(self.cfg.get("font_size", 30)))
+        except (TypeError, ValueError):
+            fs = 30
         show_glow = bool(self.cfg.get("bg_glow", True))
 
         f_title = self._font(fs + 22, bold=True)
@@ -376,6 +379,9 @@ class MenuRenderer:
             bw = cw + bp * 2
             bh = f_sub.size + 4
             bx = X + int(draw.textlength(gname, font=f_group)) + 16
+            card_right_limit = X + content_w - self.CARD_PAD_SIDE - 4
+            if bx + bw > card_right_limit:
+                bx = card_right_limit - bw
             draw.rounded_rectangle([bx, yy + 2, bx + bw, yy + 2 + bh], radius=6, fill=(*pal["accent"], 50))
             draw.text((bx + bp, yy + 3), count_text, font=f_sub, fill=pal["accent"])
 
@@ -395,6 +401,9 @@ class MenuRenderer:
                         mb_w = mw + 10
                         mb_h = f_sub.size + 4
                         mb_x = X + cmd_indent + int(draw.textlength(main_cmd, font=f_cmd)) + 10
+                        card_right_limit = X + content_w - self.CARD_PAD_SIDE - 4
+                        if mb_x + mb_w > card_right_limit:
+                            mb_x = card_right_limit - mb_w
                         draw.rounded_rectangle([mb_x, yy, mb_x + mb_w, yy + mb_h], radius=4, fill=(*pal["accent"], 40))
                         draw.text((mb_x + 5, yy + 1), mark, font=f_sub, fill=pal["accent"])
 
