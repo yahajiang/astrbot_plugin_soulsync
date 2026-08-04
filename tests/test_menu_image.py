@@ -37,6 +37,14 @@ class _CmdFilter:
         ]
 
 
+class _PermFilter:
+    """模拟 AstrBot 的 PermissionTypeFilter"""
+
+    def __init__(self, permission_type, raise_error=True):
+        self.permission_type = permission_type
+        self.raise_error = raise_error
+
+
 class _Handler:
     def __init__(self, module, name, filters, desc="", enabled=True):
         self.event_type = "adapter"
@@ -136,6 +144,11 @@ def install_stubs(data_dir: Path):
     cmd_mod.CommandFilter = _CmdFilter
     sys.modules["astrbot.core.star.filter.command"] = cmd_mod
 
+    perm_mod = types.ModuleType("astrbot.core.star.filter.permission")
+    perm_mod.PermissionType = types.SimpleNamespace(ADMIN="admin", MEMBER="member")
+    perm_mod.PermissionTypeFilter = _PermFilter
+    sys.modules["astrbot.core.star.filter.permission"] = perm_mod
+
     star_mod = types.ModuleType("astrbot.core.star.star")
     star_map = {}
     star_mod.star_map = star_map
@@ -154,6 +167,9 @@ def _populate(registry, star_map):
     )
     star_map["astrbot_plugin_imgtool_cooldown.main"] = _StarMeta(
         name="astrbot_plugin_imgtool_cooldown", display_name="生图工具"
+    )
+    star_map["astrbot_plugin_token_controller.main"] = _StarMeta(
+        name="astrbot_plugin_token_controller", display_name="令牌管理"
     )
 
     registry.handlers = [
@@ -200,6 +216,19 @@ def _populate(registry, star_map):
             "menu",
             [_CmdFilter("menu", alias={"菜单"})],
             desc="查看功能菜单图片",
+        ),
+        # 权限分类：管理员指令 + 普通指令（MEMBER）
+        _Handler(
+            "astrbot_plugin_token_controller.main",
+            "setadmin",
+            [_CmdFilter("adminonly"), _PermFilter("admin")],
+            desc="管理员专属指令",
+        ),
+        _Handler(
+            "astrbot_plugin_token_controller.main",
+            "myquota",
+            [_CmdFilter("membercmd"), _PermFilter("member")],
+            desc="普通指令",
         ),
     ]
 
@@ -286,6 +315,44 @@ def test_disabled_plugin_excluded():
         star_map["astrbot_plugin_disabled.main"].activated = True
         names = [g["name"] for g in plugin._collect_groups()]
         assert "已停用插件" in names, "启用后指令应出现在菜单中"
+
+
+def test_permission_filter():
+    with tempfile.TemporaryDirectory() as td:
+        registry, star_map, cls = _install_and_import(Path(td))
+        _populate(registry, star_map)
+        plugin = cls(None, {})
+
+        # 普通用户视图：不含管理员指令
+        user_groups = plugin._collect_groups(for_admin=False)
+        user_cmds = [c["cmd"] for g in user_groups for c in g["commands"]]
+        assert "adminonly" not in user_cmds, "普通用户不应看到管理员指令"
+        assert "membercmd" in user_cmds, "普通指令应可见"
+
+        # 管理员视图：全部指令，管理员指令带 admin 标记
+        admin_groups = plugin._collect_groups(for_admin=True)
+        admin_cmds = {c["cmd"]: c for g in admin_groups for c in g["commands"]}
+        assert "adminonly" in admin_cmds, "管理员应看到管理员指令"
+        assert admin_cmds["adminonly"]["admin"] is True
+        assert admin_cmds["membercmd"]["admin"] is False
+
+
+def test_is_admin():
+    with tempfile.TemporaryDirectory() as td:
+        _, _, cls = _install_and_import(Path(td))
+        plugin = cls(None, {})
+
+        class EvAdmin:
+            role = "admin"
+
+        class EvMember:
+            role = "member"
+
+            def is_admin(self):
+                return False
+
+        assert plugin._is_admin(EvAdmin()) is True
+        assert plugin._is_admin(EvMember()) is False
 
 
 def test_pagination():
@@ -388,6 +455,8 @@ def main():
         test_collect_and_group,
         test_filters,
         test_disabled_plugin_excluded,
+        test_permission_filter,
+        test_is_admin,
         test_pagination,
         test_render_png,
         test_font_selection,

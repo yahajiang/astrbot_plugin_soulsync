@@ -22,6 +22,10 @@ from .renderer import MenuRenderer
 
 try:
     from astrbot.core.star.filter.command import CommandFilter
+    from astrbot.core.star.filter.permission import (
+        PermissionType,
+        PermissionTypeFilter,
+    )
     from astrbot.core.star.star import star_map
     from astrbot.core.star.star_handler import EventType, star_handlers_registry
 
@@ -75,8 +79,22 @@ class MenuImagePlugin(Star):
             return _BUILTIN_LABEL, True, None
         return parts[0] if parts else "未分类", False, None
 
-    def _collect_groups(self) -> List[Dict]:
-        """遍历 AstrBot 全部已注册 handler，收集指令并按插件分组"""
+    @staticmethod
+    def _handler_requires_admin(handler) -> bool:
+        """判断 handler 是否要求管理员权限（event_filters 中含 ADMIN 权限过滤器）"""
+        for f in getattr(handler, "event_filters", []) or []:
+            if isinstance(f, PermissionTypeFilter) and getattr(
+                f, "permission_type", None
+            ) == PermissionType.ADMIN:
+                return True
+        return False
+
+    def _collect_groups(self, for_admin: bool = False) -> List[Dict]:
+        """遍历 AstrBot 全部已注册 handler，收集指令并按插件分组。
+
+        for_admin=True（管理员视图）：包含全部指令，管理员指令带 admin 标记；
+        for_admin=False（普通用户视图）：只包含非管理员权限指令。
+        """
         exclude_plugins = [str(x) for x in (self.config.get("exclude_plugins") or [])]
         show_builtin = bool(self.config.get("show_builtin", True))
         hide_self = bool(self.config.get("hide_self", True))
@@ -92,6 +110,10 @@ class MenuImagePlugin(Star):
             if handler.event_type != EventType.AdapterMessageEvent:
                 continue
             if not getattr(handler, "enabled", True):
+                continue
+            requires_admin = self._handler_requires_admin(handler)
+            # 普通用户视图：跳过管理员权限指令
+            if not for_admin and requires_admin:
                 continue
             module_path = getattr(handler, "handler_module_path", "") or ""
             if hide_self and module_path.startswith(_SELF_MODULE_PREFIX):
@@ -131,7 +153,12 @@ class MenuImagePlugin(Star):
                 ]
                 item = seen.get(cmd0)
                 if item is None:
-                    item = {"cmd": cmd0, "alias": [], "desc": desc}
+                    item = {
+                        "cmd": cmd0,
+                        "alias": [],
+                        "desc": desc,
+                        "admin": requires_admin,
+                    }
                     seen[cmd0] = item
                     group = groups.setdefault(
                         module_path, {"name": name, "commands": []}
@@ -141,6 +168,8 @@ class MenuImagePlugin(Star):
                     # 同名指令（如多个插件拦截同一指令）：保留第一个，缺描述时补充
                     if desc and not item["desc"]:
                         item["desc"] = desc
+                    if not item.get("admin") and requires_admin:
+                        item["admin"] = True
                 for a in aliases:
                     if not a or a in seen:
                         continue
@@ -180,6 +209,22 @@ class MenuImagePlugin(Star):
 
     # ────────────────────── 输出 ──────────────────────
 
+    @staticmethod
+    def _is_admin(event: AstrMessageEvent) -> bool:
+        """判断消息发送者是否为 AstrBot 管理员"""
+        try:
+            if hasattr(event, "is_admin"):
+                return bool(event.is_admin())
+        except Exception:
+            pass
+        return getattr(event, "role", "") == "admin"
+
+    def _admin_mark(self, c: Dict) -> str:
+        """管理员指令在文本降级输出中的标记"""
+        if c.get("admin") and bool(self.config.get("show_admin_mark", True)):
+            return str(self.config.get("admin_mark", "[管理员]"))
+        return ""
+
     def _text_menu(
         self,
         page_groups: List[Dict],
@@ -195,6 +240,9 @@ class MenuImagePlugin(Star):
                 cmd = f"/{c['cmd']}"
                 for a in c.get("alias") or []:
                     cmd += f" /{a}"
+                mark = self._admin_mark(c)
+                if mark:
+                    cmd += f" {mark}"
                 lines.append(f"  {cmd}" + (f" - {c['desc']}" if c["desc"] else ""))
         lines.append("=" * 24)
         lines.append(f"共 {total_commands} 个指令 · 第 {page}/{total_pages} 页")
@@ -206,8 +254,9 @@ class MenuImagePlugin(Star):
         if not _CORE_IMPORT_OK:
             yield event.plain_result("菜单插件核心模块加载失败，请查看 AstrBot 日志。")
             return
+        is_admin = self._is_admin(event)
         try:
-            groups = self._collect_groups()
+            groups = self._collect_groups(for_admin=is_admin)
         except Exception as e:
             logger.error(f"menu_image: 收集指令失败: {e}")
             yield event.plain_result(f"菜单生成失败：{e}")

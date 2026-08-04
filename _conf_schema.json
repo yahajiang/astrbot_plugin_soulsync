@@ -11,6 +11,18 @@
         "hint": "不在菜单中显示本插件自身的 /menu 指令",
         "default": true
     },
+    "show_admin_mark": {
+        "description": "管理员指令标记",
+        "type": "bool",
+        "hint": "管理员视图中，管理员权限指令后面显示标记",
+        "default": true
+    },
+    "admin_mark": {
+        "description": "管理员标记文字",
+        "type": "string",
+        "hint": "管理员指令的标记文字，仅 show_admin_mark 开启时生效",
+        "default": "[管理员]"
+    },
     "exclude_plugins": {
         "description": "排除的插件",
         "type": "list",

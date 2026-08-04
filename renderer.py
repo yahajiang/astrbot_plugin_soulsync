@@ -339,6 +339,11 @@ class MenuRenderer:
                 for a in c.get("alias") or []:
                     cmd += f"  {prefix}{a}"
                 draw.text((X + 8, yy), cmd, font=f_cmd, fill=pal["text"])
+                if c.get("admin") and self.cfg.get("show_admin_mark", True):
+                    mark = str(self.cfg.get("admin_mark", "[管理员]"))
+                    if mark:
+                        cw = draw.textlength(cmd, font=f_cmd)
+                        draw.text((X + 8 + cw + 10, yy), mark, font=f_sub, fill=pal["desc"])
                 yy += f_cmd.size + 8
                 desc = c.get("desc") or ""
                 if desc:
