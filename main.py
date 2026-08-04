@@ -52,7 +52,7 @@ class MenuImagePlugin(Star):
         self.renderer = MenuRenderer(self.data_dir, dict(self.config))
         logger.info(
             f"菜单图片插件已加载 | 渲染={'可用' if self.renderer.available else '降级文本'} "
-            f"| 触发词: /menu /菜单"
+            f"| 字体={self.renderer.font_summary} | 触发词: /menu /菜单"
         )
 
     # ────────────────────── 指令枚举与分组 ──────────────────────

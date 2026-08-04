@@ -315,6 +315,30 @@ def test_render_png():
         assert sanitize_text("赞🎉") == "赞", "emoji 应被去除"
 
 
+def test_font_selection():
+    with tempfile.TemporaryDirectory() as td:
+        from astrbot_plugin_menu_image.renderer import MenuRenderer
+
+        # 自定义字体路径应被优先使用
+        custom = "C:/Windows/Fonts/msyh.ttc"
+        r1 = MenuRenderer(Path(td), {"custom_font_path": custom})
+        assert r1._font_path == custom, "自定义字体路径应生效"
+        f = r1._font(20)
+        assert f.getname() != (), "应加载到真实字体（而非空白默认字体）"
+
+        # 无效的自定义路径应回退到系统探测
+        r2 = MenuRenderer(Path(td), {"custom_font_path": "Z:/no_such_font.ttf"})
+        if sys.platform == "win32":
+            assert r2._font_path, "Windows 上应自动探测到中文字体"
+        assert r2._font(20).getname() != (), "回退后仍应能加载字体"
+
+        # 不传配置时应自动探测
+        r3 = MenuRenderer(Path(td), {})
+        if sys.platform == "win32":
+            assert r3._font_path, "默认配置下 Windows 应自动探测到中文字体"
+        assert r3.font_summary, "font_summary 应有内容"
+
+
 def test_text_fallback():
     with tempfile.TemporaryDirectory() as td:
         registry, star_map, cls = _install_and_import(Path(td))
@@ -334,6 +358,7 @@ def main():
         test_filters,
         test_pagination,
         test_render_png,
+        test_font_selection,
         test_text_fallback,
     ]
     passed = 0

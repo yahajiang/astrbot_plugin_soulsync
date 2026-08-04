@@ -29,6 +29,7 @@
 | max_desc_length | int | 60 | 指令描述最大长度（0-200） |
 | cache_max_files | int | 20 | 图片缓存文件数上限（1-100），超出自动清理 |
 | menu_title / menu_subtitle / menu_footer | string | - | 标题/副标题/页脚文字 |
+| custom_font_path | string | (空) | 中文渲染为方框时，填写字体文件完整路径（如 `C:/Windows/Fonts/msyh.ttc` 或 Linux 下 Noto Sans CJK 路径） |
 | command_prefix | string | / | 菜单中指令显示的前缀 |
 | font_size | int | 30 | 正文字号（14-60） |
 | bg_color / accent_color / text_color / desc_color | string | - | 颜色（十六进制） |
@@ -40,6 +41,17 @@
 ## 数据目录
 
 `AstrBot/data/plugin_data/astrbot_plugin_menu_image/cache/` 存放生成的菜单图片，按 `cache_max_files` 自动清理。
+
+## 常见问题
+
+### 中文全部显示为方框？
+
+说明系统里没有可用的中文字体（常见于 Linux/Docker 部署，或字体文件损坏）。解决方法二选一：
+
+1. 安装中文字体，例如 Debian/Ubuntu：`apt install fonts-noto-cjk`，然后重启 AstrBot；
+2. 在插件配置中设置 `custom_font_path`，填写一个中文字体文件的完整路径。
+
+插件启动日志会打印实际选用的字体（`字体=...`），可据此判断是否生效。
 
 ## 测试
 

@@ -1,15 +1,21 @@
 """astrbot_plugin_menu_image - 菜单图片渲染器
 
 纯 Pillow 实现，不依赖 AstrBot，便于独立测试。
-自动探测系统中文字体（Windows / Linux / macOS），找不到字体时仍可渲染（中文显示为方块）。
+自动探测系统中文字体（Windows / Linux / macOS / WSL），找不到字体时仍可渲染（中文显示为方块）。
+支持配置 custom_font_path 手动指定字体文件。
 渲染前会去除 emoji（PIL 无法绘制彩色 emoji）。
 """
 
 from __future__ import annotations
 
+import logging
+import os
 import re
+import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
+
+_log = logging.getLogger("astrbot_plugin_menu_image.renderer")
 
 _EMOJI_RE = re.compile(
     "[\U0001F000-\U0001FAFF"
@@ -25,14 +31,33 @@ _FONT_CANDIDATES: List[Tuple[str, str]] = [
     (r"C:/Windows/Fonts/msyh.ttc", r"C:/Windows/Fonts/msyhbd.ttc"),
     (r"C:/Windows/Fonts/simhei.ttf", r"C:/Windows/Fonts/simhei.ttf"),
     (r"C:/Windows/Fonts/simsun.ttc", r"C:/Windows/Fonts/simhei.ttf"),
+    (r"C:/Windows/Fonts/Deng.ttf", r"C:/Windows/Fonts/Dengb.ttf"),
+    (r"C:/Windows/Fonts/simkai.ttf", r"C:/Windows/Fonts/simhei.ttf"),
+    (r"C:/Windows/Fonts/simfang.ttf", r"C:/Windows/Fonts/simhei.ttf"),
     (r"/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
      r"/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"),
     (r"/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
      r"/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc"),
+    (r"/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+     r"/usr/share/fonts/opentype/noto/NotoSansCJKsc-Bold.otf"),
     (r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
      r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
+    (r"/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+     r"/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"),
     (r"/System/Library/Fonts/PingFang.ttc", r"/System/Library/Fonts/PingFang.ttc"),
+    (r"/System/Library/Fonts/Hiragino Sans GB.ttc",
+     r"/System/Library/Fonts/Hiragino Sans GB.ttc"),
 ]
+
+# 递归扫描字体目录时，命中这些关键字的文件视为中文字体（文件名小写匹配）
+_CJK_KEYWORDS: Tuple[str, ...] = (
+    "msyh", "simhei", "simsun", "dengxian", "simkai", "simfang", "stxihei",
+    "stkaiti", "stsong", "stfangsong", "noto", "wqy", "zenhei", "sourcehan",
+    "sarasa", "pingfang", "heiti", "songti", "kaiti", "fangsong", "hannom",
+    "harmonyos", "miui", "oppo", "alibaba",
+)
+
+_FONT_EXTENSIONS = (".ttf", ".ttc", ".otf")
 
 _HEX_RE = re.compile(r"^#?([0-9a-fA-F]{6})$")
 
@@ -48,6 +73,57 @@ def _hex(color, default: Tuple[int, int, int]) -> Tuple[int, int, int]:
         return default
     v = int(m.group(1), 16)
     return ((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF)
+
+
+def _glob_candidates() -> List[Path]:
+    """递归扫描常见字体目录，返回命中中文字体关键字的所有字体文件"""
+    dirs: List[Path] = []
+    if sys.platform == "win32":
+        windir = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
+        dirs.append(windir)
+    else:
+        dirs += [
+            Path("/usr/share/fonts"),
+            Path("/usr/local/share/fonts"),
+            Path("~/.fonts").expanduser(),
+            Path("~/.local/share/fonts").expanduser(),
+            # WSL 下可直接使用 Windows 字体
+            Path("/mnt/c/Windows/Fonts"),
+            Path("/System/Library/Fonts"),
+            Path("/Library/Fonts"),
+            Path("~/Library/Fonts").expanduser(),
+        ]
+    found: List[Path] = []
+    seen: set = set()
+    for d in dirs:
+        if not d.is_dir():
+            continue
+        try:
+            iterator = d.rglob("*")
+        except OSError:
+            continue
+        for p in iterator:
+            if p.suffix.lower() not in _FONT_EXTENSIONS:
+                continue
+            name = p.name.lower()
+            if not any(k in name for k in _CJK_KEYWORDS):
+                continue
+            if name in seen:
+                continue
+            seen.add(name)
+            found.append(p)
+    return found
+
+
+def _font_loads(path) -> bool:
+    """验证字体文件能否被 Pillow 真正加载（防止文件损坏/权限问题）"""
+    try:
+        from PIL import ImageFont
+
+        ImageFont.truetype(str(path), 12)
+        return True
+    except Exception:
+        return False
 
 
 class MenuRenderer:
@@ -67,33 +143,92 @@ class MenuRenderer:
         self.available: bool = False
         self._font_path: Optional[str] = None
         self._font_bold_path: Optional[str] = None
+        self._fallback_paths: List[str] = []
         self._init_font()
 
     def _init_font(self):
+        """字体发现：custom_font_path > 固定候选列表 > 递归扫描字体目录"""
         try:
             from PIL import Image, ImageDraw, ImageFont  # noqa: F401
         except ImportError:
+            _log.warning("Pillow 未安装，菜单图片无法渲染")
             return
-        for regular, bold in _FONT_CANDIDATES:
-            if Path(regular).exists():
-                self._font_path = regular
-                self._font_bold_path = bold if Path(bold).exists() else regular
+
+        # 1. 配置手动指定的字体
+        custom = str(self.cfg.get("custom_font_path") or "").strip()
+        if custom:
+            if Path(custom).exists() and _font_loads(custom):
+                self._font_path = custom
+                self._font_bold_path = custom
+                self._fallback_paths = []
                 self.available = True
+                _log.info(f"使用自定义字体: {self.font_summary}")
                 return
-        # 字体不存在时仍尝试渲染（中文字符会显示为方块，但功能可用）
+            _log.warning(
+                f"custom_font_path 无效（文件不存在或无法加载）: {custom}，"
+                f"将尝试自动探测系统字体"
+            )
+
+        # 2. 固定候选列表 + 3. 递归扫描
+        pairs: List[Tuple[str, str]] = list(_FONT_CANDIDATES)
+        for p in _glob_candidates():
+            pairs.append((str(p), str(p)))
+        seen: set = set()
+        for regular, bold in pairs:
+            if regular in seen or not Path(regular).exists():
+                continue
+            seen.add(regular)
+            if not _font_loads(regular):
+                continue
+            self._font_path = regular
+            if Path(bold).exists() and _font_loads(bold):
+                self._font_bold_path = bold
+            else:
+                self._font_bold_path = regular
+            self._fallback_paths = [
+                r for r, _ in pairs if Path(r).exists() and r not in seen
+            ][:10]
+            self.available = True
+            _log.info(f"已自动探测到中文字体: {self.font_summary}")
+            return
+
+        # 一个中文字体都没有：仍允许渲染（中文会显示为方框），并给出明确提示
+        self._fallback_paths = []
         self.available = True
+        _log.warning(
+            "未找到可用的中文字体，菜单中的中文将显示为方框。"
+            "请安装中文字体（如 Linux: apt install fonts-noto-cjk）"
+            "或在插件配置中设置 custom_font_path 指定字体文件路径。"
+        )
+
+    @property
+    def font_summary(self) -> str:
+        """当前使用的字体描述，用于日志/调试"""
+        if not self._font_path:
+            return "未找到字体"
+        try:
+            from PIL import ImageFont
+
+            fam = ImageFont.truetype(self._font_path, 12).getname()
+            return f"{Path(self._font_path).name} ({fam[0]} {fam[1]})"
+        except Exception:
+            return str(self._font_path)
 
     def _font(self, size: int, bold: bool = False):
         from PIL import ImageFont
 
         path = (self._font_bold_path if bold else self._font_path) or None
-        try:
-            return ImageFont.truetype(path, size) if path else ImageFont.load_default()
-        except Exception:
+        if path:
             try:
-                return ImageFont.truetype(self._font_path, size)
+                return ImageFont.truetype(path, size)
             except Exception:
-                return ImageFont.load_default()
+                pass
+        for alt in self._fallback_paths:
+            try:
+                return ImageFont.truetype(alt, size)
+            except Exception:
+                continue
+        return ImageFont.load_default()
 
     def _wrap(self, draw, text: str, font, max_width: int) -> List[str]:
         """按字符宽度换行（兼容 CJK）"""

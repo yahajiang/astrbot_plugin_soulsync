@@ -41,6 +41,12 @@
         "hint": "图片顶部的大标题",
         "default": "功能菜单"
     },
+    "custom_font_path": {
+        "description": "自定义字体文件路径",
+        "type": "string",
+        "hint": "中文渲染为方框时使用：填写字体文件完整路径（如 C:/Windows/Fonts/msyh.ttc，或 Linux 下 Noto Sans CJK 的路径）。留空则自动探测系统字体",
+        "default": ""
+    },
     "menu_subtitle": {
         "description": "菜单副标题",
         "type": "string",
