@@ -382,6 +382,7 @@ class MenuRenderer:
             card_right_limit = X + content_w - self.CARD_PAD_SIDE - 4
             if bx + bw > card_right_limit:
                 bx = card_right_limit - bw
+                bx = max(bx, X)
             draw.rounded_rectangle([bx, yy + 2, bx + bw, yy + 2 + bh], radius=6, fill=(*pal["accent"], 50))
             draw.text((bx + bp, yy + 3), count_text, font=f_sub, fill=pal["accent"])
 
@@ -404,6 +405,7 @@ class MenuRenderer:
                         card_right_limit = X + content_w - self.CARD_PAD_SIDE - 4
                         if mb_x + mb_w > card_right_limit:
                             mb_x = card_right_limit - mb_w
+                            mb_x = max(mb_x, X)
                         draw.rounded_rectangle([mb_x, yy, mb_x + mb_w, yy + mb_h], radius=4, fill=(*pal["accent"], 40))
                         draw.text((mb_x + 5, yy + 1), mark, font=f_sub, fill=pal["accent"])
 
