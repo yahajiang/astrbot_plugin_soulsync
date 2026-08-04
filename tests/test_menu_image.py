@@ -48,10 +48,11 @@ class _Handler:
 
 
 class _StarMeta:
-    def __init__(self, name=None, display_name=None, reserved=False):
+    def __init__(self, name=None, display_name=None, reserved=False, activated=True):
         self.name = name
         self.display_name = display_name
         self.reserved = reserved
+        self.activated = activated
 
 
 class _Registry:
@@ -257,6 +258,36 @@ def test_filters():
         assert "astrbot_plugin_menu_image" in names
 
 
+def test_disabled_plugin_excluded():
+    with tempfile.TemporaryDirectory() as td:
+        registry, star_map, cls = _install_and_import(Path(td))
+        _populate(registry, star_map)
+
+        # 追加一个已停用的插件（activated=False）及其指令
+        star_map["astrbot_plugin_disabled.main"] = _StarMeta(
+            name="astrbot_plugin_disabled",
+            display_name="已停用插件",
+            activated=False,
+        )
+        registry.handlers.append(
+            _Handler(
+                "astrbot_plugin_disabled.main",
+                "oldcmd",
+                [_CmdFilter("oldcmd")],
+                desc="停用插件的指令",
+            )
+        )
+
+        plugin = cls(None, {})
+        names = [g["name"] for g in plugin._collect_groups()]
+        assert "已停用插件" not in names, "已停用插件的指令不应出现在菜单中"
+
+        # 恢复启用后应出现
+        star_map["astrbot_plugin_disabled.main"].activated = True
+        names = [g["name"] for g in plugin._collect_groups()]
+        assert "已停用插件" in names, "启用后指令应出现在菜单中"
+
+
 def test_pagination():
     with tempfile.TemporaryDirectory() as td:
         registry, star_map, cls = _install_and_import(Path(td))
@@ -356,6 +387,7 @@ def main():
     tests = [
         test_collect_and_group,
         test_filters,
+        test_disabled_plugin_excluded,
         test_pagination,
         test_render_png,
         test_font_selection,

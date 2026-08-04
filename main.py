@@ -57,23 +57,23 @@ class MenuImagePlugin(Star):
 
     # ────────────────────── 指令枚举与分组 ──────────────────────
 
-    def _resolve_group(self, module_path: str) -> Tuple[str, bool]:
-        """根据 handler 模块路径解析插件显示名，返回 (名称, 是否内置)"""
+    def _resolve_group(self, module_path: str) -> Tuple[str, bool, object]:
+        """根据 handler 模块路径解析插件元数据，返回 (名称, 是否内置, StarMetadata 或 None)"""
         parts = module_path.split(".")
         for i in range(len(parts), 0, -1):
             md = star_map.get(".".join(parts[:i]))
             if md is not None:
                 if getattr(md, "reserved", False):
-                    return _BUILTIN_LABEL, True
+                    return _BUILTIN_LABEL, True, md
                 name = (
                     getattr(md, "display_name", None)
                     or getattr(md, "name", None)
                     or parts[0]
                 )
-                return str(name), False
+                return str(name), False, md
         if parts and parts[0] == "astrbot":
-            return _BUILTIN_LABEL, True
-        return parts[0] if parts else "未分类", False
+            return _BUILTIN_LABEL, True, None
+        return parts[0] if parts else "未分类", False, None
 
     def _collect_groups(self) -> List[Dict]:
         """遍历 AstrBot 全部已注册 handler，收集指令并按插件分组"""
@@ -96,7 +96,10 @@ class MenuImagePlugin(Star):
             module_path = getattr(handler, "handler_module_path", "") or ""
             if hide_self and module_path.startswith(_SELF_MODULE_PREFIX):
                 continue
-            name, is_builtin = self._resolve_group(module_path)
+            name, is_builtin, plugin_md = self._resolve_group(module_path)
+            # 仅展示已启用插件的指令（插件在 WebUI 中停用后 activated 为 False）
+            if plugin_md is not None and not getattr(plugin_md, "activated", True):
+                continue
             if is_builtin and not show_builtin:
                 continue
             if any(
