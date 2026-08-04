@@ -54,6 +54,9 @@ class MenuImagePlugin(Star):
         except OSError:
             pass
         self.renderer = MenuRenderer(self.data_dir, dict(self.config))
+        self._groups_cache: Dict[bool, Tuple[float, List[Dict]]] = {}
+        self._groups_ttl = 60.0
+        self._page_ttl = 30.0
         logger.info(
             f"菜单图片插件已加载 | 渲染={'可用' if self.renderer.available else '降级文本'} "
             f"| 字体={self.renderer.font_summary} | 触发词: /menu /菜单"
@@ -94,7 +97,12 @@ class MenuImagePlugin(Star):
 
         for_admin=True（管理员视图）：包含全部指令，管理员指令带 admin 标记；
         for_admin=False（普通用户视图）：只包含非管理员权限指令。
+
+        结果按 60s TTL 缓存（WebUI 变更插件状态后最多延迟 60s 可见）。
         """
+        cached = self._groups_cache.get(for_admin)
+        if cached is not None and time.monotonic() - cached[0] < self._groups_ttl:
+            return cached[1]
         exclude_plugins = [str(x) for x in (self.config.get("exclude_plugins") or [])]
         show_builtin = bool(self.config.get("show_builtin", True))
         hide_self = bool(self.config.get("hide_self", True))
@@ -187,7 +195,19 @@ class MenuImagePlugin(Star):
         )
         for g in ordered:
             g["commands"].sort(key=lambda c: c["cmd"])
+        self._groups_cache[for_admin] = (time.monotonic(), ordered)
         return ordered
+
+    def _cached_page(self, key: str):
+        """同键渲染结果在 30s TTL 内直接复用（同名指令变更最多延迟 30s 可见）"""
+        try:
+            now = time.monotonic()
+            for p in self.renderer.cache_dir.glob(f"{key}_*.png"):
+                if now - p.stat().st_mtime < self._page_ttl:
+                    return p
+        except OSError:
+            pass
+        return None
 
     @staticmethod
     def _paginate(groups: List[Dict], per_page: int) -> List[List[Dict]]:
@@ -282,18 +302,21 @@ class MenuImagePlugin(Star):
             )
             return
 
-        out_path = self.data_dir / "cache" / f"menu_p{page}_{int(time.time())}.png"
-        try:
-            rendered = self.renderer.render_page(
-                page_groups,
-                page=page,
-                total_pages=total_pages,
-                total_commands=total_commands,
-                out_path=out_path,
-            )
-        except Exception as e:
-            logger.error(f"menu_image: 渲染菜单图片失败: {e}")
-            rendered = None
+        cache_key = f"menu_{'a' if is_admin else 'u'}_p{page}"
+        rendered = self._cached_page(cache_key)
+        if rendered is None:
+            out_path = self.renderer.cache_dir / f"{cache_key}_{int(time.time())}.png"
+            try:
+                rendered = self.renderer.render_page(
+                    page_groups,
+                    page=page,
+                    total_pages=total_pages,
+                    total_commands=total_commands,
+                    out_path=out_path,
+                )
+            except Exception as e:
+                logger.error(f"menu_image: 渲染菜单图片失败: {e}")
+                rendered = None
         if rendered is None or not Path(rendered).exists():
             yield event.plain_result(
                 self._text_menu(page_groups, page, total_pages, total_commands)

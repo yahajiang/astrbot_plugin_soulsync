@@ -311,10 +311,45 @@ def test_disabled_plugin_excluded():
         names = [g["name"] for g in plugin._collect_groups()]
         assert "已停用插件" not in names, "已停用插件的指令不应出现在菜单中"
 
-        # 恢复启用后应出现
+        # 恢复启用后应出现（需清 TTL 缓存）
         star_map["astrbot_plugin_disabled.main"].activated = True
+        plugin._groups_cache.clear()
         names = [g["name"] for g in plugin._collect_groups()]
         assert "已停用插件" in names, "启用后指令应出现在菜单中"
+
+
+def test_collect_cache():
+    with tempfile.TemporaryDirectory() as td:
+        registry, star_map, cls = _install_and_import(Path(td))
+        _populate(registry, star_map)
+        plugin = cls(None, {})
+
+        g1 = plugin._collect_groups()
+        # 追加停用插件，未清缓存：TTL 内应命中旧结果
+        star_map["astrbot_plugin_disabled.main"] = _StarMeta(
+            name="astrbot_plugin_disabled",
+            display_name="已停用插件",
+            activated=False,
+        )
+        registry.handlers.append(
+            _Handler(
+                "astrbot_plugin_disabled.main",
+                "oldcmd",
+                [_CmdFilter("oldcmd")],
+                desc="停用插件的指令",
+            )
+        )
+        g2 = plugin._collect_groups()
+        assert [x["name"] for x in g1] == [x["name"] for x in g2], (
+            "TTL 内应命中缓存，不反映新状态"
+        )
+
+        # 清缓存后应反映新状态
+        plugin._groups_cache.clear()
+        g3 = plugin._collect_groups()
+        assert "已停用插件" not in [x["name"] for x in g3], (
+            "清缓存后应反映新状态"
+        )
 
 
 def test_permission_filter():
@@ -455,6 +490,7 @@ def main():
         test_collect_and_group,
         test_filters,
         test_disabled_plugin_excluded,
+        test_collect_cache,
         test_permission_filter,
         test_is_admin,
         test_pagination,

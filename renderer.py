@@ -165,6 +165,7 @@ class MenuRenderer:
         self._font_path: Optional[str] = None
         self._font_bold_path: Optional[str] = None
         self._fallback_paths: List[str] = []
+        self._font_cache: dict = {}
         self._init_font()
 
     def _init_font(self):
@@ -218,32 +219,45 @@ class MenuRenderer:
             return str(self._font_path)
 
     def _font(self, size: int, bold: bool = False):
+        key = (size, bold)
+        cached = self._font_cache.get(key)
+        if cached is not None:
+            return cached
         from PIL import ImageFont
         path = (self._font_bold_path if bold else self._font_path) or None
+        font = None
         if path:
             try:
-                return ImageFont.truetype(path, size)
+                font = ImageFont.truetype(path, size)
             except Exception:
                 pass
-        for alt in self._fallback_paths:
-            try:
-                return ImageFont.truetype(alt, size)
-            except Exception:
-                continue
-        return ImageFont.load_default()
+        if font is None:
+            for alt in self._fallback_paths:
+                try:
+                    font = ImageFont.truetype(alt, size)
+                    break
+                except Exception:
+                    continue
+        if font is None:
+            font = ImageFont.load_default()
+        self._font_cache[key] = font
+        return font
 
     def _wrap(self, draw, text: str, font, max_width: int) -> List[str]:
+        """二分断点换行：textlength 单调非减，每行 O(log n) 次调用（逐字符为 O(n)）"""
         lines: List[str] = []
-        cur = ""
-        for ch in text:
-            if draw.textlength(cur + ch, font=font) <= max_width:
-                cur += ch
-            else:
-                if cur:
-                    lines.append(cur)
-                cur = ch
-        if cur:
-            lines.append(cur)
+        n = len(text)
+        i = 0
+        while i < n:
+            lo, hi = i + 1, n
+            while lo < hi:
+                mid = (lo + hi + 1) // 2
+                if draw.textlength(text[i:mid], font=font) <= max_width:
+                    lo = mid
+                else:
+                    hi = mid - 1
+            lines.append(text[i:lo])
+            i = lo
         return lines or [""]
 
     def _palette(self):
@@ -273,8 +287,7 @@ class MenuRenderer:
         return Image.composite(top, bot, gradient)
 
     @staticmethod
-    def _add_glow(
-        draw,
+    def _make_glow_layer(
         width: int,
         height: int,
         accent_color,
@@ -282,19 +295,29 @@ class MenuRenderer:
         second_color=(34, 44, 88),
         second_alpha: int = 70,
     ):
-        """双层光晕：右上 accent 光晕 + 左下深蓝紫光晕，增强背景层次"""
-        cx, cy = width - 80, -40
-        for r in range(240, 0, -24):
-            a = max(0, int(alpha * (1.0 - r / 240)))
+        """双层光晕图层：1/4 尺寸绘制后放大合成，大圆填充量减 16 倍
+
+        右上 accent 光晕 + 左下深蓝紫光晕，BILINEAR 放大自带柔化。
+        """
+        from PIL import Image, ImageDraw
+
+        scale = 4
+        sw, sh = max(1, width // scale), max(1, height // scale)
+        layer = Image.new("RGBA", (sw, sh), (0, 0, 0, 0))
+        ldraw = ImageDraw.Draw(layer)
+        cx, cy = sw - 20, -10
+        for r in range(60, 0, -6):
+            a = max(0, int(alpha * (1.0 - r / 60)))
             if a <= 0:
                 continue
-            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*accent_color, a))
-        cx, cy = -70, height + 60
-        for r in range(220, 0, -22):
-            a = max(0, int(second_alpha * (1.0 - r / 220)))
+            ldraw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*accent_color, a))
+        cx, cy = -18, sh + 15
+        for r in range(55, 0, -5):
+            a = max(0, int(second_alpha * (1.0 - r / 55)))
             if a <= 0:
                 continue
-            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*second_color, a))
+            ldraw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*second_color, a))
+        return layer.resize((width, height), Image.BILINEAR)
 
     def render_page(self, groups: List[dict], *, page: int, total_pages: int, total_commands: int, out_path: Path) -> Optional[Path]:
         from PIL import Image, ImageDraw
@@ -361,9 +384,9 @@ class MenuRenderer:
         # Gradient background + glow
         img = self._make_gradient(W, y, pal["bg_top"], pal["bg"])
         img = img.convert("RGBA")
-        draw = ImageDraw.Draw(img)
         if show_glow:
-            self._add_glow(draw, W, y, pal["accent"])
+            img = Image.alpha_composite(img, self._make_glow_layer(W, y, pal["accent"]))
+        draw = ImageDraw.Draw(img)
 
         # Card backgrounds
         card_bg_rgba = (*pal["card_bg"], 220)
@@ -511,7 +534,7 @@ class MenuRenderer:
         out.paste(img, (0, 0), mask)
 
         try:
-            out.save(out_path, "PNG")
+            out.save(out_path, "PNG", compress_level=1)
         except OSError:
             return None
         self._cleanup_cache()
