@@ -349,18 +349,25 @@ function detail(uid){
       for(const m of bp.achieved_milestones)h+=`<div style="padding-left:20px">${milestones[m]||m}</div>`;
       h+='</div>';
     }
+
+    // 行为档案原始数据
+    h+=`<div style="margin-bottom:10px"><button class="btn sm" onclick="toggleRaw('rawBp')">🗂️ 查看行为档案原始数据</button></div><div id="rawBp" style="display:none;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;margin-bottom:10px">${esc(JSON.stringify(bp,null,2))}</div>`;
   }
 
   // ── 长期记忆（真实数据）──
   if(p.memory&&p.memory.length){
-    h+='<div class="sec-t">📜 情感记忆</div><div class="mem-box">';
+    h+='<div class="sec-t">📜 情感记忆（${p.memory.length} 条）</div><div class="mem-box">';
     for(const e of p.memory){
       const ts=new Date(e.ts*1000).toLocaleString('zh-CN');
-      h+=`<div style="font-size:12px;padding:4px 0"><div style="color:var(--dim);font-size:10px">${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}</div><div>${esc(e.description||'')}</div>${e.message?`<div style="color:var(--dim);font-size:11px;padding-left:10px">💬 ${esc(String(e.message).slice(0,60))}</div>`:''}</div>`;
+      const stgTag=e.stage?` · <span style="color:var(--blue)">${esc(e.stage)}</span>`:'';
+      h+=`<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #f0f2f5"><div style="color:var(--dim);font-size:10px">🕒 ${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}${stgTag}</div><div>${esc(e.description||'')}</div>${e.message?`<div style="color:var(--dim);font-size:11px;padding-left:10px">💬 ${esc(String(e.message))}</div>`:''}</div>`;
     }
     h+='</div>';
   }else if(p.user_id){
     h+='<div class="sec-t">📜 情感记忆</div><div class="mem-box"><div class="hd">暂无长期记忆记录</div></div>';
+  }
+  if(p.memory){
+    h+=`<div style="margin-bottom:10px"><button class="btn sm" onclick="toggleRaw('rawMem')">🗂️ 查看长期记忆原始数据</button></div><div id="rawMem" style="display:none;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;margin-bottom:10px">${esc(JSON.stringify(p.memory,null,2))}</div>`;
   }
 
   // ── 关系建议 ──
@@ -384,6 +391,7 @@ function detail(uid){
 
 function dc(l,v,bv,mn,mx,c){let h=`<div class="det-c"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div>`;if(bv!==null)h+=`<div class="bar" style="margin-top:4px"><div class="bar-fg" style="width:${pc(bv,mn,mx)}%;background:${c}"></div></div>`;return h+'</div>'}
 function bc(ic,v,l){return`<div class="bc"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`}
+function toggleRaw(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none'}
 
 function lb(neg){
   const sorted=neg?[...P].sort((a,b)=>a.favorability-b.favorability).slice(0,15):[...P].sort((a,b)=>b.favorability-a.favorability).slice(0,15);
