@@ -392,6 +392,7 @@ function detail(uid){
 function dc(l,v,bv,mn,mx,c){let h=`<div class="det-c"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div>`;if(bv!==null)h+=`<div class="bar" style="margin-top:4px"><div class="bar-fg" style="width:${pc(bv,mn,mx)}%;background:${c}"></div></div>`;return h+'</div>'}
 function bc(ic,v,l){return`<div class="bc"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`}
 function toggleRaw(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none'}
+window.toggleRaw=toggleRaw;
 
 function lb(neg){
   const sorted=neg?[...P].sort((a,b)=>a.favorability-b.favorability).slice(0,15):[...P].sort((a,b)=>b.favorability-a.favorability).slice(0,15);
