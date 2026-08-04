@@ -215,7 +215,7 @@ function detail(uid){
   h+=dc('阶段进度',`${p.stage_progress.toFixed(1)}%`,p.stage_progress,0,100,'var(--green)');
   h+='</div>';
 
-  // ── 关系阶段 + 距下一阶段 + 关系角色 ──
+  // ── 关系阶段 + 距下一阶段 ──
   h+=`<div style="margin-bottom:12px;font-size:13px">🧬 当前关系：${stg(p)}`;
   if(p.stage_index>=0&&p.stage_index<5){
     const thresholds=[15,32,50,68,82,95];
@@ -226,12 +226,22 @@ function detail(uid){
     h+=`<span class="next-tag">🌸 最高阶段</span>`;
   }
   h+='</div>';
-  // 关系角色（与用户侧同步）
-  if(p.rel_active){
-    const rk=Roles.find(x=>x.key===p.rel_active);
-    const rel=p.relationships?p.relationships.find(x=>x.key===p.rel_active):null;
-    const lockTag=rel&&rel.locked?'（🔒 已锁定）':'';
-    if(rk)h+=`<div id="dRole" style="margin-bottom:12px;font-size:13px">🎭 关系角色：${rk.emoji} ${esc(rk.name)}${lockTag}</div>`;
+  // 关系角色（完整解锁状态 + 当前激活）
+  if(p.relationships&&p.relationships.length){
+    const relRows=p.relationships.filter(r=>r.key!=='stranger');
+    h+=`<div class="sec-t">🎭 关系角色解锁</div><div class="sec-box">`;
+    const activeRel=p.rel_active?p.relationships.find(x=>x.key===p.rel_active):null;
+    const rk=p.rel_active?Roles.find(x=>x.key===p.rel_active):null;
+    if(rk&&activeRel){
+      const lockTag=p.rel_locked?'（🔒 已锁定）':'';
+      h+=`<div class="item" style="font-weight:700"><span class="ic">⭐</span>当前关系：${rk.emoji} ${esc(rk.name)}${lockTag}</div>`;
+    }
+    for(const rr of relRows){
+      const mark=rr.active?'✅':rr.unlocked?'🔓':rr.can_unlock?'🔑':'🔒';
+      const state=rr.active?'使用中':rr.unlocked?'已解锁':rr.can_unlock?'可解锁':'未解锁';
+      h+=`<div class="item"><span class="ic">${mark}</span>${esc(rr.name)}<span style="color:var(--dim);font-size:11px">（${state}）</span></div>`;
+    }
+    h+='</div>';
   }
 
   // ── 态度/关系描述 ──
@@ -250,14 +260,29 @@ function detail(uid){
 
   // ── 互动统计 ──
   h+='<div class="sec-box">';
-  h+=`<div class="item"><span class="ic">💬</span>总互动 <strong>${p.total_interactions}</strong> 次 · 正面 <strong>${p.positive_interactions}</strong> · 负面 <strong>${p.negative_interactions}</strong> · 对话 <strong>${p.conversation_turns}</strong> 轮</div>`;
+  const pctPos=p.total_interactions>0?Math.round(p.positive_interactions/p.total_interactions*100):0;
+  h+=`<div class="item"><span class="ic">💬</span>总互动 <strong>${p.total_interactions}</strong> 次 · 正面 <strong>${p.positive_interactions}</strong>（${pctPos}%） · 负面 <strong>${p.negative_interactions}</strong> · 对话 <strong>${p.conversation_turns}</strong> 轮</div>`;
+  h+=`<div class="item"><span class="ic">🔄</span>距上次智能更新 <strong>${p.turns_since_update??0}</strong> 轮 · 最近更新 <strong>${p.last_update_ts?new Date(p.last_update_ts*1000).toLocaleString('zh-CN'):'未知'}</strong></div>`;
   h+='</div>';
+
+  // ── 今日节日/纪念日 ──
+  if(p.anniversaries&&p.anniversaries.length){
+    const todayItems=p.anniversaries.filter(a=>a.is_today);
+    if(todayItems.length){
+      h+='<div class="sec-t">🎉 今日特别日子</div><div class="sec-box">';
+      for(const a of todayItems){
+        const ic=a.kind==='birthday'?'🎂':a.kind==='first_meet'?'🤝':'💝';
+        h+=`<div class="item"><span class="ic">${ic}</span>${esc(a.name)} · <span style="color:#e84393;font-weight:700">就是今天 🎉</span></div>`;
+      }
+      h+='</div>';
+    }
+  }
 
   // ── 纪念日 ──
   if(p.anniversaries&&p.anniversaries.length){
-    h+='<div class="sec-t">📅 纪念日</div><div class="sec-box">';
+    h+='<div class="sec-t">📅 纪念日与倒计时</div><div class="sec-box">';
     for(const a of p.anniversaries){
-      const tag=a.is_today?' · <span style="color:#e84393;font-weight:700">就是今天 🎉</span>':(a.days_left>=0?` · 还有 ${a.days_left} 天`:'');
+      const tag=a.is_today?' · <span style="color:#e84393;font-weight:700">就是今天 🎉</span>':(a.days_left>=0?` · 还有 ${a.days_left} 天`:` · ${a.month??''}-${a.day??''}`);
       const ic=a.kind==='birthday'?'🎂':a.kind==='first_meet'?'🤝':'💝';
       h+=`<div class="item"><span class="ic">${ic}</span>${esc(a.name)}${tag}</div>`;
     }
@@ -273,11 +298,16 @@ function detail(uid){
       h+=`<div class="item" style="justify-content:space-between"><span>${p.trend.dates[i]}</span><div style="flex:1;margin:0 8px;height:6px;background:#edf0f5;border-radius:3px;overflow:hidden"><div style="width:${r}%;height:100%;background:var(--blue)"></div></div><span style="min-width:44px;text-align:right">${v>=0?'+':''}${v.toFixed(1)}</span></div>`;
     }
     h+='</div>';
+    const tsd=p.trend_summary;
+    if(tsd&&tsd.has_data){
+      h+=`<div class="sec-box"><div class="item"><span class="ic">📊</span>近${tsd.days}天 · 净变化 <strong>${tsd.delta>=0?'+':''}${tsd.delta.toFixed(1)}</strong> · 最高 <strong>${tsd.max_fav>=0?'+':''}${tsd.max_fav.toFixed(1)}</strong> · 最低 <strong>${tsd.min_fav>=0?'+':''}${tsd.min_fav.toFixed(1)}</strong></div>`;
+      h+=`<div class="item"><span class="ic">📅</span>上升 ${tsd.up_days} 天 · 下降 ${tsd.down_days} 天 · 平均亲密 <strong>${tsd.avg_int.toFixed(1)}</strong></div></div>`;
+    }
   }
 
   // ── 行为模式 ──
   if(bp){
-    h+='<div class="sec-t">🎯 行为模式</div><div class="bh">';
+    h+='<div class="sec-t">🎯 行为档案</div><div class="bh">';
     h+=bc('🔥',bp.current_streak_count,bp.current_streak_type==='positive'?'正面势头':bp.current_streak_type==='negative'?'负面势头':'中性');
     h+=bc('💔',bp.betrayal_count,'背叛');h+=bc('💫',bp.comeback_count,'回归');
     h+=bc('🕊️',bp.apology_count,'道歉');h+=bc('📈',bp.total_reward_accumulated.toFixed(1),'奖励');h+=bc('📉',bp.total_penalty_accumulated.toFixed(1),'惩罚');
@@ -287,7 +317,29 @@ function detail(uid){
     if(bp.current_streak_count>1){
       const skType=bp.current_streak_type==='positive'?'正面 ✨':'负面 ⚡';
       h+=`<div class="sec-box"><div class="item"><span class="ic">🔥</span>当前势头：${skType} ×${bp.current_streak_count}</div>`;
-      h+=`<div class="item"><span class="ic">📊</span>最长正面连续 ${bp.max_positive_streak} 次 · 最长负面连续 ${bp.max_negative_streak} 次</div></div>`;
+      h+=`<div class="item"><span class="ic">📊</span>最长正面连续 ${bp.max_positive_streak} 次 · 最长负面连续 ${bp.max_negative_streak} 次</div>`;
+      h+=`<div class="item"><span class="ic">🕒</span>最近互动：${bp.last_interaction_ts?new Date(bp.last_interaction_ts*1000).toLocaleString('zh-CN'):'未知'}</div></div>`;
+    }
+
+    // 特殊事件时间戳
+    const tsRows=[];
+    if(bp.last_betrayal_ts)tsRows.push(['💔','上次背叛',bp.last_betrayal_ts]);
+    if(bp.last_apology_ts)tsRows.push(['🕊️','上次道歉',bp.last_apology_ts]);
+    if(bp.last_comeback_ts)tsRows.push(['💫','上次回归',bp.last_comeback_ts]);
+    if(tsRows.length){
+      h+='<div class="sec-box">';
+      for(const[ic,l,t]of tsRows)h+=`<div class="item"><span class="ic">${ic}</span>${l}：${new Date(t*1000).toLocaleString('zh-CN')}</div>`;
+      h+='</div>';
+    }
+
+    // 待衰减效果
+    if(bp.pending_effects&&bp.pending_effects.length){
+      h+='<div class="sec-box"><div class="item"><span class="ic">⏳</span>待衰减效果（${bp.pending_effects.length}）</div>';
+      for(const e of bp.pending_effects){
+        const applyAt=e[0]||0,fav=e[1]||0,int_=e[2]||0,reason=e[3]||'';
+        h+=`<div style="padding-left:20px;font-size:11px;color:var(--dim)">${reason} · 好感${fav>=0?'+':''}${fav.toFixed(1)} 亲密${int_>=0?'+':''}${int_.toFixed(1)} · ${new Date(applyAt*1000).toLocaleString('zh-CN')}</div>`;
+      }
+      h+='</div>';
     }
 
     // 里程碑
@@ -299,10 +351,16 @@ function detail(uid){
     }
   }
 
-  // ── 长期记忆 ──
-  if(p.user_id){
-    const memBox=document.createElement('div');
-    h+='<div class="mem-box" id="dMem"><div class="hd">📜 情感记忆</div>加载中...</div>';
+  // ── 长期记忆（真实数据）──
+  if(p.memory&&p.memory.length){
+    h+='<div class="sec-t">📜 情感记忆</div><div class="mem-box">';
+    for(const e of p.memory){
+      const ts=new Date(e.ts*1000).toLocaleString('zh-CN');
+      h+=`<div style="font-size:12px;padding:4px 0"><div style="color:var(--dim);font-size:10px">${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}</div><div>${esc(e.description||'')}</div>${e.message?`<div style="color:var(--dim);font-size:11px;padding-left:10px">💬 ${esc(String(e.message).slice(0,60))}</div>`:''}</div>`;
+    }
+    h+='</div>';
+  }else if(p.user_id){
+    h+='<div class="sec-t">📜 情感记忆</div><div class="mem-box"><div class="hd">暂无长期记忆记录</div></div>';
   }
 
   // ── 关系建议 ──
@@ -318,30 +376,12 @@ function detail(uid){
   h+=`<div class="advice"><div class="hd">💡 关系建议</div>${advice}</div>`;
 
   // ── 底部信息 ──
-  h+=`<div style="font-size:11px;color:var(--dim);text-align:center">UID: ${esc(p.user_id)} · 数据更新于 ${p.last_update_ts?new Date(p.last_update_ts*1000).toLocaleString('zh-CN'):'未知'}</div>`;
+  h+=`<div style="font-size:11px;color:var(--dim);text-align:center">UID: ${esc(p.user_id)} · 档案创建 ${p.created_at?new Date(p.created_at*1000).toLocaleString('zh-CN'):'—'} · 最近更新 ${p.last_update_ts?new Date(p.last_update_ts*1000).toLocaleString('zh-CN'):'未知'} · 自上次更新 ${p.turns_since_update??0} 轮</div>`;
 
   $('dBody').innerHTML=h;
   $('oDet').classList.add('on');
-
-  // 异步加载长期记忆
-  if(p.user_id)loadMem(p.user_id);
 }
 
-async function loadMem(uid){
-  try{
-    const r=await B.apiGet('data');
-    // 长期记忆在 data 接口已有，但目前不在返回中，直接用已有数据
-    // 这里展示行为档案中的里程碑和统计数据
-    const el=document.getElementById('dMem');
-    if(!el)return;
-    const bp=Bp.find(b=>b.user_id===uid);
-    if(bp&&bp.achieved_milestones&&bp.achieved_milestones.length){
-      el.innerHTML=`<div class="hd">📜 情感记忆</div><div>已达成 ${bp.achieved_milestones.length} 个里程碑，累计奖励 ${bp.total_reward_accumulated.toFixed(1)}，累计惩罚 ${bp.total_penalty_accumulated.toFixed(1)}</div>`;
-    }else{
-      el.innerHTML=`<div class="hd">📜 情感记忆</div><div>暂无长期记忆记录</div>`;
-    }
-  }catch(e){}
-}
 function dc(l,v,bv,mn,mx,c){let h=`<div class="det-c"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div>`;if(bv!==null)h+=`<div class="bar" style="margin-top:4px"><div class="bar-fg" style="width:${pc(bv,mn,mx)}%;background:${c}"></div></div>`;return h+'</div>'}
 function bc(ic,v,l){return`<div class="bc"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`}
 

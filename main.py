@@ -247,10 +247,14 @@ class SoulSyncPro(Star):
                     p.user_id, today
                 )
                 d["trend"] = self.stats_tracker.to_web(p.user_id, 7)
+                d["trend_summary"] = self.stats_tracker.summary(p.user_id, 7)
                 d["relationships"] = self.relationship_manager.status(
                     p.user_id, p.favorability, p.intimacy, p.total_interactions
                 )
                 d["rel_active"] = self.relationship_manager.active_role(p.user_id)
+                d["rel_locked"] = self.relationship_manager.is_locked(p.user_id)
+                d["rel_pinned"] = self.relationship_manager.pinned_role(p.user_id)
+                d["memory"] = self.long_memory.get_events(p.user_id, 20)
                 profiles.append(d)
             bps = [bp.to_dict() for bp in self.behavior_profiles.values()]
             return json_response({
