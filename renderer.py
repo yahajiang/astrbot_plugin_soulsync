@@ -354,7 +354,6 @@ class MenuRenderer:
 
         # Content
         yy = self.PAD_Y
- 
 
         draw.text((X, yy), title, font=f_title, fill=pal["text"])
         yy += f_title.size + 14
