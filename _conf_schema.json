@@ -1,0 +1,92 @@
+{
+    "show_builtin": {
+        "description": "显示内置指令",
+        "type": "bool",
+        "hint": "是否在菜单中显示 AstrBot 内置指令（如 /help、/reset、/sid 等）",
+        "default": true
+    },
+    "hide_self": {
+        "description": "隐藏本插件指令",
+        "type": "bool",
+        "hint": "不在菜单中显示本插件自身的 /menu 指令",
+        "default": true
+    },
+    "exclude_plugins": {
+        "description": "排除的插件",
+        "type": "list",
+        "hint": "这些插件（填插件目录名或显示名）的指令不会出现在菜单中",
+        "default": []
+    },
+    "max_commands_per_page": {
+        "description": "每页指令数上限",
+        "type": "int",
+        "hint": "单张图片最多显示的指令条数，超过自动分页（限制 1-200）",
+        "default": 40
+    },
+    "max_desc_length": {
+        "description": "指令描述最大长度",
+        "type": "int",
+        "hint": "指令描述最多保留的字符数，超出截断（限制 0-200）",
+        "default": 60
+    },
+    "cache_max_files": {
+        "description": "图片缓存上限",
+        "type": "int",
+        "hint": "数据目录中最多保留的菜单图片数量，超出自动清理（限制 1-100）",
+        "default": 20
+    },
+    "menu_title": {
+        "description": "菜单标题",
+        "type": "string",
+        "hint": "图片顶部的大标题",
+        "default": "功能菜单"
+    },
+    "menu_subtitle": {
+        "description": "菜单副标题",
+        "type": "string",
+        "hint": "标题下方的说明文字，留空则不显示",
+        "default": "AstrBot 指令汇总"
+    },
+    "menu_footer": {
+        "description": "菜单页脚",
+        "type": "string",
+        "hint": "图片底部的提示文字，留空则不显示",
+        "default": "发送 /menu 页码 查看更多"
+    },
+    "command_prefix": {
+        "description": "指令前缀",
+        "type": "string",
+        "hint": "菜单中指令显示的前缀，默认 /",
+        "default": "/"
+    },
+    "font_size": {
+        "description": "正文字号",
+        "type": "int",
+        "hint": "指令文字大小（限制 14-60）",
+        "default": 30
+    },
+    "bg_color": {
+        "description": "背景颜色",
+        "type": "string",
+        "hint": "十六进制颜色，如 #151a26",
+        "default": "#151a26"
+    },
+    "accent_color": {
+        "description": "强调颜色",
+        "type": "string",
+        "hint": "标题/分组名/分隔线颜色",
+        "default": "#4f9cf9"
+    },
+    "text_color": {
+        "description": "文字颜色",
+        "type": "string",
+        "hint": "指令文字颜色",
+        "default": "#e6e9f0"
+    },
+    "desc_color": {
+        "description": "描述颜色",
+        "type": "string",
+        "hint": "指令描述文字颜色",
+        "default": "#8a93a6"
+    }
+}

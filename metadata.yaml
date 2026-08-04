@@ -1,0 +1,5 @@
+name: astrbot_plugin_menu_image
+display_name: 菜单图片
+desc: 自动汇总 Bot 全部已注册指令，按插件分组生成菜单图片。支持 /menu 与 /菜单，指令过多时自动分页。
+version: v1.0.0
+author: Yahajiang
