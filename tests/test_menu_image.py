@@ -472,6 +472,32 @@ def test_font_selection():
         assert r3.font_summary, "font_summary 应有内容"
 
 
+def test_frost_glass():
+    with tempfile.TemporaryDirectory() as td:
+        from astrbot_plugin_menu_image.renderer import MenuRenderer
+
+        groups = [
+            {
+                "name": "爱点赞",
+                "commands": [{"cmd": "zan", "alias": ["点赞"], "desc": "给朋友点赞"}],
+            }
+        ]
+        for frost in (True, False):
+            out = Path(td) / "cache" / f"frost_{frost}.png"
+            renderer = MenuRenderer(Path(td), {"frost_glass": frost})
+            result = renderer.render_page(
+                groups, page=1, total_pages=1, total_commands=1, out_path=out
+            )
+            assert result is not None and out.exists(), (
+                f"frost_glass={frost} 应成功出图"
+            )
+            from PIL import Image
+
+            with Image.open(out) as img:
+                img.load()
+                assert img.size[0] == 1080, f"frost_glass={frost} 宽度应为 1080"
+
+
 def test_text_fallback():
     with tempfile.TemporaryDirectory() as td:
         registry, star_map, cls = _install_and_import(Path(td))
@@ -496,6 +522,7 @@ def main():
         test_pagination,
         test_render_png,
         test_font_selection,
+        test_frost_glass,
         test_text_fallback,
     ]
     passed = 0

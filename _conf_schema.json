@@ -107,6 +107,12 @@
         "hint": "每个分组卡片区域的背景色，半透明叠加在背景上",
         "default": "#1a2035"
     },
+    "frost_glass": {
+        "description": "毛玻璃卡片",
+        "type": "bool",
+        "hint": "卡片区域显示高斯模糊后的背景（磨砂质感 + 轻微提亮）；关闭后使用纯色半透明卡片",
+        "default": true
+    },
     "accent_color": {
         "description": "强调颜色",
         "type": "string",

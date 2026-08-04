@@ -21,6 +21,9 @@ v3 优化：
 - 双层背景光晕（accent + 深蓝紫）
 - 多页时底部页码圆点指示器（当前页高亮）
 - 修复测量/绘制偏移（分隔线高度计入测量）
+
+v3.1：
+- 毛玻璃卡片（frost_glass，默认开）：卡片区域贴入高斯模糊背景 + 轻微提亮，可配置关闭
 """
 
 from __future__ import annotations
@@ -287,6 +290,43 @@ class MenuRenderer:
         return Image.composite(top, bot, gradient)
 
     @staticmethod
+    def _apply_frost(
+        img,
+        card_rects,
+        radius: int = 2,
+        scale: int = 4,
+        lighten: int = 18,
+    ):
+        """毛玻璃：卡片区域贴入高斯模糊后的背景（磨砂质感 + 轻微提亮）
+
+        背景缩至 1/scale 后模糊（等效大半径模糊），卡片区域从小图提取放大；
+        提亮用 Image.eval 通道平移，避免整张全白 blend 的开销。
+        """
+        from PIL import Image, ImageDraw, ImageFilter
+
+        W, H = img.size
+        ext = 48
+        small = img.resize((max(1, W // scale), max(1, H // scale)), Image.BILINEAR)
+        small = small.filter(ImageFilter.GaussianBlur(radius))
+        sw, sh = small.size
+        for x1, y1, x2, y2 in card_rects:
+            cw, ch = x2 - x1, y2 - y1
+            sx1 = max(0, (x1 - ext) // scale)
+            sy1 = max(0, (y1 - ext) // scale)
+            sx2 = min(sw, (x2 + ext + scale - 1) // scale)
+            sy2 = min(sh, (y2 + ext + scale - 1) // scale)
+            src = small.crop((sx1, sy1, sx2, sy2))
+            card = src.resize((cw + ext * 2, ch + ext * 2), Image.BILINEAR)
+            card = card.crop((ext, ext, ext + cw, ext + ch))
+            if lighten:
+                card = Image.eval(card, lambda v: min(255, v + lighten))
+            mask = Image.new("L", (cw, ch), 0)
+            ImageDraw.Draw(mask).rounded_rectangle(
+                [0, 0, cw - 1, ch - 1], radius=MenuRenderer.CARD_RADIUS, fill=255
+            )
+            img.paste(card, (x1, y1), mask)
+
+    @staticmethod
     def _make_glow_layer(
         width: int,
         height: int,
@@ -388,18 +428,23 @@ class MenuRenderer:
             img = Image.alpha_composite(img, self._make_glow_layer(W, y, pal["accent"]))
         draw = ImageDraw.Draw(img)
 
-        # Card backgrounds
+        # Card backgrounds（frost_glass 开启时卡片区域改贴模糊背景，实现毛玻璃）
         card_bg_rgba = (*pal["card_bg"], 220)
         card_stroke_rgba = (*pal["accent"], 30)
+        card_rects: List[Tuple[int, int, int, int]] = []
         for i, g in enumerate(groups):
             if i >= len(card_regions):
                 break
             cy1, cy2 = card_regions[i]
+            rect = (X - self.CARD_PAD_SIDE, cy1, X + content_w + self.CARD_PAD_SIDE, cy2)
+            card_rects.append(rect)
             draw.rounded_rectangle(
-                [X - self.CARD_PAD_SIDE, cy1, X + content_w + self.CARD_PAD_SIDE, cy2],
+                rect,
                 radius=self.CARD_RADIUS, fill=card_bg_rgba,
                 outline=card_stroke_rgba, width=1,
             )
+        if bool(self.cfg.get("frost_glass", True)) and card_rects:
+            self._apply_frost(img, card_rects)
 
         # Content
         yy = self.PAD_Y
