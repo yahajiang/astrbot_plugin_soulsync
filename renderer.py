@@ -12,6 +12,15 @@ v2 优化：
 - 分组卡片化（圆角半透明卡片包裹每个分组）
 - 指令/别名分行显示，视觉层次更清晰
 - 管理员标记 badge 样式
+
+v3 优化：
+- 标题左侧 accent 圆点 + 分隔线改渐变（左实右渐隐）
+- 组标题左侧 accent 竖条，层级更清晰
+- 指令行左侧空心圆点，别名以 ↳ 前缀引导
+- 卡片加深 + 1px accent 描边
+- 双层背景光晕（accent + 深蓝紫）
+- 多页时底部页码圆点指示器（当前页高亮）
+- 修复测量/绘制偏移（分隔线高度计入测量）
 """
 
 from __future__ import annotations
@@ -133,13 +142,17 @@ class MenuRenderer:
     PAD_X = 64
     PAD_Y = 56
 
-    CARD_PAD_TOP = 16
-    CARD_PAD_BOTTOM = 16
-    CARD_PAD_SIDE = 16
+    CARD_PAD_TOP = 18
+    CARD_PAD_BOTTOM = 18
+    CARD_PAD_SIDE = 18
     CARD_RADIUS = 16
-    CARD_SPACING = 20
+    CARD_SPACING = 24
     ALIAS_INDENT = 24
     DESC_INDENT = 24
+    HEADER_LINE_H = 4
+    GROUP_BAR_W = 4
+    CMD_DOT_R = 5
+    PAGE_DOT_R = 6
 
     def __init__(self, data_dir: Path, cfg: Optional[dict] = None):
         self.cfg = cfg or {}
@@ -260,19 +273,28 @@ class MenuRenderer:
         return Image.composite(top, bot, gradient)
 
     @staticmethod
-    def _add_glow(draw, width: int, height: int, accent_color, alpha: int = 30):
+    def _add_glow(
+        draw,
+        width: int,
+        height: int,
+        accent_color,
+        alpha: int = 55,
+        second_color=(34, 44, 88),
+        second_alpha: int = 70,
+    ):
+        """双层光晕：右上 accent 光晕 + 左下深蓝紫光晕，增强背景层次"""
         cx, cy = width - 80, -40
-        for r in range(200, 0, -20):
-            a = max(0, int(alpha * (1.0 - r / 200)))
+        for r in range(240, 0, -24):
+            a = max(0, int(alpha * (1.0 - r / 240)))
             if a <= 0:
                 continue
             draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*accent_color, a))
-        cx, cy = -60, height + 40
-        for r in range(180, 0, -20):
-            a = max(0, int(alpha * (1.0 - r / 180)))
+        cx, cy = -70, height + 60
+        for r in range(220, 0, -22):
+            a = max(0, int(second_alpha * (1.0 - r / 220)))
             if a <= 0:
                 continue
-            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*accent_color, a))
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*second_color, a))
 
     def render_page(self, groups: List[dict], *, page: int, total_pages: int, total_commands: int, out_path: Path) -> Optional[Path]:
         from PIL import Image, ImageDraw
@@ -298,7 +320,7 @@ class MenuRenderer:
         W = self.WIDTH
         X = self.PAD_X
         content_w = W - X * 2
-        cmd_indent = 8
+        cmd_indent = self.CMD_DOT_R * 2 + 8
 
         # Measure pass
         tmp = Image.new("RGB", (W, 800), pal["bg"])
@@ -308,7 +330,7 @@ class MenuRenderer:
         y += f_title.size + 14
         if subtitle:
             y += f_sub.size + 12
-        y += 10
+        y += self.HEADER_LINE_H + 10
         card_regions: List[Tuple[int, int]] = []
 
         for g in groups:
@@ -329,6 +351,8 @@ class MenuRenderer:
             card_regions.append((card_top, y))
             y += self.CARD_SPACING
 
+        if total_pages > 1:
+            y += 4 + self.PAGE_DOT_R * 2 + 16
         y += 12 + f_foot.size + 8
         if footer:
             y += f_foot.size + 6
@@ -339,10 +363,11 @@ class MenuRenderer:
         img = img.convert("RGBA")
         draw = ImageDraw.Draw(img)
         if show_glow:
-            self._add_glow(draw, W, y, pal["accent"], alpha=30)
+            self._add_glow(draw, W, y, pal["accent"])
 
         # Card backgrounds
-        card_bg_rgba = (*pal["card_bg"], 200)
+        card_bg_rgba = (*pal["card_bg"], 220)
+        card_stroke_rgba = (*pal["accent"], 30)
         for i, g in enumerate(groups):
             if i >= len(card_regions):
                 break
@@ -350,18 +375,32 @@ class MenuRenderer:
             draw.rounded_rectangle(
                 [X - self.CARD_PAD_SIDE, cy1, X + content_w + self.CARD_PAD_SIDE, cy2],
                 radius=self.CARD_RADIUS, fill=card_bg_rgba,
+                outline=card_stroke_rgba, width=1,
             )
 
         # Content
         yy = self.PAD_Y
 
-        draw.text((X, yy), title, font=f_title, fill=pal["text"])
+        # 标题左侧 accent 圆点装饰
+        dot_r = 7
+        draw.ellipse(
+            [X, yy + (f_title.size - dot_r * 2) / 2,
+             X + dot_r * 2, yy + (f_title.size - dot_r * 2) / 2 + dot_r * 2],
+            fill=pal["accent"],
+        )
+        draw.text((X + dot_r * 2 + 14, yy), title, font=f_title, fill=pal["text"])
         yy += f_title.size + 14
         if subtitle:
-            draw.text((X, yy), subtitle, font=f_sub, fill=pal["desc"])
+            draw.text((X + dot_r * 2 + 14, yy), subtitle, font=f_sub, fill=pal["desc"])
             yy += f_sub.size + 12
-        draw.rounded_rectangle([X, yy, X + content_w, yy + 4], radius=2, fill=pal["accent"])
-        yy += 10
+        # 渐变分隔线：accent 左实右渐隐
+        seg_w = max(1, content_w // 8)
+        for i, a in enumerate((150, 120, 90, 60, 35, 15)):
+            draw.rectangle(
+                [X + i * seg_w, yy, X + (i + 1) * seg_w, yy + self.HEADER_LINE_H],
+                fill=(*pal["accent"], a),
+            )
+        yy += self.HEADER_LINE_H + 10
 
         for i, g in enumerate(groups):
             cy1, cy2 = card_regions[i] if i < len(card_regions) else (yy, yy + 100)
@@ -369,7 +408,12 @@ class MenuRenderer:
 
             gname = sanitize_text(g.get("name", "未分类"))
             gcount = len(g.get("commands", []))
-            draw.text((X, yy), gname, font=f_group, fill=pal["accent"])
+            draw.rounded_rectangle(
+                [X, yy, X + self.GROUP_BAR_W, yy + f_group.size],
+                radius=2, fill=pal["accent"],
+            )
+            gname_x = X + self.GROUP_BAR_W + 12
+            draw.text((gname_x, yy), gname, font=f_group, fill=pal["accent"])
 
             # Count badge
             count_text = str(gcount)
@@ -377,7 +421,7 @@ class MenuRenderer:
             bp = 6
             bw = cw + bp * 2
             bh = f_sub.size + 4
-            bx = X + int(draw.textlength(gname, font=f_group)) + 16
+            bx = gname_x + int(draw.textlength(gname, font=f_group)) + 16
             card_right_limit = X + content_w - self.CARD_PAD_SIDE - 4
             if bx + bw > card_right_limit:
                 bx = card_right_limit - bw
@@ -391,6 +435,13 @@ class MenuRenderer:
                 main_cmd = f"{prefix}{c.get('cmd', '')}"
                 cmd_aliases = c.get("alias") or []
 
+                # 指令左侧圆点（accent 描边空心圆）
+                dot_cy = yy + (f_cmd.size + 2) / 2
+                draw.ellipse(
+                    [X + 2 - self.CMD_DOT_R, dot_cy - self.CMD_DOT_R,
+                     X + 2 + self.CMD_DOT_R, dot_cy + self.CMD_DOT_R],
+                    outline=(*pal["accent"], 110), width=2,
+                )
                 draw.text((X + cmd_indent, yy), main_cmd, font=f_cmd, fill=pal["text"])
 
                 # Admin badge
@@ -412,7 +463,7 @@ class MenuRenderer:
 
                 # Alias line
                 if cmd_aliases:
-                    alias_text = "  ".join(f"{prefix}{a}" for a in cmd_aliases)
+                    alias_text = "  ".join(f"↳ {prefix}{a}" for a in cmd_aliases)
                     draw.text((X + cmd_indent + self.ALIAS_INDENT, yy), alias_text, font=f_sub, fill=pal["desc"])
                     yy += f_sub.size + 4
 
@@ -427,7 +478,22 @@ class MenuRenderer:
 
             yy = cy2 + self.CARD_SPACING
 
-        # Footer
+        # Page dots + Footer
+        yy += 4
+        if total_pages > 1:
+            dot_d = self.PAGE_DOT_R * 2
+            total_w = total_pages * dot_d + (total_pages - 1) * 14
+            dx = (W - total_w) / 2
+            dy = yy + self.PAGE_DOT_R
+            for i in range(total_pages):
+                c = pal["accent"] if i + 1 == page else (*pal["accent"], 55)
+                draw.ellipse(
+                    [dx - self.PAGE_DOT_R, dy - self.PAGE_DOT_R,
+                     dx + self.PAGE_DOT_R, dy + self.PAGE_DOT_R],
+                    fill=c,
+                )
+                dx += dot_d + 14
+            yy += dot_d + 16
         yy += 12
         foot_line = f"共 {total_commands} 个指令" if total_pages == 1 else f"共 {total_commands} 个指令 · 第 {page}/{total_pages} 页"
         fw = draw.textlength(foot_line, font=f_foot)
