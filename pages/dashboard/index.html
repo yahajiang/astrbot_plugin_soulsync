@@ -197,7 +197,7 @@ function status(){
   const sk=Bp.filter(b=>b.current_streak_count>=3);
   const bt=Bp.reduce((s,b)=>s+(b.betrayal_count||0),0);
   const cb=Bp.reduce((s,b)=>s+(b.comeback_count||0),0);
-  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.10 · 六阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
+  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.11 · 六阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
 }
 
 function detail(uid){

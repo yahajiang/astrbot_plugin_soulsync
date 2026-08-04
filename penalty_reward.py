@@ -25,27 +25,27 @@ BEHAVIOR_NEUTRAL = "neutral"
 # ─── 惩罚奖励配置常量 ─────────────────────────────────────────
 # 连续行为势头
 MAX_MOMENTUM = 10                    # 势头最大层数
-MOMENTUM_REWARD_PER_LEVEL = 0.34     # 每层正面势头额外奖励（正面再下调 15%）
-MOMENTUM_PENALTY_PER_LEVEL = -0.76   # 每层负面势头额外惩罚（负面上调 8%）
+MOMENTUM_REWARD_PER_LEVEL = 0.24     # 每层正面势头额外奖励（v2.11 放缓：正面奖励下调约 30%）
+MOMENTUM_PENALTY_PER_LEVEL = -0.76   # 每层负面势头额外惩罚（惩罚不变）
 
 # 冷落检测
 COLD_THRESHOLD_HOURS = 24            # 超过此时间未互动视为冷落
-COLD_PENALTY_BASE = -1.8             # 冷落基础惩罚（负面上调 8%）
-COLD_PENALTY_PER_DAY = -0.43         # 每多冷落一天额外惩罚（负面上调 8%）
-COLD_MAX_PENALTY = -14.0             # 冷落惩罚上限（负面上调 8%）
+COLD_PENALTY_BASE = -1.8             # 冷落基础惩罚（惩罚不变）
+COLD_PENALTY_PER_DAY = -0.43         # 每多冷落一天额外惩罚（惩罚不变）
+COLD_MAX_PENALTY = -14.0             # 冷落惩罚上限（惩罚不变）
 
 # 回归奖励
 COMEBACK_THRESHOLD_HOURS = 48        # 冷落超过此时长后回归给予奖励
-COMEBACK_REWARD_BASE = 2.1           # 回归基础奖励（正面再下调 15%）
-COMEBACK_BONUS_PER_DAY = 0.34        # 每多冷落一天回归额外奖励（正面再下调 15%）
-COMEBACK_MAX_REWARD = 8.5            # 回归奖励上限（正面再下调 15%）
+COMEBACK_REWARD_BASE = 1.5           # 回归基础奖励（v2.11 放缓：正面奖励下调约 30%）
+COMEBACK_BONUS_PER_DAY = 0.24        # 每多冷落一天回归额外奖励（v2.11 放缓）
+COMEBACK_MAX_REWARD = 6.0            # 回归奖励上限（v2.11 放缓）
 
 # 关系里程碑
-MILESTONES = {  # 正面再下调 15%
-    10:  ("first_positive", "首次正面互动", 1.4),
-    50:  ("fifty_interactions", "50次互动", 2.1),
-    100: ("hundred_interactions", "100次互动", 3.6),
-    200: ("two_hundred", "200次互动", 5.8),
+MILESTONES = {  # v2.11 放缓：正面奖励下调约 30%
+    10:  ("first_positive", "首次正面互动", 1.0),
+    50:  ("fifty_interactions", "50次互动", 1.5),
+    100: ("hundred_interactions", "100次互动", 2.6),
+    200: ("two_hundred", "200次互动", 4.2),
 }
 
 # 背叛检测关键词
@@ -55,7 +55,7 @@ BETRAYAL_COOLDOWN_SEC = 3600         # 背叛惩罚冷却时间（防止短时�
 
 # 道歉检测关键词
 APOLOGY_KEYWORDS = ["对不起", "抱歉", "不好意思", "我错了", "原谅我", "sorry", "道歉"]
-APOLOGY_RECOVERY = 1.4               # 道歉恢复量（正面再下调 15%）
+APOLOGY_RECOVERY = 1.0               # 道歉恢复量（v2.11 放缓：正面奖励下调约 30%）
 APOLOGY_COOLDOWN_SEC = 600           # 道歉冷却时间
 
 # 衰减
@@ -337,7 +337,7 @@ class PenaltyRewardEngine:
 
         if behavior == BEHAVIOR_POSITIVE:
             fav_bonus = level * self.momentum_reward_per_level
-            int_bonus = level * 0.2
+            int_bonus = level * 0.14
             if level >= 3:
                 event = f"🔥 正面势头 ×{level}（好感+{fav_bonus:.1f}）"
             return fav_bonus, int_bonus, event

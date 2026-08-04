@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v2.10 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v2.11 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -53,7 +53,7 @@ from .time_perception import (
 
 
 class SoulSyncPro(Star):
-    """心旅知音 (SoulSync) v2.10 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
+    """心旅知音 (SoulSync) v2.11 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
 
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -97,7 +97,7 @@ class SoulSyncPro(Star):
         self.pr_cold_threshold_hours: float = config.get("pr_cold_threshold_hours", 24)
         self.pr_comeback_threshold_hours: float = config.get("pr_comeback_threshold_hours", 48)
         self.pr_decay_half_life_hours: float = config.get("pr_decay_half_life_hours", 72)
-        self.pr_momentum_reward_per_level: float = config.get("pr_momentum_reward_per_level", 0.5)
+        self.pr_momentum_reward_per_level: float = config.get("pr_momentum_reward_per_level", 0.24)
         self.pr_momentum_penalty_per_level: float = config.get("pr_momentum_penalty_per_level", -0.8)
 
         # ── 纪念日/节日参数（动态读取，支持热更新）──
@@ -182,7 +182,7 @@ class SoulSyncPro(Star):
 
         # ── 启动日志 ──
         logger.info(
-            f"SoulSync v2.10 已加载 | "
+            f"SoulSync v2.11 已加载 | "
             f"智能更新={self.enable_smart_update} | "
             f"辅助LLM={self.enable_secondary_llm} | "
             f"态度系统={self.enable_attitude} | "
@@ -204,7 +204,7 @@ class SoulSyncPro(Star):
         if self._save_task and not self._save_task.done():
             self._save_task.cancel()
         self._save_all()
-        logger.info("SoulSync v2.10 已停止，数据已保存")
+        logger.info("SoulSync v2.11 已停止，数据已保存")
 
     # ═══════════════════════════════════════════════════════════════
     #  WebUI
@@ -348,7 +348,7 @@ class SoulSyncPro(Star):
             self.pr_cold_threshold_hours = float(self.config.get("pr_cold_threshold_hours", 24))
             self.pr_comeback_threshold_hours = float(self.config.get("pr_comeback_threshold_hours", 48))
             self.pr_decay_half_life_hours = float(self.config.get("pr_decay_half_life_hours", 72))
-            self.pr_momentum_reward_per_level = float(self.config.get("pr_momentum_reward_per_level", 0.5))
+            self.pr_momentum_reward_per_level = float(self.config.get("pr_momentum_reward_per_level", 0.24))
             self.pr_momentum_penalty_per_level = float(self.config.get("pr_momentum_penalty_per_level", -0.8))
             try:
                 self.penalty_reward_engine.update_config(
@@ -2107,7 +2107,7 @@ class SoulSyncPro(Star):
                 data = json.loads(f.read_text(encoding="utf-8"))
                 for uid, pdict in data.items():
                     profile = EmotionProfile.from_dict(pdict)
-                    # v2.10 → v2.10：旧档案自定义态度/关系描述迁移到关系角色管理器
+                    # v2.10 起：旧档案自定义态度/关系描述迁移到关系角色管理器
                     custom = self.relationship_manager.custom_info(uid)
                     for kind, old_key in (("attitude", "attitude_text"),
                                           ("relationship", "relationship_text")):
