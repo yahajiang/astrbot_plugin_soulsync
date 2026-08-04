@@ -1,8 +1,8 @@
-"""心旅知音 (SoulSync) v2.11 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v2.12 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
-- 六阶段关系演进 + 负好感阶段
+- 十二阶段关系演进 + 负好感阶段
 - 四维智能更新（关键词+时间+计数+LLM标记）
 - 辅助 LLM 情感分析专家（注入关系角色 persona）
 - 长期记忆 + 近期对话缓存
@@ -53,7 +53,7 @@ from .time_perception import (
 
 
 class SoulSyncPro(Star):
-    """心旅知音 (SoulSync) v2.11 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
+    """心旅知音 (SoulSync) v2.12 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
 
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -182,7 +182,7 @@ class SoulSyncPro(Star):
 
         # ── 启动日志 ──
         logger.info(
-            f"SoulSync v2.11 已加载 | "
+            f"SoulSync v2.12 已加载 | "
             f"智能更新={self.enable_smart_update} | "
             f"辅助LLM={self.enable_secondary_llm} | "
             f"态度系统={self.enable_attitude} | "
@@ -204,7 +204,7 @@ class SoulSyncPro(Star):
         if self._save_task and not self._save_task.done():
             self._save_task.cancel()
         self._save_all()
-        logger.info("SoulSync v2.11 已停止，数据已保存")
+        logger.info("SoulSync v2.12 已停止，数据已保存")
 
     # ═══════════════════════════════════════════════════════════════
     #  WebUI
@@ -1087,7 +1087,7 @@ class SoulSyncPro(Star):
             lines.append(ltm)
             lines.append("")
 
-        # ── 关系建议（阈值对齐新阶段体系 30/70/115/160/185/200）──
+        # ── 关系建议（阈值对齐十二阶段体系 15/35/55/75/95/115/135/152/168/180/185/200）──
         lines.append("💡 关系建议：")
         if fav < -50:
             lines.append("  你们的关系处于敌对状态，需要真诚的道歉和长时间的修复。")
@@ -1095,14 +1095,26 @@ class SoulSyncPro(Star):
             lines.append("  关系有些紧张，试着多表达善意，减少负面言辞。")
         elif fav < 0:
             lines.append("  关系偏冷淡，多一些温暖的互动可以改善。")
-        elif fav < 30:
+        elif fav < 15:
             lines.append("  初识阶段，保持真诚和耐心，关系会慢慢加深。")
-        elif fav < 70:
+        elif fav < 35:
             lines.append("  好感在增长，继续用心互动，信任正在建立。")
+        elif fav < 55:
+            lines.append("  已建立信任，可以多分享一些心事。")
+        elif fav < 75:
+            lines.append("  越来越熟悉了，陪伴与默契正在积累。")
+        elif fav < 95:
+            lines.append("  已能交心，这份信任值得珍惜。")
         elif fav < 115:
-            lines.append("  关系不错！深化期需要更多真诚和陪伴。")
-        elif fav < 160:
-            lines.append("  关系很亲密了，珍惜这份信任。")
+            lines.append("  关系深化中，真诚的互动会让情感更稳固。")
+        elif fav < 135:
+            lines.append("  心动明显，多表达在意与关怀。")
+        elif fav < 152:
+            lines.append("  默契十足，彼此已是重要的人。")
+        elif fav < 168:
+            lines.append("  深深依恋着彼此，感情非常紧密。")
+        elif fav < 180:
+            lines.append("  缠绵难分，这是极亲密的关系。")
         elif fav < 185:
             lines.append("  已到承诺期，这段感情已非常深厚。")
         elif fav < 200:

@@ -1,4 +1,4 @@
-"""EmotionAI Pro - 8 维情感模型 + 好感/亲密度双核引擎（六阶段版）"""
+"""EmotionAI Pro - 8 维情感模型 + 好感/亲密度双核引擎（十二阶段版）"""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ DIM_ICONS = {
     "surprise": "😲", "disgust": "🤢", "trust": "🤗", "anticipation": "✨",
 }
 
-# ─── 关系阶段定义（六阶段，好感上限 200 后阈值加大间距）───────────
+# ─── 关系阶段定义（十二阶段，好感上限 200 后阈值加大间距）────────
 @dataclass
 class StageConfig:
     name: str
@@ -37,10 +37,16 @@ class StageConfig:
     hysteresis_buffer: float    # 滞后带缓冲分
 
 STAGES: List[StageConfig] = [
-    StageConfig("initial",      "🌱 初识期", 30,   2),
-    StageConfig("favorable",    "🌿 好感期", 70,   3),
-    StageConfig("trust",        "🤝 信任期", 115,  4),
-    StageConfig("deepening",    "💛 深化期", 160,  5),
+    StageConfig("initial",      "🌱 初识期", 15,   2),
+    StageConfig("favorable",    "🌿 好感期", 35,   3),
+    StageConfig("trust",        "🤝 信任期", 55,   3),
+    StageConfig("familiar",     "🍀 熟悉期", 75,   4),
+    StageConfig("intimate_talk","💬 交心期", 95,   4),
+    StageConfig("deepening",    "💛 深化期", 115,  4),
+    StageConfig("heartbeat",    "🧡 心动期", 135,  5),
+    StageConfig("tacit",        "💜 默契期", 152,  5),
+    StageConfig("attachment",   "💖 依恋期", 168,  6),
+    StageConfig("entangled",    "💞 缠绵期", 180,  6),
     StageConfig("commitment",   "🌳 承诺期", 185,  6),
     StageConfig("symbiosis",    "🌸 共生期", 200,  8),
 ]
@@ -104,7 +110,7 @@ class EmotionProfile:
     # 8 维情感值 (0~100)
     emotions: Dict[str, float] = field(default_factory=lambda: {d: 50.0 for d in EMOTION_DIMENSIONS})
 
-    # 关系阶段索引 (0~5)，负好感用 -1
+    # 关系阶段索引 (0~11)，负好感用 -1
     stage_index: int = 0
     # 阶段内进度百分比
     stage_progress: float = 0.0
@@ -207,7 +213,7 @@ class EmotionEngine:
 
     # ── 阶段判定（带滞后带保护）──
     def evaluate_stage(self, profile: EmotionProfile) -> int:
-        """返回应处于的阶段索引 (0~5)，负好感返回 -1"""
+        """返回应处于的阶段索引 (0~11)，负好感返回 -1"""
         if profile.favorability < 0:
             return -1
 

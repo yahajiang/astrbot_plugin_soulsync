@@ -1,7 +1,7 @@
 name: astrbot_plugin_soulsync
-display_name: "心旅知音 (SoulSync) v2.11 - 融合版情感智能插件"
-desc: "心旅知音（SoulSync）：融合 EmotionAI 与 FavourPro 精华的情感智能插件，支持 8 维情感模型、六阶段关系演进、智能更新、辅助 LLM、长期记忆、负好感支持、过渡保护、惩罚奖励机制（v2.11 增长数值放缓）、情感自画像、纪念日/节日系统、数据趋势统计、关系角色（含自定义态度/关系合并）、时间感知、图片输出、WebUI 控制台（配置热同步 + 完整数据自画像）。好感度上限 200，亲密度按好感度百分比派生。"
-version: "2.11"
+display_name: "心旅知音 (SoulSync) v2.12 - 融合版情感智能插件"
+desc: "心旅知音（SoulSync）：融合 EmotionAI 与 FavourPro 精华的情感智能插件，支持 8 维情感模型、十二阶段关系演进、智能更新、辅助 LLM、长期记忆、负好感支持、过渡保护、惩罚奖励机制（v2.11 增长数值放缓）、情感自画像、纪念日/节日系统、数据趋势统计、关系角色（含自定义态度/关系合并）、时间感知、图片输出、WebUI 控制台（配置热同步 + 完整数据自画像）。好感度上限 200，亲密度按好感度百分比派生。"
+version: "2.12"
 author: "Yahajiang"
 repo: "https://github.com/yahajiang/EmotionAI-Pro"
 pages:

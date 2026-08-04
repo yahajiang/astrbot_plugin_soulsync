@@ -146,7 +146,7 @@ textarea.fld{min-height:56px;resize:vertical}
 const B = window.AstrBotPluginPage;
 await B.ready();
 
-const S=['🌱 初识期','🌿 好感期','🤝 信任期','💛 深化期','🌳 承诺期','🌸 共生期'];
+const S=['🌱 初识期','🌿 好感期','🤝 信任期','🍀 熟悉期','💬 交心期','💛 深化期','🧡 心动期','💜 默契期','💖 依恋期','💞 缠绵期','🌳 承诺期','🌸 共生期'];
 const N=['😐 冷淡','😠 反感','💢 厌恶','🔥 敌对'];
 const DM={joy:'喜悦',sadness:'悲伤',anger:'愤怒',fear:'恐惧',surprise:'惊讶',disgust:'厌恶',trust:'信任',anticipation:'期待'};
 const DC={joy:'#fdcb6e',sadness:'#74b9ff',anger:'#e17055',fear:'#a29bfe',surprise:'#ffeaa7',disgust:'#55efc4',trust:'#00b894',anticipation:'#6c5ce7'};
@@ -157,7 +157,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
 const fc=v=>v>40?'var(--green)':v>0?'var(--blue)':v>-20?'var(--orange)':'var(--red)';
 const pc=(v,a,b)=>Math.round(Math.max(0,Math.min(1,(v-a)/(b-a)))*100);
-const stg=p=>{if(p.favorability<0){if(p.favorability>=-15)return N[0];if(p.favorability>=-40)return N[1];if(p.favorability>=-70)return N[2];return N[3]}return S[Math.max(0,Math.min(p.stage_index||0,5))]};
+const stg=p=>{if(p.favorability<0){if(p.favorability>=-15)return N[0];if(p.favorability>=-40)return N[1];if(p.favorability>=-70)return N[2];return N[3]}return S[Math.max(0,Math.min(p.stage_index||0,11))]};
 const tst=(id,m,e)=>{const el=$(id);if(el){el.textContent=m||'';el.classList.toggle('error',!!e)}};
 
 async function load(){
@@ -197,7 +197,7 @@ function status(){
   const sk=Bp.filter(b=>b.current_streak_count>=3);
   const bt=Bp.reduce((s,b)=>s+(b.betrayal_count||0),0);
   const cb=Bp.reduce((s,b)=>s+(b.comeback_count||0),0);
-  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.11 · 六阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
+  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.12 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
 }
 
 function detail(uid){
@@ -217,12 +217,12 @@ function detail(uid){
 
   // ── 关系阶段 + 距下一阶段 ──
   h+=`<div style="margin-bottom:12px;font-size:13px">🧬 当前关系：${stg(p)}`;
-  if(p.stage_index>=0&&p.stage_index<5){
-    const thresholds=[30,70,115,160,185,200];
+  if(p.stage_index>=0&&p.stage_index<11){
+    const thresholds=[15,35,55,75,95,115,135,152,168,180,185,200];
     const nxt=thresholds[p.stage_index+1];
     const need=nxt-p.composite_score;
     if(need>0)h+=`<span class="next-tag">还需 ${need.toFixed(1)} 分进阶</span>`;
-  }else if(p.stage_index>=5){
+  }else if(p.stage_index>=11){
     h+=`<span class="next-tag">🌸 最高阶段</span>`;
   }
   h+='</div>';
@@ -376,10 +376,14 @@ function detail(uid){
   if(fav<-50)advice='你们的关系处于敌对状态，需要真诚的道歉和长时间的修复才能缓和。';
   else if(fav<-20)advice='关系有些紧张，试着多表达善意，减少负面言辞，信任需要慢慢重建。';
   else if(fav<0)advice='关系偏冷淡，多一些温暖的互动可以改善，不要急于求成。';
-  else if(fav<25)advice='初识阶段，保持真诚和耐心，关系会随着互动慢慢加深。';
-  else if(fav<55)advice='好感在增长中，继续用心互动，信任正在稳步建立。';
-  else if(fav<80)advice='关系不错！深化期需要更多真诚和陪伴，珍惜这份信任。';
-  else if(fav<95)advice='关系很亲密了，继续保持真诚，维护这份深层的情感连接。';
+  else if(fav<15)advice='初识阶段，保持真诚和耐心，关系会随着互动慢慢加深。';
+  else if(fav<35)advice='好感在增长中，继续用心互动，信任正在稳步建立。';
+  else if(fav<55)advice='信任已建立，多分享心事会让关系更进一步。';
+  else if(fav<75)advice='越来越熟悉了，陪伴与默契正在慢慢积累。';
+  else if(fav<95)advice='已能交心，这份信任值得加倍珍惜。';
+  else if(fav<135)advice='关系深化中，心动明显，保持真诚的互动。';
+  else if(fav<168)advice='默契十足，彼此已是对方重要的人。';
+  else if(fav<185)advice='感情非常深厚，守护这份依恋与承诺。';
   else advice='已达共生阶段，这是最深层的情感连接 🌸 珍惜彼此。';
   h+=`<div class="advice"><div class="hd">💡 关系建议</div>${advice}</div>`;
 
