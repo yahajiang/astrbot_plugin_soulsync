@@ -123,29 +123,61 @@ class ImageRenderer:
 
     def _paint_background(self, img: "Image",
                           accent: Tuple[int, int, int] = (232, 96, 140)) -> "Image":
-        """深色渐变背景 + 顶部光晕 + 底部微光，返回 RGBA 图"""
+        """星空质感背景：多色相渐变 + 三向光晕 + 星光粒子 + 底部渐隐高光，返回 RGBA 图"""
         from PIL import Image, ImageDraw
+        import random as _rnd
         w, h = img.size
         d = ImageDraw.Draw(img)
-        # 垂直渐变（上深下略浅）
-        bands = 48
+
+        # ── 分段渐变：深紫(顶部) → 靛蓝 → 深蓝黑(底部) ──
+        bands = 72
         for i in range(bands):
             t = i / max(1, bands - 1)
+            if t < 0.45:
+                tt = t / 0.45
+                base = (round(30 - 8 * tt), round(25 - 7 * tt), round(56 - 16 * tt))
+            elif t < 0.75:
+                tt = (t - 0.45) / 0.3
+                base = (round(22 - 6 * tt), round(18 - 5 * tt), round(40 - 12 * tt))
+            else:
+                tt = (t - 0.75) / 0.25
+                base = (round(16 - 4 * tt), round(13 - 3 * tt), round(28 - 6 * tt))
             d.rectangle([0, int(h * i / bands), w, int(h * (i + 1) / bands) + 1],
-                        fill=(round(18 - 6 * t), round(23 - 8 * t), round(34 - 11 * t)))
-        # 顶部中心光晕（主题色泛光）
+                        fill=base)
+
+        # ── 光晕层：顶部主题色 + 右下蓝紫 + 左上暖光 ──
         glow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         gd = ImageDraw.Draw(glow)
-        cx, cy, gr = w // 2, -40, w // 2
-        for r in range(gr, 0, -3):
-            a = int(26 * (1 - r / gr))
-            gd.ellipse([cx - r, cy - r, cx + r, cy + r],
-                       fill=(accent[0], accent[1], accent[2], a))
+        for cx, cy, gr, col, peak in [
+            (w // 2, -60, int(w * 0.62), accent, 34),                      # 顶部主光
+            (int(w * 0.94), int(h * 0.86), int(w * 0.44), (86, 108, 230), 24),  # 右下冷光
+            (int(w * 0.04), int(h * 0.08), int(w * 0.24), (255, 190, 120), 18),  # 左上暖光
+        ]:
+            for r in range(gr, 0, -4):
+                a = int(peak * (1 - r / gr))
+                gd.ellipse([cx - r, cy - r, cx + r, cy + r], fill=col + (a,))
         img = img.convert("RGBA")
         img.alpha_composite(glow)
-        # 底部细边高光
-        ImageDraw.Draw(img).rectangle(
-            [0, h - 2, w, h], fill=(accent[0], accent[1], accent[2], 46))
+
+        # ── 星光粒子（固定种子，暗色小点不干扰文本检测）──
+        rnd = _rnd.Random(20260804)
+        stars = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        sd = ImageDraw.Draw(stars)
+        for _ in range(48):
+            x, y = rnd.randint(0, w - 1), rnd.randint(0, h - 1)
+            r = rnd.choice((1, 1, 2))
+            a = rnd.randint(40, 95)
+            col = rnd.choice(((255, 255, 255), accent, (170, 195, 255)))
+            sd.ellipse([x - r, y - r, x + r, y + r], fill=col + (a,))
+        img.alpha_composite(stars)
+
+        # ── 顶部细高光线 + 底部主题色渐隐高光（中间亮两侧淡）──
+        d2 = ImageDraw.Draw(img)
+        d2.rectangle([0, 0, w, 1], fill=(130, 140, 170, 56))
+        for i in range(w):
+            t = abs(i - w / 2) / max(1, w / 2)
+            a = int(46 * (1 - t * 0.55))
+            d2.line([i, h - 1, i, h - 1], fill=accent + (a,))
         return img
 
     def _draw_progress_bar(self, draw, x: int, y: int, filled: int, total: int,
