@@ -1,9 +1,17 @@
+# -*- coding: utf-8 -*-
 """astrbot_plugin_menu_image - 菜单图片渲染器
 
 纯 Pillow 实现，不依赖 AstrBot，便于独立测试。
 自动探测系统中文字体（Windows / Linux / macOS / WSL），找不到字体时仍可渲染（中文显示为方块）。
 支持配置 custom_font_path 手动指定字体文件。
 渲染前会去除 emoji（PIL 无法绘制彩色 emoji）。
+
+v2 优化：
+- 垂直渐变背景（从 bg_gradient_top 到 bg_color）
+- 可选装饰光晕（右上/左下）
+- 分组卡片化（圆角半透明卡片包裹每个分组）
+- 指令/别名分行显示，视觉层次更清晰
+- 管理员标记 badge 样式
 """
 
 from __future__ import annotations
@@ -27,7 +35,6 @@ _EMOJI_RE = re.compile(
 )
 
 _FONT_CANDIDATES: List[Tuple[str, str]] = [
-    # (常规字体, 粗体字体) - 按优先级
     (r"C:/Windows/Fonts/msyh.ttc", r"C:/Windows/Fonts/msyhbd.ttc"),
     (r"C:/Windows/Fonts/simhei.ttf", r"C:/Windows/Fonts/simhei.ttf"),
     (r"C:/Windows/Fonts/simsun.ttc", r"C:/Windows/Fonts/simhei.ttf"),
@@ -49,7 +56,6 @@ _FONT_CANDIDATES: List[Tuple[str, str]] = [
      r"/System/Library/Fonts/Hiragino Sans GB.ttc"),
 ]
 
-# 递归扫描字体目录时，命中这些关键字的文件视为中文字体（文件名小写匹配）
 _CJK_KEYWORDS: Tuple[str, ...] = (
     "msyh", "simhei", "simsun", "dengxian", "simkai", "simfang", "stxihei",
     "stkaiti", "stsong", "stfangsong", "noto", "wqy", "zenhei", "sourcehan",
@@ -63,7 +69,6 @@ _HEX_RE = re.compile(r"^#?([0-9a-fA-F]{6})$")
 
 
 def sanitize_text(text) -> str:
-    """去除无法用普通字体渲染的 emoji 字符"""
     return _EMOJI_RE.sub("", str(text or ""))
 
 
@@ -76,7 +81,6 @@ def _hex(color, default: Tuple[int, int, int]) -> Tuple[int, int, int]:
 
 
 def _glob_candidates() -> List[Path]:
-    """递归扫描常见字体目录，返回命中中文字体关键字的所有字体文件"""
     dirs: List[Path] = []
     if sys.platform == "win32":
         windir = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
@@ -87,7 +91,6 @@ def _glob_candidates() -> List[Path]:
             Path("/usr/local/share/fonts"),
             Path("~/.fonts").expanduser(),
             Path("~/.local/share/fonts").expanduser(),
-            # WSL 下可直接使用 Windows 字体
             Path("/mnt/c/Windows/Fonts"),
             Path("/System/Library/Fonts"),
             Path("/Library/Fonts"),
@@ -116,15 +119,12 @@ def _glob_candidates() -> List[Path]:
 
 
 def _font_loads(path) -> bool:
-    """验证字体文件能否被 Pillow 真正加载（防止文件损坏/权限问题）"""
     try:
         from PIL import ImageFont
-
         ImageFont.truetype(str(path), 12)
         return True
     except Exception:
         return False
-
 
 class MenuRenderer:
     """菜单图片渲染器（Pillow）"""
@@ -132,6 +132,14 @@ class MenuRenderer:
     WIDTH = 1080
     PAD_X = 64
     PAD_Y = 56
+
+    CARD_PAD_TOP = 16
+    CARD_PAD_BOTTOM = 16
+    CARD_PAD_SIDE = 16
+    CARD_RADIUS = 16
+    CARD_SPACING = 20
+    ALIAS_INDENT = 24
+    DESC_INDENT = 24
 
     def __init__(self, data_dir: Path, cfg: Optional[dict] = None):
         self.cfg = cfg or {}
@@ -147,14 +155,11 @@ class MenuRenderer:
         self._init_font()
 
     def _init_font(self):
-        """字体发现：custom_font_path > 固定候选列表 > 递归扫描字体目录"""
         try:
-            from PIL import Image, ImageDraw, ImageFont  # noqa: F401
+            from PIL import Image, ImageDraw, ImageFont
         except ImportError:
             _log.warning("Pillow 未安装，菜单图片无法渲染")
             return
-
-        # 1. 配置手动指定的字体
         custom = str(self.cfg.get("custom_font_path") or "").strip()
         if custom:
             if Path(custom).exists() and _font_loads(custom):
@@ -164,12 +169,7 @@ class MenuRenderer:
                 self.available = True
                 _log.info(f"使用自定义字体: {self.font_summary}")
                 return
-            _log.warning(
-                f"custom_font_path 无效（文件不存在或无法加载）: {custom}，"
-                f"将尝试自动探测系统字体"
-            )
-
-        # 2. 固定候选列表 + 3. 递归扫描
+            _log.warning(f"custom_font_path 无效: {custom}，将尝试自动探测系统字体")
         pairs: List[Tuple[str, str]] = list(_FONT_CANDIDATES)
         for p in _glob_candidates():
             pairs.append((str(p), str(p)))
@@ -185,30 +185,20 @@ class MenuRenderer:
                 self._font_bold_path = bold
             else:
                 self._font_bold_path = regular
-            self._fallback_paths = [
-                r for r, _ in pairs if Path(r).exists() and r not in seen
-            ][:10]
+            self._fallback_paths = [r for r, _ in pairs if Path(r).exists() and r not in seen][:10]
             self.available = True
             _log.info(f"已自动探测到中文字体: {self.font_summary}")
             return
-
-        # 一个中文字体都没有：仍允许渲染（中文会显示为方框），并给出明确提示
         self._fallback_paths = []
         self.available = True
-        _log.warning(
-            "未找到可用的中文字体，菜单中的中文将显示为方框。"
-            "请安装中文字体（如 Linux: apt install fonts-noto-cjk）"
-            "或在插件配置中设置 custom_font_path 指定字体文件路径。"
-        )
+        _log.warning("未找到可用的中文字体，菜单中的中文将显示为方框。")
 
     @property
     def font_summary(self) -> str:
-        """当前使用的字体描述，用于日志/调试"""
         if not self._font_path:
             return "未找到字体"
         try:
             from PIL import ImageFont
-
             fam = ImageFont.truetype(self._font_path, 12).getname()
             return f"{Path(self._font_path).name} ({fam[0]} {fam[1]})"
         except Exception:
@@ -216,7 +206,6 @@ class MenuRenderer:
 
     def _font(self, size: int, bold: bool = False):
         from PIL import ImageFont
-
         path = (self._font_bold_path if bold else self._font_path) or None
         if path:
             try:
@@ -231,7 +220,6 @@ class MenuRenderer:
         return ImageFont.load_default()
 
     def _wrap(self, draw, text: str, font, max_width: int) -> List[str]:
-        """按字符宽度换行（兼容 CJK）"""
         lines: List[str] = []
         cur = ""
         for ch in text:
@@ -249,21 +237,44 @@ class MenuRenderer:
         cfg = self.cfg
         return {
             "bg": _hex(cfg.get("bg_color"), (21, 26, 38)),
+            "bg_top": _hex(cfg.get("bg_gradient_top"), (15, 20, 30)),
+            "card_bg": _hex(cfg.get("card_bg_color"), (26, 32, 53)),
             "accent": _hex(cfg.get("accent_color"), (79, 156, 249)),
             "text": _hex(cfg.get("text_color"), (230, 233, 240)),
             "desc": _hex(cfg.get("desc_color"), (138, 147, 166)),
         }
 
-    def render_page(
-        self,
-        groups: List[dict],
-        *,
-        page: int,
-        total_pages: int,
-        total_commands: int,
-        out_path: Path,
-    ) -> Optional[Path]:
-        """把一组分组渲染成一张 PNG。成功返回 out_path，失败返回 None。"""
+    @staticmethod
+    def _make_gradient(width: int, height: int, top_color, bottom_color):
+        from PIL import Image, ImageDraw
+        if top_color == bottom_color:
+            return Image.new("RGB", (width, height), bottom_color)
+        gradient = Image.new("L", (width, height))
+        gdraw = ImageDraw.Draw(gradient)
+        for y in range(height):
+            ratio = y / max(height - 1, 1)
+            val = int(255 * (1.0 - ratio))
+            gdraw.line([(0, y), (width, y)], fill=val)
+        top = Image.new("RGB", (width, height), top_color)
+        bot = Image.new("RGB", (width, height), bottom_color)
+        return Image.composite(top, bot, gradient)
+
+    @staticmethod
+    def _add_glow(draw, width: int, height: int, accent_color, alpha: int = 30):
+        cx, cy = width - 80, -40
+        for r in range(200, 0, -20):
+            a = max(0, int(alpha * (1.0 - r / 200)))
+            if a <= 0:
+                continue
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*accent_color, a))
+        cx, cy = -60, height + 40
+        for r in range(180, 0, -20):
+            a = max(0, int(alpha * (1.0 - r / 180)))
+            if a <= 0:
+                continue
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*accent_color, a))
+
+    def render_page(self, groups: List[dict], *, page: int, total_pages: int, total_commands: int, out_path: Path) -> Optional[Path]:
         from PIL import Image, ImageDraw
 
         pal = self._palette()
@@ -272,6 +283,7 @@ class MenuRenderer:
         subtitle = sanitize_text(self.cfg.get("menu_subtitle", ""))
         footer = sanitize_text(self.cfg.get("menu_footer", ""))
         fs = max(14, int(self.cfg.get("font_size", 30)))
+        show_glow = bool(self.cfg.get("bg_glow", True))
 
         f_title = self._font(fs + 22, bold=True)
         f_sub = self._font(fs - 6)
@@ -283,8 +295,9 @@ class MenuRenderer:
         W = self.WIDTH
         X = self.PAD_X
         content_w = W - X * 2
+        cmd_indent = 8
 
-        # ── 第一步：用临时画布测量总高度 ──
+        # Measure pass
         tmp = Image.new("RGB", (W, 800), pal["bg"])
         tdraw = ImageDraw.Draw(tmp)
 
@@ -292,72 +305,121 @@ class MenuRenderer:
         y += f_title.size + 14
         if subtitle:
             y += f_sub.size + 12
-        y += 10  # 分隔线区
+        y += 10
+        card_regions: List[Tuple[int, int]] = []
+
         for g in groups:
-            y += 24 + f_group.size + 10
+            card_top = y
+            y += self.CARD_PAD_TOP
+            y += f_group.size + 10
             for c in g.get("commands", []):
-                y += f_cmd.size + 8
+                y += f_cmd.size + 4
+                if c.get("alias"):
+                    y += f_sub.size + 4
+                y += 8
                 desc = c.get("desc") or ""
                 if desc:
-                    lines = self._wrap(tdraw, desc, f_desc, content_w)
+                    desc_max_w = content_w - cmd_indent - self.DESC_INDENT
+                    lines = self._wrap(tdraw, desc, f_desc, max(40, desc_max_w))
                     y += len(lines) * (f_desc.size + 8)
-            y += 16
+            y += self.CARD_PAD_BOTTOM
+            card_regions.append((card_top, y))
+            y += self.CARD_SPACING
+
         y += 12 + f_foot.size + 8
         if footer:
             y += f_foot.size + 6
         y += self.PAD_Y
 
-        # ── 第二步：正式绘制 ──
-        img = Image.new("RGB", (W, y), pal["bg"])
+        # Gradient background + glow
+        img = self._make_gradient(W, y, pal["bg_top"], pal["bg"])
+        img = img.convert("RGBA")
         draw = ImageDraw.Draw(img)
+        if show_glow:
+            self._add_glow(draw, W, y, pal["accent"], alpha=30)
 
+        # Card backgrounds
+        card_bg_rgba = (*pal["card_bg"], 200)
+        for i, g in enumerate(groups):
+            if i >= len(card_regions):
+                break
+            cy1, cy2 = card_regions[i]
+            draw.rounded_rectangle(
+                [X - self.CARD_PAD_SIDE, cy1, X + content_w + self.CARD_PAD_SIDE, cy2],
+                radius=self.CARD_RADIUS, fill=card_bg_rgba,
+            )
+
+        # Content
         yy = self.PAD_Y
-        # 标题
+ 
+
         draw.text((X, yy), title, font=f_title, fill=pal["text"])
         yy += f_title.size + 14
         if subtitle:
             draw.text((X, yy), subtitle, font=f_sub, fill=pal["desc"])
             yy += f_sub.size + 12
-        # 分隔线
-        draw.rounded_rectangle(
-            [X, yy, X + content_w, yy + 4], radius=2, fill=pal["accent"]
-        )
+        draw.rounded_rectangle([X, yy, X + content_w, yy + 4], radius=2, fill=pal["accent"])
         yy += 10
 
-        for g in groups:
-            yy += 24
+        for i, g in enumerate(groups):
+            cy1, cy2 = card_regions[i] if i < len(card_regions) else (yy, yy + 100)
+            yy = cy1 + self.CARD_PAD_TOP
+
             gname = sanitize_text(g.get("name", "未分类"))
             gcount = len(g.get("commands", []))
             draw.text((X, yy), gname, font=f_group, fill=pal["accent"])
-            gw = draw.textlength(gname, font=f_group)
-            draw.text(
-                (X + gw + 16, yy + 4), f"{gcount} 个指令", font=f_sub, fill=pal["desc"]
-            )
+
+            # Count badge
+            count_text = str(gcount)
+            cw = draw.textlength(count_text, font=f_sub)
+            bp = 6
+            bw = cw + bp * 2
+            bh = f_sub.size + 4
+            bx = X + int(draw.textlength(gname, font=f_group)) + 16
+            draw.rounded_rectangle([bx, yy + 2, bx + bw, yy + 2 + bh], radius=6, fill=(*pal["accent"], 50))
+            draw.text((bx + bp, yy + 3), count_text, font=f_sub, fill=pal["accent"])
+
             yy += f_group.size + 10
+
             for c in g.get("commands", []):
-                cmd = f"{prefix}{c.get('cmd', '')}"
-                for a in c.get("alias") or []:
-                    cmd += f"  {prefix}{a}"
-                draw.text((X + 8, yy), cmd, font=f_cmd, fill=pal["text"])
+                main_cmd = f"{prefix}{c.get('cmd', '')}"
+                cmd_aliases = c.get("alias") or []
+
+                draw.text((X + cmd_indent, yy), main_cmd, font=f_cmd, fill=pal["text"])
+
+                # Admin badge
                 if c.get("admin") and self.cfg.get("show_admin_mark", True):
                     mark = str(self.cfg.get("admin_mark", "[管理员]"))
                     if mark:
-                        cw = draw.textlength(cmd, font=f_cmd)
-                        draw.text((X + 8 + cw + 10, yy), mark, font=f_sub, fill=pal["desc"])
-                yy += f_cmd.size + 8
+                        mw = draw.textlength(mark, font=f_sub)
+                        mb_w = mw + 10
+                        mb_h = f_sub.size + 4
+                        mb_x = X + cmd_indent + int(draw.textlength(main_cmd, font=f_cmd)) + 10
+                        draw.rounded_rectangle([mb_x, yy, mb_x + mb_w, yy + mb_h], radius=4, fill=(*pal["accent"], 40))
+                        draw.text((mb_x + 5, yy + 1), mark, font=f_sub, fill=pal["accent"])
+
+                yy += f_cmd.size + 4
+
+                # Alias line
+                if cmd_aliases:
+                    alias_text = "  ".join(f"{prefix}{a}" for a in cmd_aliases)
+                    draw.text((X + cmd_indent + self.ALIAS_INDENT, yy), alias_text, font=f_sub, fill=pal["desc"])
+                    yy += f_sub.size + 4
+
+                yy += 8
+
                 desc = c.get("desc") or ""
                 if desc:
-                    for line in self._wrap(draw, desc, f_desc, content_w):
-                        draw.text((X + 8, yy), line, font=f_desc, fill=pal["desc"])
+                    desc_max_w = content_w - cmd_indent - self.DESC_INDENT
+                    for line in self._wrap(draw, desc, f_desc, max(40, desc_max_w)):
+                        draw.text((X + cmd_indent + self.DESC_INDENT, yy), line, font=f_desc, fill=pal["desc"])
                         yy += f_desc.size + 8
-            yy += 16
 
-        # 页脚
+            yy = cy2 + self.CARD_SPACING
+
+        # Footer
         yy += 12
-        if total_pages == 1:
-            foot_line = f"共 {total_commands} 个指令"
-        else:
-            foot_line = f"共 {total_commands} 个指令 · 第 {page}/{total_pages} 页"
+        foot_line = f"共 {total_commands} 个指令" if total_pages == 1 else f"共 {total_commands} 个指令 · 第 {page}/{total_pages} 页"
         fw = draw.textlength(foot_line, font=f_foot)
         draw.text(((W - fw) / 2, yy), foot_line, font=f_foot, fill=pal["desc"])
         yy += f_foot.size + 8
@@ -366,11 +428,9 @@ class MenuRenderer:
             draw.text(((W - fw2) / 2, yy), footer, font=f_foot, fill=pal["desc"])
             yy += f_foot.size + 6
 
-        # 圆角裁剪
+        # Rounded corners
         mask = Image.new("L", img.size, 0)
-        ImageDraw.Draw(mask).rounded_rectangle(
-            [0, 0, img.size[0] - 1, img.size[1] - 1], radius=24, fill=255
-        )
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, img.size[0] - 1, img.size[1] - 1], radius=24, fill=255)
         out = Image.new("RGBA", img.size)
         out.paste(img, (0, 0), mask)
 
@@ -382,18 +442,13 @@ class MenuRenderer:
         return out_path
 
     def _cleanup_cache(self, limit: Optional[int] = None):
-        """只保留最近的 limit 张图片（默认读取配置 cache_max_files）"""
         if limit is None:
             try:
                 limit = max(1, int(self.cfg.get("cache_max_files", 20)))
             except (TypeError, ValueError):
                 limit = 20
         try:
-            files = sorted(
-                self.cache_dir.glob("*.png"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
+            files = sorted(self.cache_dir.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
             for f in files[limit:]:
                 f.unlink(missing_ok=True)
         except OSError:

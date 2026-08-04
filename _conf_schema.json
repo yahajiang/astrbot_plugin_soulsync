@@ -89,6 +89,24 @@
         "hint": "十六进制颜色，如 #151a26",
         "default": "#151a26"
     },
+    "bg_gradient_top": {
+        "description": "渐变顶部颜色",
+        "type": "string",
+        "hint": "背景垂直渐变的顶部颜色，与 bg_color 形成渐变；设为与 bg_color 相同则退化为纯色",
+        "default": "#0f141e"
+    },
+    "bg_glow": {
+        "description": "装饰光晕",
+        "type": "bool",
+        "hint": "在右上角和左下角添加半透明光晕装饰，增强视觉层次",
+        "default": true
+    },
+    "card_bg_color": {
+        "description": "卡片背景色",
+        "type": "string",
+        "hint": "每个分组卡片区域的背景色，半透明叠加在背景上",
+        "default": "#1a2035"
+    },
     "accent_color": {
         "description": "强调颜色",
         "type": "string",
