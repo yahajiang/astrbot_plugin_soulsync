@@ -88,6 +88,7 @@ INTIMACY_KEYWORDS = {  # 正面下调 15%
 FAVORABILITY_MIN: float = -100.0   # 好感度下限（负向不变）
 FAVORABILITY_MAX: float = 200.0    # 好感度上限（由 100 调高至 200）
 EMOTION_BONUS_MAX: float = 15.0    # 情感加成上限（参与复合评分）
+FAV_GROWTH_RATE: float = 0.5       # 好感正向增长速率（v2.13 放缓 50%；仅作用于正向，负向不变）
 
 
 def intimacy_from_favorability(fav: float) -> float:
@@ -144,8 +145,14 @@ class EmotionProfile:
 class EmotionEngine:
     """情感计算核心：负责好感/亲密度变更、阶段判定、复合评分"""
 
-    def __init__(self, sensitivity: float = 1.0):
+    def __init__(self, sensitivity: float = 1.0, fav_growth_rate: float = FAV_GROWTH_RATE):
         self.sensitivity = max(0.5, min(2.0, sensitivity))
+        self.fav_growth_rate = max(0.05, min(1.0, fav_growth_rate))
+
+    def update_config(self, fav_growth_rate: Optional[float] = None):
+        """热更新引擎参数（WebUI 保存配置后调用）；仅支持正向增长速率"""
+        if fav_growth_rate is not None:
+            self.fav_growth_rate = max(0.05, min(1.0, float(fav_growth_rate)))
 
     # ── 关键词情绪分析 ──
     def analyze_keywords(self, text: str) -> dict:
@@ -268,9 +275,12 @@ class EmotionEngine:
         """应用情感变更，含边界保护和阶段跃迁"""
         old_stage = profile.stage_index
 
+        # 正向增长放缓：仅对正向增量乘 fav_growth_rate（默认 0.5），负向（惩罚）不变
+        effective_delta = fav_delta * self.fav_growth_rate if fav_delta > 0 else fav_delta
+
         # 好感度变更（上限 200，下限 -100）
         profile.favorability = max(
-            FAVORABILITY_MIN, min(FAVORABILITY_MAX, profile.favorability + fav_delta)
+            FAVORABILITY_MIN, min(FAVORABILITY_MAX, profile.favorability + effective_delta)
         )
 
         # 亲密度按好感度百分比派生（int_delta 不再累积，仅用于记忆/日志展示）

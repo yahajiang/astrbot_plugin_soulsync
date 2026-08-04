@@ -57,6 +57,13 @@
     "default": 1.0,
     "slider": {"min": 0.1, "max": 3.0, "step": 0.1}
   },
+  "fav_growth_rate": {
+    "description": "好感正向增长速率",
+    "hint": "v2.13 增长放缓 50%：好感正向增长（关键词/微变化/惩罚奖励正向部分）统一乘以该系数，1.0 为原始速度；负向（惩罚）不受影响",
+    "type": "float",
+    "default": 0.5,
+    "slider": {"min": 0.1, "max": 1.0, "step": 0.05}
+  },
   "micro_change_favorability": {
     "description": "无关键词时微变化（好感）",
     "hint": "普通对话未命中任何情绪关键词时，每轮好感度的微弱正向变化量（模拟互动积累）",
