@@ -290,6 +290,9 @@ class SoulSyncPro(Star):
                 d["rel_pinned"] = self.relationship_manager.pinned_role(p.user_id)
                 d["rel_custom"] = self.relationship_manager.custom_info(p.user_id)
                 d["memory"] = self.long_memory.get_events(p.user_id, 20)
+                d["radar"] = compare_recent(
+                    self.long_memory.get_events(p.user_id, 5000), time.time(), 7
+                )
                 profiles.append(d)
             bps = [bp.to_dict() for bp in self.behavior_profiles.values()]
             return json_response({
@@ -1523,6 +1526,28 @@ class SoulSyncPro(Star):
             yield event.plain_result(f"📭 最近 {days} 天没有值得回顾的回忆")
             return
         yield event.plain_result(format_role_report(stats, days))
+
+    @filter.command("雷达图")
+    @filter.command("对比雷达")
+    async def cmd_radar(self, event: AstrMessageEvent):
+        """用户：对比最近两段各 N 天的关系维度。用法：/雷达图 [天数]（默认7）"""
+        uid = self._get_user_id(event)
+        kw = event.message_str.strip()
+        days = 7
+        try:
+            num = int("".join(c for c in kw if c.isdigit()))
+            if 1 <= num <= 90:
+                days = num
+        except Exception:
+            pass
+        from report import compare_recent, format_compare
+        comp = compare_recent(
+            self.long_memory.get_events(uid, 5000), time.time(), days
+        )
+        if not comp:
+            yield event.plain_result("📭 最近没有足够的回忆数据用于对比")
+            return
+        yield event.plain_result(format_compare(comp, days))
 
     @filter.command("调试事件")
     async def cmd_debug_event(self, event: AstrMessageEvent):

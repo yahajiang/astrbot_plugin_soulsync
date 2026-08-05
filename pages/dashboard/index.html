@@ -221,6 +221,35 @@ const pc=(v,a,b)=>Math.round(Math.max(0,Math.min(1,(v-a)/(b-a)))*100);
 const stg=p=>{if(p.favorability<0){if(p.favorability>=-15)return N[0];if(p.favorability>=-40)return N[1];if(p.favorability>=-70)return N[2];return N[3]}return S[Math.max(0,Math.min(p.stage_index||0,11))]};
 const tst=(id,m,e)=>{const el=$(id);if(el){el.textContent=m||'';el.classList.toggle('error',!!e)}};
 
+function drawRadar(cv,r){
+  if(!cv||!r)return;
+  const ctx=cv.getContext('2d'),w=cv.width,h=cv.height,cx=w/2,cy=h/2+6,R=Math.min(w,h)/2-36,n=r.labels.length;
+  ctx.clearRect(0,0,w,h);
+  const ang=i=>-Math.PI/2+i*2*Math.PI/n;
+  for(let ring=1;ring<=4;ring++){
+    ctx.beginPath();
+    for(let i=0;i<=n;i++){const a=ang(i%n),x=cx+Math.cos(a)*R*ring/4,y=cy+Math.sin(a)*R*ring/4;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+    ctx.strokeStyle='#e3e8f0';ctx.stroke();
+  }
+  for(let i=0;i<n;i++){
+    const a=ang(i),x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);ctx.strokeStyle='#e3e8f0';ctx.stroke();
+    const lx=cx+Math.cos(a)*(R+18),ly=cy+Math.sin(a)*(R+18);
+    ctx.fillStyle='#5a6478';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(r.labels[i],lx,ly);
+  }
+  const poly=(vals,color)=>{
+    ctx.beginPath();
+    for(let i=0;i<n;i++){
+      const v=Math.max(0,Math.min(100,vals[i]||0))/100,a=ang(i),x=cx+Math.cos(a)*R*v,y=cy+Math.sin(a)*R*v;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.closePath();ctx.fillStyle=color;ctx.strokeStyle=color;ctx.stroke();
+  };
+  poly(r.before,'rgba(140,163,200,0.32)');
+  poly(r.after,'rgba(212,175,55,0.42)');
+}
+
 async function load(){
   try{
     const r=await B.apiGet('data');
@@ -369,6 +398,15 @@ function detail(uid){
       h+=`<div class="sec-box"><div class="item"><span class="ic">📊</span>近${tsd.days}天 · 净变化 <strong>${tsd.delta>=0?'+':''}${tsd.delta.toFixed(1)}</strong> · 最高 <strong>${tsd.max_fav>=0?'+':''}${tsd.max_fav.toFixed(1)}</strong> · 最低 <strong>${tsd.min_fav>=0?'+':''}${tsd.min_fav.toFixed(1)}</strong></div>`;
       h+=`<div class="item"><span class="ic">📅</span>上升 ${tsd.up_days} 天 · 下降 ${tsd.down_days} 天 · 平均亲密 <strong>${tsd.avg_int.toFixed(1)}</strong></div></div>`;
     }
+  }
+
+  // ── 关系雷达对比（前后两段关系维度）──
+  if(p.radar){
+    h+='<div class="sec-t">🕸️ 关系雷达对比（前后7天）</div><div class="sec-box" style="text-align:center">';
+    h+=`<canvas id="radarCv" width="280" height="224" style="max-width:100%"></canvas>`;
+    h+=`<div style="font-size:11px;color:var(--dim)"><span style="color:#8fa3c8">◾ 前段 ${p.radar.before_avg}</span> → <span style="color:var(--gold-d)">◾ 后段 ${p.radar.after_avg}</span> 综合评分</div>`;
+    h+='</div>';
+    setTimeout(()=>drawRadar($('radarCv'),p.radar),0);
   }
 
   // ── 行为模式 ──

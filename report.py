@@ -121,6 +121,92 @@ def _tone_narrative(stats: dict) -> str:
     return "这段时间，日子平平淡淡，但能这样陪着你，我就觉得很安心"
 
 
+# ══════════ P12 对比雷达图：关系六维评分 ══════════
+DIMENSIONS = ["甜蜜", "心动", "信任", "安稳", "浓度", "羁绊"]
+
+# 各维度由情绪均值映射的权重（"安稳"为负向情绪反转）
+_DIM_W = [
+    ({"joy": 0.6, "trust": 0.4}, 0),        # 甜蜜
+    ({"anticipation": 0.6, "surprise": 0.4}, 0),  # 心动
+    ({"trust": 1.0}, 0),                    # 信任
+    ({"sadness": -0.5, "anger": -0.5}, 100),  # 安稳 = 100 - 负面
+    (None, 0),                              # 浓度：全部情绪均值
+]
+
+
+def dimension_scores(events: List[dict], start_ts: float, end_ts: float) -> Optional[dict]:
+    """按时间窗口聚合关系六维评分（0~100）。无事件返回 None。
+    甜蜜/心动/信任/安稳 由情绪均值映射，浓度=情绪活跃度均值，羁绊=min(100, 事件数*20)"""
+    items = [e for e in events if start_ts <= float(e.get("ts", 0)) < end_ts]
+    if not items:
+        return None
+    emo_means: Dict[str, float] = {}
+    emo_count = 0
+    for e in items:
+        em = e.get("emotions") or {}
+        if em:
+            emo_count += 1
+            for k, v in em.items():
+                emo_means[k] = emo_means.get(k, 0.0) + float(v)
+    for k in list(emo_means):
+        emo_means[k] /= emo_count or 1
+    scores = []
+    for weights, base in _DIM_W:
+        if weights is None:
+            mean = sum(emo_means.values()) / 8.0 if emo_means else 0.0
+        else:
+            mean = sum(v * emo_means.get(k, 0.0) for k, v in weights.items())
+        scores.append(round(max(0.0, min(100.0, base + mean))))
+    scores.append(min(100, len(items) * 20))  # 羁绊
+    return dict(zip(DIMENSIONS, scores))
+
+
+def compare_windows(events: List[dict], mid_ts: float, span_sec: float) -> Optional[dict]:
+    """前后两个时间段的关系维度对比：前段 [mid-span, mid)，后段 [mid, mid+span)。
+    返回 {labels, before, after, before_avg, after_avg}；两段都无事件返回 None"""
+    before = dimension_scores(events, mid_ts - span_sec, mid_ts)
+    after = dimension_scores(events, mid_ts, mid_ts + span_sec)
+    if before is None and after is None:
+        return None
+    zero = dict(zip(DIMENSIONS, [0] * len(DIMENSIONS)))
+    before = before or zero
+    after = after or zero
+    return {
+        "labels": DIMENSIONS,
+        "before": [before[d] for d in DIMENSIONS],
+        "after": [after[d] for d in DIMENSIONS],
+        "before_avg": round(sum(before.values()) / len(before), 1),
+        "after_avg": round(sum(after.values()) / len(after), 1),
+    }
+
+
+def compare_recent(events: List[dict], now: float, span_days: int = 7) -> Optional[dict]:
+    """以 now 为界，对比最近 span_days 天与再往前 span_days 天"""
+    span = max(1, span_days) * 86400.0
+    return compare_windows(events, now - span, span)
+
+
+def format_compare(comp: dict, span_days: int = 7) -> str:
+    """文本版对比摘要：上升/下降的维度 + 总体走向"""
+    up = [(l, a - b) for l, b, a in zip(comp["labels"], comp["before"], comp["after"])
+          if a > b]
+    down = [(l, b - a) for l, b, a in zip(comp["labels"], comp["before"], comp["after"])
+            if b > a]
+    up.sort(key=lambda x: -x[1])
+    down.sort(key=lambda x: -x[1])
+    lines = [f"🕸️ 关系雷达对比 · 前{span_days}天 vs 后{span_days}天"]
+    if up:
+        lines.append("📈 升温：" + "、".join(f"{l}+{d}" for l, d in up[:3]))
+    if down:
+        lines.append("📉 降温：" + "、".join(f"{l}-{d}" for l, d in down[:3]))
+    if not up and not down:
+        lines.append("各方面保持稳定，波澜不惊")
+    trend = "整体在变好" if comp["after_avg"] > comp["before_avg"] else (
+        "整体有些回落" if comp["after_avg"] < comp["before_avg"] else "整体持平")
+    lines.append(f"综合评分 {comp['before_avg']} → {comp['after_avg']}，{trend}。")
+    return "\n".join(lines)
+
+
 def format_role_report(stats: dict, days: int = 14) -> str:
     """以角色第一人称口吻渲染这段时间的情感历程（P11 角色视角报告）"""
     lines = [
