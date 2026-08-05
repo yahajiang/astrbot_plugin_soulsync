@@ -178,6 +178,10 @@ class SoulSyncPro(Star):
         self._save_task = None
         self._start_auto_save()
 
+        # ── 每日冷落惩罚结算任务（v2.15：惩罚改为每日更新，不再对话触发）──
+        self._daily_task = None
+        self._start_daily_penalty()
+
         # ── 注册 WebUI API ──
         self._setup_webui()
 
@@ -2208,3 +2212,61 @@ class SoulSyncPro(Star):
             self._save_task = asyncio.get_event_loop().create_task(_auto_save_loop())
         except Exception:
             pass
+
+    def _start_daily_penalty(self):
+        """每日冷落惩罚结算循环：启动时立即补结算一次，此后每日 00:10 结算（v2.15）"""
+
+        async def _daily_loop():
+            while True:
+                try:
+                    await self._apply_daily_cold_penalties()
+                except Exception as e:
+                    logger.warning(f"SoulSync 每日冷落惩罚结算失败：{e}")
+                from datetime import datetime as _dt, timedelta as _td
+
+                now = _dt.now()
+                nxt = now.replace(hour=0, minute=10, second=0, microsecond=0)
+                if nxt <= now:
+                    nxt += _td(days=1)
+                await asyncio.sleep((nxt - now).total_seconds())
+
+        try:
+            self._daily_task = asyncio.get_event_loop().create_task(_daily_loop())
+            logger.info("SoulSync 每日冷落惩罚结算任务已启动（每日 00:10）")
+        except Exception:
+            pass
+
+    def _apply_daily_cold_penalties(self):
+        """对全部用户执行每日冷落惩罚结算（缺席自然日才罚，penalty_last_date 防同日重复）"""
+        from datetime import date as _date, timedelta as _td
+
+        today = _date.today().isoformat()
+        yesterday = (_date.today() - _td(days=1)).isoformat()
+        settled = 0
+
+        for uid, bp in list(self.behavior_profiles.items()):
+            profile = self.profiles.get(uid)
+            if not profile:
+                continue
+            try:
+                pf, pi, evt = self.penalty_reward_engine.apply_daily_cold_penalty(
+                    bp, profile.favorability, today, yesterday
+                )
+            except Exception as e:
+                logger.warning(f"SoulSync 每日结算异常 [{uid}]: {e}")
+                continue
+            if not evt:
+                continue
+
+            profile.favorability = max(-100.0, min(FAVORABILITY_MAX, profile.favorability + pf))
+            bp.total_penalty_accumulated += abs(pf)
+            self.long_memory.add_event(uid, {
+                "favorability": round(profile.favorability, 1),
+                "stage": self._get_stage_label(profile),
+                "description": evt,
+                "message": "",
+            })
+            settled += 1
+            logger.info(f"SoulSync 每日冷落惩罚 [{uid}]: {evt}")
+
+        self._save_all()

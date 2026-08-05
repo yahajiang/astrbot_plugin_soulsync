@@ -87,6 +87,11 @@ class BehaviorProfile:
     last_apology_ts: float = 0.0                  # 上次道歉时间
     last_comeback_ts: float = 0.0                 # 上次回归时间
 
+    # 每日冷落结算（v2.15：冷落惩罚改为每日定时结算，不再对话触发）
+    last_active_date: str = ""                    # 上次互动自然日 YYYY-MM-DD
+    cold_days: int = 0                            # 累计冷落天数（每日结算递增）
+    penalty_last_date: str = ""                   # 上次结算惩罚的日期（防同日重复）
+
     # 已达成的里程碑
     achieved_milestones: List[str] = field(default_factory=list)
 
@@ -197,13 +202,7 @@ class PenaltyRewardEngine:
             if streak_event:
                 events.append(streak_event)
 
-        # ── 3. 冷落检测 ──
-        if self.enable_cold_penalty and bp.last_interaction_ts > 0:
-            cold_fav, cold_int, cold_event = self._check_cold(bp, now, current_favorability + extra_fav)
-            extra_fav += cold_fav
-            extra_int += cold_int
-            if cold_event:
-                events.append(cold_event)
+        # ── 3. 冷落惩罚：v2.15 起改为每日定时结算（apply_daily_cold_penalty），对话内不再结算 ──
 
         # ── 4. 回归奖励 ──
         if self.enable_comeback_reward and bp.last_interaction_ts > 0:
@@ -240,10 +239,45 @@ class PenaltyRewardEngine:
         if extra_fav != 0 or extra_int != 0:
             bp.pending_effects.append((now, extra_fav, extra_int, "; ".join(events) if events else "常规"))
 
-        # ── 更新时间戳 ──
+        # ── 更新时间戳与互动日期（每日冷落结算依据）──
         bp.last_interaction_ts = now
+        from datetime import date as _date
+
+        bp.last_active_date = _date.today().isoformat()
 
         return round(extra_fav, 2), round(extra_int, 2), events
+
+    def apply_daily_cold_penalty(
+        self, bp: BehaviorProfile, current_fav: float, today: str, yesterday: str
+    ) -> Tuple[float, float, Optional[str]]:
+        """
+        每日冷落惩罚结算（v2.15，每日定时调用，与对话触发无关）。
+
+        按自然日缺席结算：昨天（含今天）互动过则不罚；否则冷落天数 +1，
+        惩罚 = COLD_PENALTY_BASE + cold_days × COLD_PENALTY_PER_DAY（× 好感因子，上限 COLD_MAX_PENALTY）。
+        penalty_last_date 防同日重复结算；无互动日期记录的老档案不追溯。
+        """
+        if not self.enable_cold_penalty:
+            return 0.0, 0.0, None
+        if not bp.last_active_date:
+            bp.penalty_last_date = today
+            return 0.0, 0.0, None
+        if bp.last_active_date >= yesterday:
+            return 0.0, 0.0, None
+        if bp.penalty_last_date == today:
+            return 0.0, 0.0, None
+
+        bp.cold_days += 1
+        bp.penalty_last_date = today
+
+        favor_factor = max(0.5, min(2.0, (current_fav + 50) / 100))
+        fav_penalty = COLD_PENALTY_BASE + bp.cold_days * COLD_PENALTY_PER_DAY
+        fav_penalty *= favor_factor
+        fav_penalty = max(fav_penalty, COLD_MAX_PENALTY)
+        int_penalty = fav_penalty * 0.3
+
+        event = f"❄️ 每日冷落结算（第{bp.cold_days}天，好感{fav_penalty:.1f}）"
+        return fav_penalty, int_penalty, event
 
     def get_pending_deltas(self, bp: BehaviorProfile) -> Tuple[float, float]:
         """
@@ -347,29 +381,6 @@ class PenaltyRewardEngine:
             if level >= 3:
                 event = f"⚡ 负面势头 ×{level}（好感{fav_penalty:.1f}）"
             return fav_penalty, int_penalty, event
-
-    def _check_cold(
-        self, bp: BehaviorProfile, now: float, current_fav: float
-    ) -> Tuple[float, float, Optional[str]]:
-        """检测冷落（长时间未互动）"""
-        elapsed = now - bp.last_interaction_ts
-        if elapsed < self.cold_threshold_sec:
-            return 0.0, 0.0, None
-
-        # 冷落天数
-        cold_days = (elapsed - self.cold_threshold_sec) / 86400
-
-        # 好感越高，冷落惩罚越重（在乎才会受伤）
-        favor_factor = max(0.5, min(2.0, (current_fav + 50) / 100))
-
-        fav_penalty = COLD_PENALTY_BASE + cold_days * COLD_PENALTY_PER_DAY
-        fav_penalty *= favor_factor
-        fav_penalty = max(fav_penalty, COLD_MAX_PENALTY)
-
-        int_penalty = fav_penalty * 0.3  # 亲密也会下降，但幅度较小
-
-        event = f"❄️ 冷落{cold_days:.1f}天（好感{fav_penalty:.1f}）"
-        return fav_penalty, int_penalty, event
 
     def _check_comeback(
         self, bp: BehaviorProfile, now: float
