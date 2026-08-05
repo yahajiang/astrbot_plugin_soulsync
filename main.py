@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v2.15 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v2.16 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -58,7 +58,7 @@ from .time_perception import (
 
 
 class SoulSyncPro(Star):
-    """心旅知音 (SoulSync) v2.15 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
+    """心旅知音 (SoulSync) v2.16 - 融合版情感智能插件（含惩罚奖励机制、关系角色、情感深化）"""
 
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
