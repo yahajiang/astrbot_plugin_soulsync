@@ -34,7 +34,7 @@ body::after{width:720px;height:720px;background:radial-gradient(circle at center
 .card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--glass-line)}
 .card-hd h2{font-size:16px;font-weight:700;color:var(--text)}
 .card-bd{padding:16px 18px}
-.btn{border:1px solid rgba(255,255,255,.6);border-radius:16px;background:rgba(255,255,255,.65);-webkit-backdrop-filter:blur(40px) saturate(180%);backdrop-filter:blur(40px) saturate(180%);padding:6px 14px;cursor:pointer;font-size:13px;color:var(--text);box-shadow:var(--shadow-s);transition:all .5s var(--spring)}
+.btn{border:1px solid rgba(255,255,255,.6);border-radius:16px;background:rgba(255,255,255,.65);padding:6px 14px;cursor:pointer;font-size:13px;color:var(--text);box-shadow:var(--shadow-s);transition:all .5s var(--spring)}
 .btn:hover{background:rgba(255,255,255,.85);border-color:rgba(255,255,255,.9);transform:translateY(-1px);box-shadow:var(--shadow-hover)}
 .btn:active{transform:translateY(0) scale(.97)}
 .btn.pri{background:var(--gold);color:#FFF8E8;border-color:var(--gold-l)}
@@ -128,7 +128,7 @@ textarea.fld{min-height:56px;resize:vertical}
 .mm-sc{position:absolute;top:2px;right:2px;bottom:2px;width:10px;z-index:9;opacity:0;pointer-events:none;transition:opacity .15s ease-out}
 .mm-sc.mm-fixed{position:fixed}
 .mm-sc.vis{opacity:1;pointer-events:auto}
-.mm-thumb{position:absolute;top:0;right:0;width:4px;min-height:40px;border-radius:999px;background:rgba(15,25,50,.16);box-shadow:none;transition:width .2s ease-out,background .2s ease-out,box-shadow .2s ease-out}
+.mm-thumb{position:absolute;top:0;right:0;width:4px;min-height:40px;border-radius:999px;background:rgba(15,25,50,.16);box-shadow:none;animation:mmY linear;animation-timeline:scroll();animation-range:0 100%;transition:width .2s ease-out,background .2s ease-out,box-shadow .2s ease-out}
 .mm-sc.hov .mm-thumb{width:8px;background:rgba(166,124,47,.45);box-shadow:0 0 2px rgba(15,25,50,.08)}
 .mm-sc.drag .mm-thumb{width:8px;background:rgba(166,124,47,.65);box-shadow:0 0 2px rgba(15,25,50,.08)}
 .mm-has-sc{position:relative}
@@ -137,6 +137,7 @@ textarea.fld{min-height:56px;resize:vertical}
 @keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes driftA{from{transform:translate(0,0)}to{transform:translate(48px,40px)}}
 @keyframes driftB{from{transform:translate(0,0)}to{transform:translate(-42px,-36px)}}
+@keyframes mmY{from{transform:translateY(0)}to{transform:translateY(var(--mm-y))}}
 @supports not ((backdrop-filter:blur(4px)) or (-webkit-backdrop-filter:blur(4px))){.card,.stat,.modal,.row:hover{background:rgba(255,255,255,.92)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.row:hover,.btn:hover,.act-btn:hover,.stat:hover{transform:none!important}.stat:hover .ic{transform:none!important}}
 @media(max-width:800px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.det-grid{grid-template-columns:1fr}.cr{grid-template-columns:1fr}}
@@ -246,7 +247,7 @@ function status(){
   const sk=Bp.filter(b=>b.current_streak_count>=3);
   const bt=Bp.reduce((s,b)=>s+(b.betrayal_count||0),0);
   const cb=Bp.reduce((s,b)=>s+(b.comeback_count||0),0);
-  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.19 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
+  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.20 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
 }
 
 function detail(uid){
@@ -633,16 +634,20 @@ function mmScroll(el,fixed){
   const th=document.createElement('div');th.className='mm-thumb';sc.appendChild(th);
   (fixed?document.body:el).appendChild(sc);
   if(!fixed)el.classList.add('mm-has-sc');
+  const CSS_TL=CSS.supports&&CSS.supports('animation-timeline','scroll()');
+  if(!CSS_TL)th.style.animation='none';
   const dim=()=>fixed?{c:innerHeight,s:document.documentElement.scrollHeight,t:scrollY}:{c:el.clientHeight,s:el.scrollHeight,t:el.scrollTop};
   const up=()=>{
     const d=dim();
     if(d.s<=d.c+1){sc.classList.remove('vis');th.style.height='0';return}
     const h=Math.max(40,d.c*d.c/d.s);
     th.style.height=h+'px';
-    th.style.transform='translateY('+((d.t/(d.s-d.c))*(d.c-h))+'px)';
+    const y=(d.t/(d.s-d.c))*(d.c-h);
+    if(CSS_TL)th.style.setProperty('--mm-y',y+'px');
+    else th.style.transform='translateY('+y+'px)';
   };
   let raf=0;
-  const onScroll=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;up()});show()};
+  const onScroll=()=>{if(!CSS_TL&&!raf)raf=requestAnimationFrame(()=>{raf=0;up()});show()};
   const show=()=>{sc.classList.add('vis');clearTimeout(sc._t);sc._t=setTimeout(()=>{if(!sc.classList.contains('drag')&&!sc._ov)sc.classList.remove('vis')},1000)};
   (fixed?addEventListener('scroll',onScroll,{passive:true}):el.addEventListener('scroll',onScroll,{passive:true}));
   addEventListener('resize',()=>{if(!raf){raf=requestAnimationFrame(()=>{raf=0;up()})}});
