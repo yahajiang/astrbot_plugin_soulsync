@@ -106,6 +106,9 @@ class BehaviorProfile:
     # 倒计时事件（v2.16 P9：角色主动提及纪念日制造期待，防每日重复）
     countdown_last_date: str = ""          # 上次提及倒计时的自然日 YYYY-MM-DD
 
+    # 月度报告（v2.16 P10：每月回顾总结，防每月重复）
+    monthly_report_last: str = ""          # 上次注入月度回顾的年月 YYYY-MM
+
     # 待衰减的奖惩队列 [(apply_ts, delta_fav, delta_int, reason), ...]
     pending_effects: List[Tuple[float, float, float, str]] = field(default_factory=list)
 

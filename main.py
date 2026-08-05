@@ -1481,6 +1481,26 @@ class SoulSyncPro(Star):
             return None
         return count - n
 
+    @filter.command("月度报告")
+    @filter.command("月报")
+    async def cmd_monthly_report(self, event: AstrMessageEvent):
+        """用户：查看本月（或上月）关系月报。用法：/月度报告 [月] 或 /月度报告 上月"""
+        uid = self._get_user_id(event)
+        from datetime import date as _rdate
+        today_r = _rdate.today()
+        kw = event.message_str.strip()
+        if "上月" in kw or "上个月" in kw:
+            from report import last_month_label
+            y, m = last_month_label(today_r.year, today_r.month)
+        else:
+            y, m = today_r.year, today_r.month
+        from report import aggregate_month, format_report
+        stats = aggregate_month(self.long_memory.get_events(uid, 5000), y, m)
+        if not stats:
+            yield event.plain_result(f"📭 {y}年{m}月 没有值得记录的回忆")
+            return
+        yield event.plain_result(format_report(stats))
+
     @filter.command("调试事件")
     async def cmd_debug_event(self, event: AstrMessageEvent):
         """管理员：输出事件结构（排障用）"""
@@ -1608,6 +1628,30 @@ class SoulSyncPro(Star):
                                 "这是你们之间特别的日子，你一直默默记着，心里在暗暗期待、"
                                 "盘算着那天要做什么。请在回复中自然流露这份期待，"
                                 "让对方感受到你的在意。"
+                            )
+                except Exception:
+                    pass
+
+            # ── 第一步半a2：月度回顾（自然月切换后首次对话，角色回望上个月的进展与成长）──
+            monthly_ctx = ""
+            if self.config.get("enable_monthly_report", True):
+                try:
+                    from datetime import date as _mdate
+                    today_m = _mdate.today()
+                    label_m = f"{today_m.year:04d}-{today_m.month:02d}"
+                    if behavior_profile.monthly_report_last != label_m:
+                        behavior_profile.monthly_report_last = label_m
+                        from report import aggregate_month, format_report, last_month_label
+                        ly, lm = last_month_label(today_m.year, today_m.month)
+                        mstats = aggregate_month(
+                            self.long_memory.get_events(uid, 5000), ly, lm
+                        )
+                        if mstats:
+                            monthly_ctx = (
+                                f"📅 新的一月开始了。上个月的回忆（供你回顾，勿直接照读）:\n"
+                                f"{format_report(mstats)}\n"
+                                "请在回复中自然回望上个月的相处（某段记忆、情绪的起伏或成长），"
+                                "表现出对这段关系的珍视与期待。"
                             )
                 except Exception:
                     pass
@@ -1895,6 +1939,10 @@ class SoulSyncPro(Star):
             # ── 注入倒计时期待上下文 ──
             if countdown_ctx:
                 req.extra_user_content_parts.append(TextPart(text=countdown_ctx))
+
+            # ── 注入月度回顾上下文 ──
+            if monthly_ctx:
+                req.extra_user_content_parts.append(TextPart(text=monthly_ctx))
 
             # ── 注入信任考验上下文（剧情或结果）──
             if crisis_ctx:

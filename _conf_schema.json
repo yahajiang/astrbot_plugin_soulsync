@@ -542,6 +542,12 @@
     "default": 0.15,
     "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
   },
+  "enable_monthly_report": {
+    "description": "月度回顾",
+    "hint": "自然月切换后的首次对话，角色回望上月关系进展与成长（每月一次）",
+    "type": "bool",
+    "default": true
+  },
 
   "_section_perception": {
     "description": "═══ 时间感知（仿 LLMPerception）═══",
