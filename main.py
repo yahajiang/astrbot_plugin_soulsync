@@ -40,15 +40,16 @@ LEGACY_PLUGIN_NAME = "astrbot_plugin_inj_guard"
 LEGACY_STATS_FILE = "inj_guard_stats.json"
 
 MODES = ("block", "sanitize", "warn")
+MODE_LABELS = {"block": "拦截", "sanitize": "剥离", "warn": "告警"}
 
 HELP_TEXT = (
     "🛡 心旅知音 · 注入防护盾\n"
-    "用法：\n"
-    "/injguard help — 本帮助\n"
-    "/injguard stats — 今日统计与最近命中\n"
-    "/injguard mode block|sanitize|warn — 切换处置模式\n"
-    "/injguard whitelist add|del <用户ID> — 增删白名单\n"
-    "/injguard whitelist list — 查看白名单"
+    "用法（中文即可）：\n"
+    "/injguard — 帮助\n"
+    "/injguard 统计 — 今日统计与最近命中\n"
+    "/injguard 模式 拦截|剥离|告警 — 切换处置模式\n"
+    "/injguard 白名单 加|删 <用户ID> — 增删白名单\n"
+    "/injguard 白名单 列表 — 查看白名单"
 )
 
 
@@ -363,53 +364,72 @@ class InjGuard(Star):
 
     # ─────────────────────── 管理指令 ───────────────────────
 
-    @filter.command("injguard", alias={"注入防护", "防注入"})
+    @staticmethod
+    def _norm_mode(word: str) -> str | None:
+        w = word.lower()
+        if w in ("block", "拦截", "拦"):
+            return "block"
+        if w in ("sanitize", "剥离", "剥"):
+            return "sanitize"
+        if w in ("warn", "告警", "警告", "告"):
+            return "warn"
+        return None
+
+    @filter.command("injguard", alias={"注入防护", "防注入", "防护盾"})
     async def cmd_injguard(self, event: AstrMessageEvent) -> None:
         if not self._is_admin(event):
             yield event.plain_result("⛔ 该指令仅管理员可用。")
             return
 
         parts = (event.message_str or "").strip().split()
-        sub = parts[1].lower() if len(parts) > 1 else "help"
+        sub = parts[1] if len(parts) > 1 else ""
 
-        if sub == "help":
+        if sub in ("", "帮助", "帮", "help"):
             yield event.plain_result(HELP_TEXT)
             return
 
-        if sub == "stats":
+        if sub in ("统计", "数据", "stats"):
             yield event.plain_result(self._format_stats())
             return
 
-        if sub == "mode":
-            if len(parts) < 3 or parts[2].lower() not in MODES:
-                yield event.plain_result("用法：/injguard mode block|sanitize|warn")
+        if sub in ("模式", "mode"):
+            if len(parts) < 3:
+                yield event.plain_result("用法：/injguard 模式 拦截|剥离|告警")
                 return
-            mode = parts[2].lower()
+            mode = self._norm_mode(parts[2])
+            if mode is None:
+                yield event.plain_result("用法：/injguard 模式 拦截|剥离|告警")
+                return
             self.config.update({"mode": mode})
             save = getattr(self.config, "save_config", None)
             if callable(save):
                 save()
-            yield event.plain_result(f"✅ 处置模式已切换为：{mode}")
+            yield event.plain_result(f"✅ 处置模式已切换为：{MODE_LABELS[mode]}（{mode}）")
             return
 
-        if sub == "whitelist":
+        if sub in ("白名单", "名单", "whitelist"):
             if len(parts) < 3:
-                yield event.plain_result("用法：/injguard whitelist add|del|list [用户ID]")
+                yield event.plain_result("用法：/injguard 白名单 加|删 <用户ID>；/injguard 白名单 列表")
                 return
-            action = parts[2].lower()
-            if action == "list":
+            action = parts[2]
+            if action in ("列表", "查看", "list"):
                 exempt = list(self.config.get("exempt_users", []) or [])
                 if not exempt:
                     yield event.plain_result("白名单为空。")
                 else:
                     yield event.plain_result("白名单用户：\n" + "\n".join(f"- {u}" for u in exempt))
                 return
+            add = action in ("加", "添加", "add")
+            delete = action in ("删", "删除", "移除", "del")
+            if not (add or delete):
+                yield event.plain_result("用法：/injguard 白名单 加|删 <用户ID>；/injguard 白名单 列表")
+                return
             if len(parts) < 4:
-                yield event.plain_result("用法：/injguard whitelist add|del <用户ID>")
+                yield event.plain_result("用法：/injguard 白名单 加|删 <用户ID>")
                 return
             uid = parts[3]
             exempt = [str(u) for u in (self.config.get("exempt_users", []) or [])]
-            if action == "add":
+            if add:
                 if uid in exempt:
                     yield event.plain_result(f"✅ {uid} 已在白名单中。")
                 else:
@@ -417,15 +437,12 @@ class InjGuard(Star):
                     self._save_whitelist(exempt)
                     yield event.plain_result(f"✅ 已将 {uid} 加入白名单。")
                 return
-            if action == "del":
-                if uid in exempt:
-                    exempt.remove(uid)
-                    self._save_whitelist(exempt)
-                    yield event.plain_result(f"✅ 已将 {uid} 移出白名单。")
-                else:
-                    yield event.plain_result(f"{uid} 不在白名单中。")
-                return
-            yield event.plain_result("用法：/injguard whitelist add|del|list [用户ID]")
+            if uid in exempt:
+                exempt.remove(uid)
+                self._save_whitelist(exempt)
+                yield event.plain_result(f"✅ 已将 {uid} 移出白名单。")
+            else:
+                yield event.plain_result(f"{uid} 不在白名单中。")
             return
 
         yield event.plain_result(HELP_TEXT)
