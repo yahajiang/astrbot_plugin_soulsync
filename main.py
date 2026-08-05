@@ -2219,7 +2219,7 @@ class SoulSyncPro(Star):
         async def _daily_loop():
             while True:
                 try:
-                    await self._apply_daily_cold_penalties()
+                    self._apply_daily_cold_penalties()
                 except Exception as e:
                     logger.warning(f"SoulSync 每日冷落惩罚结算失败：{e}")
                 from datetime import datetime as _dt, timedelta as _td
