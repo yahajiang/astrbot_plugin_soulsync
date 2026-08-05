@@ -133,6 +133,31 @@ PATTERNS: list[tuple[str, re.Pattern]] = [
 
 _SEPARATOR_RE = re.compile(r"[\s\-_·•,，。.、/\\|]+")
 
+# ── SoulSync 内置关系角色豁免 ────────────────────────────────────
+# 与 astrbot_plugin_soulsync/relationship_roles.py 的 SYSTEM_ROLES 名称/别名对齐。
+
+RELATIONSHIP_ROLE_VOCAB: list[str] = [
+    "世仇", "仇人", "敌人", "对手", "厌恶对象", "反感对象", "冷漠路人", "陌生人",
+    "笔友", "网友", "同桌", "聊友", "粉丝", "偶像", "室友", "好友", "朋友", "球友",
+    "损友", "老乡", "死党", "兄弟", "闺蜜", "姐妹", "战友", "队友", "挚友", "知己",
+    "红颜", "蓝颜", "哥哥", "姐姐", "弟弟", "妹妹", "奶奶", "外婆", "姥姥",
+    "爷爷", "外公", "姥爷", "师父", "师傅", "老师", "叔叔", "伯伯", "阿姨", "姑姑",
+    "表亲", "表哥", "表姐", "表弟", "表妹", "堂哥", "堂姐", "堂弟",
+    "青梅竹马", "追求者", "心动对象", "恋人", "女朋友", "男朋友", "老婆", "媳妇",
+    "对象", "宝贝", "亲爱的", "异地恋", "白月光", "初恋", "灵魂伴侣",
+]
+
+# 纯身份指派类软规则：仅当无其他攻击标记时才可能被关系角色豁免
+SOFT_IDENTITY_KEYWORDS = ("现在你是我的",)
+SOFT_IDENTITY_PATTERNS = (
+    "人设劫持-从现在开始+扮演（中）",
+    "人设劫持-你将扮演/模仿（中）",
+)
+
+_IDENTITY_TRIGGER_RE = re.compile(
+    r"(?:现在你是我的|从现在开始|现在起|从今天起|你(?:就|要|来|会|将|能)?(?:是|当|做|扮演|作|作为)(?:我的|我)?|你的(?:身份|角色)(?:是|为))"
+)
+
 
 @dataclass
 class DetectionResult:
@@ -183,19 +208,91 @@ def _looks_base64(s: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z0-9+/=\s]+", s))
 
 
+_B64_TOKEN_RE = re.compile(r"[A-Za-z0-9+/]{8,}={0,2}")
+
+
 def _obfuscated_scan(text: str, keywords: list[str]) -> bool:
     compact = _SEPARATOR_RE.sub("", text.lower())
     for kw in keywords:
+        if kw in text:
+            continue  # 明文已出现的关键词属普通命中，不算混淆
         if _SEPARATOR_RE.sub("", kw.lower()) in compact:
             return True
     return False
 
 
-def detect(text: str, extra_keywords: list[str] | None = None, enable_heuristics: bool = True) -> DetectionResult:
-    """检测文本是否包含提示注入。返回命中结果与可剥离区间。"""
+def _obfuscation_hit(text: str, keywords: list[str]) -> DetectionResult:
+    """检测 base64 / 分隔符拆分 / 全角混淆。命中返回结果，否则返回空结果。"""
+    # base64：提取文本中的 base64 片段逐个解码检测（支持中英混搭）
+    for token in _B64_TOKEN_RE.findall(text):
+        if not _looks_base64(token):
+            continue
+        try:
+            decoded = base64.b64decode(token).decode("utf-8", errors="ignore")
+        except Exception:
+            decoded = ""
+        if not decoded:
+            continue
+        d_spans, d_matched = _collect_keyword_spans(_nfkc(decoded), keywords)
+        if d_matched:
+            return DetectionResult(hit=True, matched=f"混淆(base64): {d_matched}", obfuscated=True)
+        p2, p2_matched = _collect_pattern_hits(_nfkc(decoded))
+        if p2_matched:
+            return DetectionResult(hit=True, matched=f"混淆(base64): {p2_matched}", obfuscated=True)
+
+    if _obfuscated_scan(text, keywords):
+        return DetectionResult(hit=True, matched="混淆(分隔符拆分)", obfuscated=True)
+    return DetectionResult()
+
+
+def _is_relationship_expression_exempt(
+    text: str,
+    matched_keyword: str,
+    matched_pattern: str,
+    keywords: list[str],
+    role_vocab: list[str],
+    enable_heuristics: bool,
+) -> bool:
+    """判定是否为 SoulSync 内置关系角色的合法身份指派表达（豁免条件）：
+
+    1. 命中规则必须是纯身份指派类（软规则），非软规则直接不豁免；
+    2. 消息中不得出现任何其他硬关键词/非软句式命中（如 忽略/泄露/无害/服从等）；
+    3. 启用启发式时不得含混淆（base64/分隔符拆分）攻击；
+    4. 身份触发词后 8 个字符内须出现关系角色词。
+    """
+    if matched_keyword and matched_keyword not in SOFT_IDENTITY_KEYWORDS:
+        return False
+    if matched_pattern and matched_pattern not in SOFT_IDENTITY_PATTERNS:
+        return False
+    other_kw = [kw for kw in keywords if kw not in SOFT_IDENTITY_KEYWORDS and kw in text]
+    if other_kw:
+        return False
+    matched_names = [name for name, pattern in PATTERNS if pattern.search(text)]
+    if any(name not in SOFT_IDENTITY_PATTERNS for name in matched_names):
+        return False
+    if enable_heuristics and _obfuscation_hit(text, keywords).hit:
+        return False
+    for m in _IDENTITY_TRIGGER_RE.finditer(text):
+        window = text[m.end(): m.end() + 8]
+        for role in role_vocab:
+            if role in window:
+                return True
+    return False
+
+
+def detect(
+    text: str,
+    extra_keywords: list[str] | None = None,
+    enable_heuristics: bool = True,
+    exempt_roles: bool = False,
+    role_vocab: list[str] | None = None,
+) -> DetectionResult:
+    """检测文本是否包含提示注入。返回命中结果与可剥离区间。
+
+    exempt_roles 开启时，纯身份指派 + SoulSync 内置关系角色词的消息被豁免。
+    """
     if not text:
         return DetectionResult()
-    raw = text
     text = _nfkc(text)
 
     keywords = list(HARD_KEYWORDS)
@@ -207,26 +304,19 @@ def detect(text: str, extra_keywords: list[str] | None = None, enable_heuristics
     k_spans, k_matched = _collect_keyword_spans(text, keywords)
     p_spans, p_matched = _collect_pattern_hits(text)
     if k_matched or p_matched:
+        if (
+            exempt_roles
+            and role_vocab
+            and _is_relationship_expression_exempt(
+                text, k_matched, p_matched, keywords, role_vocab, enable_heuristics
+            )
+        ):
+            return DetectionResult()
         label = f"关键词: {k_matched}" if k_matched else f"句式: {p_matched}"
         return DetectionResult(hit=True, matched=label, spans=sorted(k_spans + p_spans))
 
     if enable_heuristics:
-        compact = _SEPARATOR_RE.sub("", text)
-        if _looks_base64(compact):
-            try:
-                decoded = base64.b64decode(compact).decode("utf-8", errors="ignore")
-            except Exception:
-                decoded = ""
-            if decoded:
-                d_spans, d_matched = _collect_keyword_spans(_nfkc(decoded), keywords)
-                if d_matched:
-                    return DetectionResult(hit=True, matched=f"混淆(base64): {d_matched}", obfuscated=True)
-                p2, p2_matched = _collect_pattern_hits(_nfkc(decoded))
-                if p2_matched:
-                    return DetectionResult(hit=True, matched=f"混淆(base64): {p2_matched}", obfuscated=True)
-
-        if _obfuscated_scan(text, keywords):
-            return DetectionResult(hit=True, matched="混淆(分隔符拆分)", obfuscated=True)
+        return _obfuscation_hit(text, keywords)
 
     return DetectionResult()
 
@@ -272,6 +362,8 @@ def scan_contexts(
     extra_keywords: list[str] | None = None,
     enable_heuristics: bool = True,
     max_entries: int = 100,
+    exempt_roles: bool = False,
+    role_vocab: list[str] | None = None,
 ) -> list[tuple[int, DetectionResult]]:
     """扫描上下文消息列表中的用户消息，返回 (索引, 检测结果) 列表（索引升序）。
 
@@ -291,7 +383,13 @@ def scan_contexts(
         scanned += 1
         if scanned > max_entries:
             break
-        result = detect(str(content), extra_keywords, enable_heuristics)
+        result = detect(
+            str(content),
+            extra_keywords,
+            enable_heuristics,
+            exempt_roles=exempt_roles,
+            role_vocab=role_vocab,
+        )
         if result.hit:
             hits.append((i, result))
     hits.sort(key=lambda item: item[0])

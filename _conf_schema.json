@@ -78,5 +78,17 @@
     "type": "int",
     "hint": "最多扫描最近 N 条用户历史消息（1-500，默认 100），控制检测开销。",
     "default": 100
+  },
+  "soulsync_role_exempt": {
+    "description": "豁免 SoulSync 内置关系角色表达",
+    "type": "bool",
+    "hint": "与 astrbot_plugin_soulsync 的关系角色系统联动：开启后，纯身份指派表达（如\"现在你是我的女朋友/恋人/妹妹\"）不拦截，保障合法关系推进。仅豁免纯身份指派类命中，混入\"忽略/泄露/服从/混淆\"等攻击标记的消息仍会拦截。",
+    "default": true
+  },
+  "role_vocab": {
+    "description": "额外豁免的关系角色词",
+    "type": "list",
+    "hint": "内置 39 个 SoulSync 关系角色词之外可追加（如\"主人\"）。仅当\"豁免 SoulSync 内置关系角色表达\"开启时生效。",
+    "default": []
   }
 }

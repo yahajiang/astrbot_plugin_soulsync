@@ -27,7 +27,7 @@ try:
 except ImportError:  # pragma: no cover
     StarTools = None  # type: ignore[assignment]
 
-from .detector import detect, sanitize, scan_contexts
+from .detector import RELATIONSHIP_ROLE_VOCAB, detect, sanitize, scan_contexts
 from .guard_text import (
     DEFAULT_BLOCK_REPLY,
     DEFAULT_GUARD_TEXT,
@@ -174,10 +174,14 @@ class InjGuard(Star):
         prompt = str(prompt)
 
         extra_kw = list(self.config.get("extra_keywords", []) or [])
+        exempt_roles = bool(self.config.get("soulsync_role_exempt", True))
+        role_vocab = self._role_vocab()
         result = detect(
             prompt,
             extra_kw,
             enable_heuristics=bool(self.config.get("enable_heuristics", True)),
+            exempt_roles=exempt_roles,
+            role_vocab=role_vocab,
         )
         if result.hit:
             mode = str(self.config.get("mode", "block")).lower()
@@ -202,6 +206,14 @@ class InjGuard(Star):
 
         if self.config.get("scan_contexts", True):
             self._scan_request_contexts(event, req, extra_kw)
+
+    def _role_vocab(self) -> list[str]:
+        vocab = list(RELATIONSHIP_ROLE_VOCAB)
+        for word in self.config.get("role_vocab", []) or []:
+            word = str(word).strip()
+            if word:
+                vocab.append(word)
+        return vocab
 
     def _apply_block(self, event: AstrMessageEvent, req: ProviderRequest, matched: str, original: str) -> None:
         reply = str(self.config.get("block_reply", DEFAULT_BLOCK_REPLY))
@@ -228,6 +240,8 @@ class InjGuard(Star):
             extra_kw,
             enable_heuristics=bool(self.config.get("enable_heuristics", True)),
             max_entries=self._context_scan_max(),
+            exempt_roles=bool(self.config.get("soulsync_role_exempt", True)),
+            role_vocab=self._role_vocab(),
         )
         if not hits:
             return
