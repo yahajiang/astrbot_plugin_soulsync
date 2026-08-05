@@ -548,6 +548,26 @@
     "type": "bool",
     "default": true
   },
+  "enable_role_report": {
+    "description": "角色视角独白",
+    "hint": "按间隔以角色口吻（第一人称）回望最近的情感历程，自然流露内心独白",
+    "type": "bool",
+    "default": true
+  },
+  "role_report_interval_days": {
+    "description": "独白间隔（天）",
+    "hint": "两次内心独白之间的最少间隔天数",
+    "type": "int",
+    "default": 7,
+    "slider": {"min": 1, "max": 30, "step": 1}
+  },
+  "report_window_days": {
+    "description": "回顾窗口（天）",
+    "hint": "/角色回顾 默认回顾最近多少天（也可在命令后直接指定天数）",
+    "type": "int",
+    "default": 14,
+    "slider": {"min": 1, "max": 90, "step": 1}
+  },
 
   "_section_perception": {
     "description": "═══ 时间感知（仿 LLMPerception）═══",

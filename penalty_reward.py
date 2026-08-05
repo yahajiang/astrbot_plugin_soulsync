@@ -109,6 +109,9 @@ class BehaviorProfile:
     # 月度报告（v2.16 P10：每月回顾总结，防每月重复）
     monthly_report_last: str = ""          # 上次注入月度回顾的年月 YYYY-MM
 
+    # 角色视角独白（v2.16 P11：以角色口吻总结这段时间的情感历程）
+    role_report_last_ts: float = 0.0       # 上次注入内心独白的 ts
+
     # 待衰减的奖惩队列 [(apply_ts, delta_fav, delta_int, reason), ...]
     pending_effects: List[Tuple[float, float, float, str]] = field(default_factory=list)
 

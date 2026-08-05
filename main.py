@@ -1501,6 +1501,29 @@ class SoulSyncPro(Star):
             return
         yield event.plain_result(format_report(stats))
 
+    @filter.command("角色回顾")
+    @filter.command("回顾")
+    async def cmd_role_report(self, event: AstrMessageEvent):
+        """用户：以角色口吻总结最近一段时间的相处。用法：/角色回顾 [天数]（默认14）"""
+        uid = self._get_user_id(event)
+        kw = event.message_str.strip()
+        days = int(self.config.get("report_window_days", 14))
+        try:
+            num = int("".join(c for c in kw if c.isdigit()))
+            if 1 <= num <= 365:
+                days = num
+        except Exception:
+            pass
+        from report import aggregate_window, format_role_report
+        now_r = time.time()
+        stats = aggregate_window(
+            self.long_memory.get_events(uid, 5000), now_r - days * 86400.0, now_r
+        )
+        if not stats:
+            yield event.plain_result(f"📭 最近 {days} 天没有值得回顾的回忆")
+            return
+        yield event.plain_result(format_role_report(stats, days))
+
     @filter.command("调试事件")
     async def cmd_debug_event(self, event: AstrMessageEvent):
         """管理员：输出事件结构（排障用）"""
@@ -1652,6 +1675,30 @@ class SoulSyncPro(Star):
                                 f"{format_report(mstats)}\n"
                                 "请在回复中自然回望上个月的相处（某段记忆、情绪的起伏或成长），"
                                 "表现出对这段关系的珍视与期待。"
+                            )
+                except Exception:
+                    pass
+
+            # ── 第一步半a3：角色视角独白（按间隔以角色口吻回望最近的情感历程）──
+            role_ctx = ""
+            if self.config.get("enable_role_report", True):
+                try:
+                    now_r = time.time()
+                    interval = float(self.config.get("role_report_interval_days", 7)) * 86400.0
+                    if now_r - behavior_profile.role_report_last_ts >= interval:
+                        behavior_profile.role_report_last_ts = now_r
+                        from report import aggregate_window, format_role_report
+                        rstats = aggregate_window(
+                            self.long_memory.get_events(uid, 5000),
+                            now_r - interval, now_r,
+                        )
+                        if rstats:
+                            role_ctx = (
+                                "🌙 夜深人静时，你独自回想这段时间的相处。"
+                                f"（供你展开内心独白，勿直接照读）\n"
+                                f"{format_role_report(rstats, int(interval / 86400.0))}\n"
+                                "请以第一人称、带着真实的情绪，自然地把这份心绪说给对方听，"
+                                "让对方感到你的真诚与在意。"
                             )
                 except Exception:
                     pass
@@ -1943,6 +1990,10 @@ class SoulSyncPro(Star):
             # ── 注入月度回顾上下文 ──
             if monthly_ctx:
                 req.extra_user_content_parts.append(TextPart(text=monthly_ctx))
+
+            # ── 注入角色视角独白上下文 ──
+            if role_ctx:
+                req.extra_user_content_parts.append(TextPart(text=role_ctx))
 
             # ── 注入信任考验上下文（剧情或结果）──
             if crisis_ctx:
