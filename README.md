@@ -9,7 +9,7 @@
 [![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.10.0-blue)](https://github.com/Soulter/AstrBot)
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.10-green)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.3.0-8A2BE2)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.3.1-8A2BE2)](CHANGELOG.md)
 
 </div>
 
@@ -36,17 +36,17 @@
 
 ## 📖 管理指令
 
-> 仅管理员可用，中文即可：
+> 仅管理员可用，全中文：
 
 ```
-/injguard                  帮助
-/injguard 统计             今日统计与最近命中
-/injguard 模式 拦截|剥离|告警  切换处置模式（持久化）
-/injguard 白名单 加|删 <用户ID> 增删白名单
-/injguard 白名单 列表       查看白名单
+/防注入                  帮助
+/防注入 统计             今日统计与最近命中
+/防注入 模式 拦截|剥离|告警 切换处置模式（持久化）
+/防注入 白名单 加|删 <用户ID> 增删白名单
+/防注入 白名单 列表       查看白名单
 ```
 
-> 💡 兼容旧版英文写法：`help` / `stats` / `mode block|sanitize|warn` / `whitelist add|del|list`。
+> 别名：`/注入防护`、`/防护盾`、`/注入防护盾`。
 
 ## ⚙️ 配置项
 

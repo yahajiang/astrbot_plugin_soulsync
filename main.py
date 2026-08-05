@@ -44,12 +44,12 @@ MODE_LABELS = {"block": "拦截", "sanitize": "剥离", "warn": "告警"}
 
 HELP_TEXT = (
     "🛡 心旅知音 · 注入防护盾\n"
-    "用法（中文即可）：\n"
-    "/injguard — 帮助\n"
-    "/injguard 统计 — 今日统计与最近命中\n"
-    "/injguard 模式 拦截|剥离|告警 — 切换处置模式\n"
-    "/injguard 白名单 加|删 <用户ID> — 增删白名单\n"
-    "/injguard 白名单 列表 — 查看白名单"
+    "用法：\n"
+    "/防注入 — 帮助\n"
+    "/防注入 统计 — 今日统计与最近命中\n"
+    "/防注入 模式 拦截|剥离|告警 — 切换处置模式\n"
+    "/防注入 白名单 加|删 <用户ID> — 增删白名单\n"
+    "/防注入 白名单 列表 — 查看白名单"
 )
 
 
@@ -366,16 +366,15 @@ class InjGuard(Star):
 
     @staticmethod
     def _norm_mode(word: str) -> str | None:
-        w = word.lower()
-        if w in ("block", "拦截", "拦"):
+        if word in ("拦截", "拦"):
             return "block"
-        if w in ("sanitize", "剥离", "剥"):
+        if word in ("剥离", "剥"):
             return "sanitize"
-        if w in ("warn", "告警", "警告", "告"):
+        if word in ("告警", "警告", "告"):
             return "warn"
         return None
 
-    @filter.command("injguard", alias={"注入防护", "防注入", "防护盾"})
+    @filter.command("防注入", alias={"注入防护", "防护盾", "注入防护盾"})
     async def cmd_injguard(self, event: AstrMessageEvent) -> None:
         if not self._is_admin(event):
             yield event.plain_result("⛔ 该指令仅管理员可用。")
@@ -384,48 +383,48 @@ class InjGuard(Star):
         parts = (event.message_str or "").strip().split()
         sub = parts[1] if len(parts) > 1 else ""
 
-        if sub in ("", "帮助", "帮", "help"):
+        if sub in ("", "帮助", "帮"):
             yield event.plain_result(HELP_TEXT)
             return
 
-        if sub in ("统计", "数据", "stats"):
+        if sub in ("统计", "数据"):
             yield event.plain_result(self._format_stats())
             return
 
-        if sub in ("模式", "mode"):
+        if sub in ("模式",):
             if len(parts) < 3:
-                yield event.plain_result("用法：/injguard 模式 拦截|剥离|告警")
+                yield event.plain_result("用法：/防注入 模式 拦截|剥离|告警")
                 return
             mode = self._norm_mode(parts[2])
             if mode is None:
-                yield event.plain_result("用法：/injguard 模式 拦截|剥离|告警")
+                yield event.plain_result("用法：/防注入 模式 拦截|剥离|告警")
                 return
             self.config.update({"mode": mode})
             save = getattr(self.config, "save_config", None)
             if callable(save):
                 save()
-            yield event.plain_result(f"✅ 处置模式已切换为：{MODE_LABELS[mode]}（{mode}）")
+            yield event.plain_result(f"✅ 处置模式已切换为：{MODE_LABELS[mode]}")
             return
 
-        if sub in ("白名单", "名单", "whitelist"):
+        if sub in ("白名单", "名单"):
             if len(parts) < 3:
-                yield event.plain_result("用法：/injguard 白名单 加|删 <用户ID>；/injguard 白名单 列表")
+                yield event.plain_result("用法：/防注入 白名单 加|删 <用户ID>；/防注入 白名单 列表")
                 return
             action = parts[2]
-            if action in ("列表", "查看", "list"):
+            if action in ("列表", "查看"):
                 exempt = list(self.config.get("exempt_users", []) or [])
                 if not exempt:
                     yield event.plain_result("白名单为空。")
                 else:
                     yield event.plain_result("白名单用户：\n" + "\n".join(f"- {u}" for u in exempt))
                 return
-            add = action in ("加", "添加", "add")
-            delete = action in ("删", "删除", "移除", "del")
+            add = action in ("加", "添加")
+            delete = action in ("删", "删除", "移除")
             if not (add or delete):
-                yield event.plain_result("用法：/injguard 白名单 加|删 <用户ID>；/injguard 白名单 列表")
+                yield event.plain_result("用法：/防注入 白名单 加|删 <用户ID>；/防注入 白名单 列表")
                 return
             if len(parts) < 4:
-                yield event.plain_result("用法：/injguard 白名单 加|删 <用户ID>")
+                yield event.plain_result("用法：/防注入 白名单 加|删 <用户ID>")
                 return
             uid = parts[3]
             exempt = [str(u) for u in (self.config.get("exempt_users", []) or [])]
