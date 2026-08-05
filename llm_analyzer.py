@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     pass
 
-from emotion_engine import detect_compound_emotions
+from .emotion_engine import detect_compound_emotions
 
 
 # ─── 系统提示词 ─────────────────────────────────────────────────

@@ -130,7 +130,7 @@ def build_lunar_info(dt: datetime.datetime) -> str:
     try:
         from .anniversary import solar_to_lunar
     except ImportError:
-        from anniversary import solar_to_lunar
+            from .anniversary import solar_to_lunar
     try:
         res = solar_to_lunar(dt.year, dt.month, dt.day)
         if res:

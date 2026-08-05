@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from emotion_engine import DIM_ICONS, DIM_LABELS
+from .emotion_engine import DIM_ICONS, DIM_LABELS
 
 
 def emotion_anchor(emotions: Optional[dict], top_n: int = 2) -> str:

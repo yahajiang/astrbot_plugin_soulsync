@@ -6,8 +6,8 @@ import random
 import time
 from typing import Callable, Dict, Optional
 
-from penalty_reward import BehaviorProfile
-from emotion_engine import EmotionProfile
+from .penalty_reward import BehaviorProfile
+from .emotion_engine import EmotionProfile
 
 
 # ─── 考验剧情池（高好感阶段的随机信任考验）────────────────────────
