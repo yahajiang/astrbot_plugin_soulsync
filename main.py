@@ -1607,7 +1607,16 @@ class SoulSyncPro(Star):
             except Exception as e:
                 logger.warning(f"SoulSync 雷达图渲染失败（降级文本）: {e}")
             if not path:
-                logger.warning("SoulSync 雷达图渲染返回空（render_radar 内部失败或渲染器不可用），降级文本")
+                # 兜底：render_radar 失败时改用普通卡片渲染文本对比，保证有图
+                try:
+                    path = self.image_renderer.render_card(
+                        f"关系雷达 · 前后各{days}天",
+                        format_compare(comp, days).split("\n"),
+                        f"card_{int(time.time())}.png",
+                    )
+                except Exception as e:
+                    logger.warning(f"SoulSync 雷达图卡片兜底渲染失败（降级文本）: {e}")
+                    path = None
         if path:
             yield event.image_result(path)
         else:

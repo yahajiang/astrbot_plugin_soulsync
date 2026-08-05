@@ -702,7 +702,7 @@ class ImageRenderer:
             ad = ImageDraw.Draw(area)
             ad.polygon(before_pts, fill=(91, 141, 239, 90))
             img.alpha_composite(area)
-            draw.line(before_pts + [before_pts[0]], fill=(110, 165, 255), width=3, joint="curve")
+            draw.line(before_pts + [before_pts[0]], fill=(110, 165, 255), width=3)
             for x, y in before_pts:
                 draw.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(110, 165, 255))
 
@@ -712,7 +712,7 @@ class ImageRenderer:
             ad2 = ImageDraw.Draw(area2)
             ad2.polygon(after_pts, fill=(247, 183, 49, 95))
             img.alpha_composite(area2)
-            draw.line(after_pts + [after_pts[0]], fill=(255, 200, 90), width=3, joint="curve")
+            draw.line(after_pts + [after_pts[0]], fill=(255, 200, 90), width=3)
             for x, y in after_pts:
                 draw.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(255, 200, 90))
 
