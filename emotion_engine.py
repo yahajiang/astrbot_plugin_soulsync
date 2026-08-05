@@ -28,6 +28,26 @@ DIM_ICONS = {
     "surprise": "😲", "disgust": "🤢", "trust": "🤗", "anticipation": "✨",
 }
 
+# ─── 复合情绪标签（双维达到阈值即激活）────────────────────────────
+COMPOUND_EMOTIONS = {
+    "感动": {"joy": 60, "trust": 60},
+    "失望": {"sadness": 55, "disgust": 50},
+    "醋意": {"anger": 50, "fear": 50},
+    "忐忑": {"anticipation": 50, "fear": 50},
+    "依恋": {"trust": 60, "anticipation": 50},
+}
+
+
+def detect_compound_emotions(emotions: Optional[dict]) -> list:
+    """返回当前激活的复合情绪标签列表（如 ["感动", "依恋"]）"""
+    if not emotions:
+        return []
+    out = []
+    for label, conds in COMPOUND_EMOTIONS.items():
+        if all(emotions.get(d, 0) >= t for d, t in conds.items()):
+            out.append(label)
+    return out
+
 # ─── 关系阶段定义（十二阶段，好感上限 200 后阈值加大间距）────────
 @dataclass
 class StageConfig:

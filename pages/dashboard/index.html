@@ -205,6 +205,11 @@ function anchorOf(em){
   return Object.entries(em).sort((a,b)=>b[1]-a[1]).slice(0,2)
     .map(([d,v])=>`${DI[d]||'•'}${DM[d]||d}${Math.round(v)}`).join(' · ');
 }
+const CM={'感动':{'joy':60,'trust':60},'失望':{'sadness':55,'disgust':50},'醋意':{'anger':50,'fear':50},'忐忑':{'anticipation':50,'fear':50},'依恋':{'trust':60,'anticipation':50}};
+function compoundOf(em){
+  if(!em||typeof em!=='object')return [];
+  return Object.keys(CM).filter(l=>Object.entries(CM[l]).every(([d,t])=>(em[d]||0)>=t));
+}
 const DC={joy:'#fdcb6e',sadness:'#74b9ff',anger:'#e17055',fear:'#a29bfe',surprise:'#ffeaa7',disgust:'#55efc4',trust:'#00b894',anticipation:'#6c5ce7'};
 
 let P=[],Bp=[],schema={},draft={},Fest=[],Roles=[];
@@ -313,6 +318,8 @@ function detail(uid){
   h+='<div class="sec-t">🎭 情感画像</div><div class="emo">';
   const dimIc={joy:'😊',sadness:'😢',anger:'😠',fear:'😨',surprise:'😲',disgust:'🤢',trust:'🤗',anticipation:'✨'};
   for(const d of Object.keys(DM)){const v=(p.emotions&&p.emotions[d])||50;h+=`<div class="ei"><div class="n">${dimIc[d]||''} ${DM[d]}</div><div class="v" style="color:${DC[d]}">${v.toFixed(0)}</div><div class="eb"><div class="ef" style="width:${v}%;background:${DC[d]}"></div></div></div>`}
+  const cmp=compoundOf(p.emotions);
+  if(cmp.length)h+=`<div style="font-size:12px;margin-top:8px;color:var(--dim)">🎯 复合情绪：${cmp.map(c=>`<span style="display:inline-block;background:var(--gold-l);color:var(--gold-d);border-radius:10px;padding:1px 8px;margin:2px 4px 2px 0;font-size:11px">${esc(c)}</span>`).join('')}</div>`;
   h+='</div>';
 
   // ── 互动统计 ──

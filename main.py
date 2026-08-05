@@ -31,6 +31,7 @@ from .emotion_engine import (
     EmotionEngine, EmotionProfile, STAGES, NEGATIVE_STAGES,
     EMOTION_DIMENSIONS, DIM_LABELS, DIM_ICONS,
     intimacy_from_favorability, FAVORABILITY_MAX,
+    detect_compound_emotions,
 )
 from .smart_updater import SmartUpdater
 from .memory_manager import LongTermMemory
@@ -1060,6 +1061,9 @@ class SoulSyncPro(Star):
                 icon = DIM_ICONS.get(dim, "•")
                 label = DIM_LABELS.get(dim, dim)
                 lines.append(f"  {icon} {label}：{val:.0f}  {bar}")
+            compound = detect_compound_emotions(profile.emotions)
+            if compound:
+                lines.append(f"  🎯 复合情绪：{' · '.join(compound)}")
             lines.append("")
 
         # ── 互动统计 ──
@@ -1854,6 +1858,9 @@ class SoulSyncPro(Star):
                 val = profile.emotions.get(dim, 50)
                 bar = self._progress_bar(val, 0, 100)
                 lines.append(f"  {DIM_LABELS.get(dim, dim)}：{val:.1f} {bar}")
+            compound = detect_compound_emotions(profile.emotions)
+            if compound:
+                lines.append(f"  🎯 复合情绪：{' · '.join(compound)}")
 
             custom = self.relationship_manager.custom_info(profile.user_id)
             if custom["attitude"]:

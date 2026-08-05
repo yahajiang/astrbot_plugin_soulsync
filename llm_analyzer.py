@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     pass
 
+from emotion_engine import detect_compound_emotions
+
 
 # ─── 系统提示词 ─────────────────────────────────────────────────
 EMOTION_ANALYSIS_PROMPT = """你是一个情感分析专家。你需要分析用户的消息对 AI 助手的情感影响。
@@ -16,6 +18,7 @@ EMOTION_ANALYSIS_PROMPT = """你是一个情感分析专家。你需要分析用
 - 亲密度：{intimacy}/100（按好感度派生）
 - 关系阶段：{stage_label}
 - 8维情感：喜悦={joy}, 悲伤={sadness}, 愤怒={anger}, 恐惧={fear}, 惊讶={surprise}, 厌恶={disgust}, 信任={trust}, 期待={anticipation}
+- 复合情绪：{compound}
 
 当前扮演关系角色：{role_context}
 
@@ -72,6 +75,7 @@ class LLMAnalyzer:
             disgust=round(emotions.get("disgust", 50), 1),
             trust=round(emotions.get("trust", 50), 1),
             anticipation=round(emotions.get("anticipation", 50), 1),
+            compound="、".join(detect_compound_emotions(emotions)) or "无",
             memory_summary=memory_summary or "暂无",
             recent_messages=recent_messages or "暂无",
             role_context=role_context or "陌生人（普通朋友关系）",
