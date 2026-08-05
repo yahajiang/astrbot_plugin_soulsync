@@ -84,6 +84,12 @@
     "type": "bool",
     "default": true
   },
+  "enable_stage_styles": {
+    "description": "阶段对话风格（关系分支剧情）",
+    "hint": "开启后：十二阶段与负阶段各有独立称呼/口吻/互动倾向，注入 LLM 回复自然贴合",
+    "type": "bool",
+    "default": true
+  },
   "tension_accumulate_rate": {
     "description": "张力积累倍率",
     "hint": "每轮负面情感上升量 × 该倍率 = 张力增加",

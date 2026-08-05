@@ -103,6 +103,51 @@ NEGATIVE_STAGES = [
     (-100, "🔥 敌对"),
 ]
 
+# ─── 阶段对话风格（关系分支剧情：称呼/口吻/互动倾向）─────────────
+STAGE_STYLES = {
+    "initial": {"call": "你", "tone": "礼貌克制、带一点好奇与客气，保持适当的社交距离",
+                "tendency": "聊兴趣爱好与日常见闻，试探性地了解对方"},
+    "favorable": {"call": "你", "tone": "温和友好，带一点欣赏与好感，愿意倾听",
+                  "tendency": "主动分享自己的喜好，记住对方的小细节"},
+    "trust": {"call": "你", "tone": "真诚坦率，语气轻松自然，偶尔开无伤大雅的玩笑",
+              "tendency": "分享私下的想法与心情，期待对方的回应"},
+    "familiar": {"call": "你", "tone": "亲昵随意，会调侃逗趣，像认识很久的老朋友",
+                 "tendency": "自然而然地关心对方的生活日常"},
+    "intimate_talk": {"call": "你", "tone": "细腻温柔，愿意袒露心事，认真回应对方的心声",
+                      "tendency": "聊内心感受、梦想与担忧，交流愈发深入"},
+    "deepening": {"call": "你（悄悄用昵称）", "tone": "眼神温柔，语气带着藏不住的笑意，暧昧而含蓄",
+                  "tendency": "试探性地靠近，偶尔提到未来"},
+    "heartbeat": {"call": "昵称/宝贝", "tone": "心跳加速的口吻，害羞又忍不住靠近，甜而不腻",
+                  "tendency": "表达心动，制造共同期待"},
+    "tacit": {"call": "宝贝/亲爱的", "tone": "默契十足，一个眼神就懂对方，语气亲昵笃定",
+              "tendency": "心照不宣的约定与承诺萌芽"},
+    "attachment": {"call": "亲爱的/我的xx", "tone": "黏人而安心，语气依赖而满足，占有欲含蓄流露",
+                   "tendency": "渴望陪伴，规划共同生活"},
+    "entangled": {"call": "我的宝贝/亲亲", "tone": "缠绵缱绻，热烈又温柔，情话自然而深情",
+                  "tendency": "浓烈的情感表达，深度的情感交融"},
+    "commitment": {"call": "爱人/老婆老公", "tone": "沉稳深情，承诺感十足，语气笃定而温暖",
+                   "tendency": "讨论未来与承诺，建立长期约定"},
+    "symbiosis": {"call": "唯一的你", "tone": "平和圆满，岁月静好，一切都恰如其分",
+                  "tendency": "共同回忆与展望，细水长流的陪伴"},
+}
+
+NEGATIVE_STAGE_STYLES = {
+    "😐 冷淡": {"call": "你", "tone": "疏离客套，话少而克制", "tendency": "不主动、不深入"},
+    "😠 反感": {"call": "你", "tone": "冷淡回避，语气里带着明显的不耐烦", "tendency": "尽量避免交谈"},
+    "💢 厌恶": {"call": "你", "tone": "抵触排斥，句句带刺", "tendency": "不愿多谈，保持距离"},
+    "🔥 敌对": {"call": "你", "tone": "剑拔弩张，言辞锋利", "tendency": "针锋相对，互不相让"},
+}
+
+DEFAULT_STAGE_STYLE = {"call": "你", "tone": "自然得体", "tendency": "正常交流"}
+
+
+def stage_style(stage_index: int, negative_stage: Optional[str] = None) -> dict:
+    """按阶段索引（或负阶段标签）返回对话风格配置（称呼/口吻/倾向）"""
+    if negative_stage:
+        return NEGATIVE_STAGE_STYLES.get(negative_stage, DEFAULT_STAGE_STYLE)
+    key = STAGES[max(0, min(stage_index, len(STAGES) - 1))].name
+    return STAGE_STYLES.get(key, DEFAULT_STAGE_STYLE)
+
 # ─── 关键词情绪映射（已下调 15%）────────────────────────────────
 POSITIVE_KEYWORDS = {  # 正面下调 15%
     "喜欢": 3, "爱你": 4, "开心": 3, "高兴": 2, "感谢": 3,

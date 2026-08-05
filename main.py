@@ -31,7 +31,7 @@ from .emotion_engine import (
     EmotionEngine, EmotionProfile, STAGES, NEGATIVE_STAGES,
     EMOTION_DIMENSIONS, DIM_LABELS, DIM_ICONS,
     intimacy_from_favorability, FAVORABILITY_MAX,
-    detect_compound_emotions, tension_state,
+    detect_compound_emotions, tension_state, stage_style,
 )
 from .smart_updater import SmartUpdater
 from .memory_manager import LongTermMemory
@@ -577,9 +577,11 @@ class SoulSyncPro(Star):
         bp = self._get_or_create_behavior_profile(self._get_user_id(event))
         if profile.favorability < 0:
             stage_label = self._get_negative_stage_label(profile.favorability)
+            style = self._get_stage_style(profile)
             yield event.plain_result(
                 f"❄️ 当前关系：{stage_label}\n"
                 f"好感度：{profile.favorability:+.1f}\n"
+                f"🎭 阶段风格：称呼「{style['call']}」· {style['tone']}\n"
                 f"💡 建议：改善互动方式，减少负面表达"
             )
             return
@@ -592,6 +594,12 @@ class SoulSyncPro(Star):
             f"复合评分：{profile.composite_score:.1f}（阶段阈值 {stage.composite_threshold:.0f}）",
             f"亲密度（按好感度派生）：{profile.intimacy:.1f}",
         ]
+        if self.config.get("enable_stage_styles", True):
+            style = self._get_stage_style(profile)
+            lines.append(
+                f"🎭 阶段风格：称呼「{style['call']}」· {style['tone']}"
+                f"（倾向：{style['tendency']}）"
+            )
         if profile.stage_index < len(STAGES) - 1:
             need = next_stage.composite_threshold - profile.composite_score
             lines.append(f"💡 距下一阶段还需：{need:.1f} 分")
@@ -1084,6 +1092,9 @@ class SoulSyncPro(Star):
                 tstate = tension_state(tension, self.config.get("tension_threshold", 85.0))
                 tlabel = {"calm": "平静", "uneasy": "阴郁", "strained": "临界", "bursting": "即将爆发"}.get(tstate, tstate)
                 lines.append(f"  🌋 情绪张力：{tension:.0f}/100（{tlabel}）")
+            if self.config.get("enable_stage_styles", True):
+                style = self._get_stage_style(profile)
+                lines.append(f"  🎭 阶段风格：称呼「{style['call']}」· {style['tone']}")
             lines.append("")
 
         # ── 互动统计 ──
@@ -2035,6 +2046,15 @@ class SoulSyncPro(Star):
         parts.append(f"亲密度：{profile.intimacy:.1f}/100")
         parts.append(f"关系阶段：{self._get_stage_label(profile)}")
 
+        # 阶段对话风格（关系分支剧情：称呼/口吻/互动倾向）
+        if self.config.get("enable_stage_styles", True):
+            style = self._get_stage_style(profile)
+            parts.append(
+                f"你当前关系阶段的说话风格：称呼对方为「{style['call']}」；"
+                f"口吻——{style['tone']}；互动倾向——{style['tendency']}。"
+                "请自然地贴合这个风格回应。"
+            )
+
         # 情绪张力状态（情绪传染模型）
         if self.config.get("enable_emotion_contagion", True):
             t = profile.tension
@@ -2097,6 +2117,12 @@ class SoulSyncPro(Star):
             return self._get_negative_stage_label(profile.favorability)
         idx = max(0, min(profile.stage_index, len(STAGES) - 1))
         return STAGES[idx].label
+
+    def _get_stage_style(self, profile: EmotionProfile) -> dict:
+        """当前阶段的对话风格（称呼/口吻/互动倾向）"""
+        if profile.favorability < 0:
+            return stage_style(-1, EmotionEngine.get_negative_stage_label(profile.favorability))
+        return stage_style(profile.stage_index)
 
     @staticmethod
     def _get_negative_stage_label(favorability: float) -> str:
