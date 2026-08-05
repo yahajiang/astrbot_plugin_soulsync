@@ -1,6 +1,6 @@
-# 提示注入防护 (Injection Guard)
+# 心旅知音 · 注入防护盾 (astrbot_plugin_soulsync_shield)
 
-AstrBot 插件：防止提示注入（Prompt Injection）与恶意调教，保护 AI 人格设定不被污染。
+心旅知音（SoulSync）衍伸系列插件：防止提示注入（Prompt Injection）与恶意调教，保护 AI 人格设定不被污染。
 
 ## 功能
 
@@ -53,7 +53,7 @@ AstrBot 插件：防止提示注入（Prompt Injection）与恶意调教，保�
 
 ## 部署
 
-将 `astrbot_plugin_inj_guard` 目录放入 AstrBot `plugins` 目录，重启或热载入即可。
+将 `astrbot_plugin_soulsync_shield` 目录放入 AstrBot `plugins` 目录，重启或热载入即可。若此前使用旧名 `astrbot_plugin_inj_guard`，统计文件会自动迁移。
 
 ## 许可证
 
