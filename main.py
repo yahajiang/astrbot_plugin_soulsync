@@ -56,6 +56,10 @@ from .time_perception import (
     build_weather_info,
 )
 
+# 不可见标记（纯零宽字符）：加在插件大段报告输出（回顾/月报/时间回溯等）文本开头，
+# on_llm_request 据此把历史中的这类消息替换为占位，防止 LLM 模仿其风格与长度
+REPORT_MARK = "\u200b\u2060\u200b"
+
 
 class SoulSyncPro(Star):
     """心旅知音 (SoulSync) v2.16 - 融合版情感智能插件（含惩罚奖励机制、关系角色、情感深化）"""
@@ -1457,7 +1461,7 @@ class SoulSyncPro(Star):
             if path:
                 yield event.image_result(path)
             else:
-                yield event.plain_result("\n".join(lines))
+                yield event.plain_result(REPORT_MARK + "\n".join(lines))
             return
         recalled = self.long_memory.mark_important(uid, events[idx]["ts"])
         if recalled:
@@ -1491,7 +1495,7 @@ class SoulSyncPro(Star):
             if path:
                 yield event.image_result(path)
             else:
-                yield event.plain_result("\n".join(lines))
+                yield event.plain_result(REPORT_MARK + "\n".join(lines))
             return
         target = events[idx]
         if self.long_memory.forget(uid, target["ts"]):
@@ -1535,7 +1539,7 @@ class SoulSyncPro(Star):
         if path:
             yield event.image_result(path)
         else:
-            yield event.plain_result(format_report(stats))
+            yield event.plain_result(REPORT_MARK + format_report(stats))
 
     @filter.command("角色回顾")
     @filter.command("回顾")
@@ -1563,7 +1567,7 @@ class SoulSyncPro(Star):
         if path:
             yield event.image_result(path)
         else:
-            yield event.plain_result(text)
+            yield event.plain_result(REPORT_MARK + text)
 
     @filter.command("雷达图")
     @filter.command("对比雷达")
@@ -1623,7 +1627,7 @@ class SoulSyncPro(Star):
         if path:
             yield event.image_result(path)
         else:
-            yield event.plain_result("\n".join(lines))
+            yield event.plain_result(REPORT_MARK + "\n".join(lines))
 
     @filter.command("角色列表")
     async def cmd_character_list(self, event: AstrMessageEvent):
@@ -1767,6 +1771,32 @@ class SoulSyncPro(Star):
             profile = self._get_or_create_profile(event)
             behavior_profile = self._get_or_create_behavior_profile(uid)
             text = event.message_str
+
+            # ── 清理历史中本插件的报告输出（回顾/月报/时间回溯等）──
+            # 这些含记忆原文的大段消息若留在上下文中，LLM 会模仿其措辞与篇幅，
+            # 导致回复字数失控、复读"唯一的你"等样例行文字眼，故替换为占位。
+            # 新输出带 REPORT_MARK（零宽字符）前缀；存量旧消息用特征文本兜底。
+            try:
+                if req.contexts:
+                    cleaned = []
+                    for ctx in req.contexts:
+                        content = ctx.get("content", "")
+                        is_report = (
+                            ctx.get("role") == "assistant"
+                            and isinstance(content, str)
+                            and (
+                                content.startswith(REPORT_MARK)
+                                or "回忆切片" in content
+                                or "关系月报" in content
+                                or "📖 角色独白" in content
+                            )
+                        )
+                        if is_report:
+                            ctx = {**ctx, "content": "[系统数据报告，请勿模仿其格式或措辞]"}
+                        cleaned.append(ctx)
+                    req.contexts = cleaned
+            except Exception:
+                logger.debug("SoulSync 清理报告历史失败，跳过", exc_info=True)
 
             # ── 动态读取配置（支持 WebUI 热更新，无需重载插件）──
             dyn_enable_smart = self.config.get("enable_smart_update", True)
@@ -2181,7 +2211,7 @@ class SoulSyncPro(Star):
             # ── 注入情感上下文到 LLM ──
             emotion_context = self._build_emotion_context(profile)
             if emotion_context:
-                req.extra_user_content_parts.append(TextPart(text=emotion_context))
+                req.extra_user_content_parts.append(TextPart(text=emotion_context).mark_as_temp())
 
             # ── 注入多角色 persona（自定义角色扮演）──
             role_block = self._role_prompt_block(uid)
@@ -2192,47 +2222,47 @@ class SoulSyncPro(Star):
 
             # ── 注入惊喜回忆上下文 ──
             if recall_ctx:
-                req.extra_user_content_parts.append(TextPart(text=recall_ctx))
+                req.extra_user_content_parts.append(TextPart(text=recall_ctx).mark_as_temp())
 
             # ── 注入倒计时期待上下文 ──
             if countdown_ctx:
-                req.extra_user_content_parts.append(TextPart(text=countdown_ctx))
+                req.extra_user_content_parts.append(TextPart(text=countdown_ctx).mark_as_temp())
 
             # ── 注入月度回顾上下文 ──
             if monthly_ctx:
-                req.extra_user_content_parts.append(TextPart(text=monthly_ctx))
+                req.extra_user_content_parts.append(TextPart(text=monthly_ctx).mark_as_temp())
 
             # ── 注入角色视角独白上下文 ──
             if role_ctx:
-                req.extra_user_content_parts.append(TextPart(text=role_ctx))
+                req.extra_user_content_parts.append(TextPart(text=role_ctx).mark_as_temp())
 
             # ── 注入时间跳跃叙事上下文 ──
             if timejump_ctx:
-                req.extra_user_content_parts.append(TextPart(text=timejump_ctx))
+                req.extra_user_content_parts.append(TextPart(text=timejump_ctx).mark_as_temp())
 
             # ── 注入信任考验上下文（剧情或结果）──
             if crisis_ctx:
-                req.extra_user_content_parts.append(TextPart(text=crisis_ctx))
+                req.extra_user_content_parts.append(TextPart(text=crisis_ctx).mark_as_temp())
             if crisis_result_ctx:
                 req.extra_user_content_parts.append(
-                    TextPart(text=f"（这段关系的信任考验有了结果：{crisis_result_ctx}请在回复中自然流露此刻的心情，不要直接说明这是机制。）")
+                    TextPart(text=f"（这段关系的信任考验有了结果：{crisis_result_ctx}请在回复中自然流露此刻的心情，不要直接说明这是机制。）").mark_as_temp()
                 )
 
             # ── 注入情绪爆发上下文 ──
             if eruption_ctx:
-                req.extra_user_content_parts.append(TextPart(text=eruption_ctx))
+                req.extra_user_content_parts.append(TextPart(text=eruption_ctx).mark_as_temp())
 
             # ── 注入惩罚奖励事件提示 ──
             if pr_events:
                 pr_hint = self._build_pr_context(pr_events, behavior_profile)
                 if pr_hint:
-                    req.extra_user_content_parts.append(TextPart(text=pr_hint))
+                    req.extra_user_content_parts.append(TextPart(text=pr_hint).mark_as_temp())
 
             # ── 状态显示 ──
             if self.show_status.get(uid, self.config.get("show_status_default", False)):
                 status_line = self._build_status_line(profile, behavior_profile)
                 if status_line:
-                    req.extra_user_content_parts.append(TextPart(text=status_line))
+                    req.extra_user_content_parts.append(TextPart(text=status_line).mark_as_temp())
 
             # ── 保存 ──
             self._save_profile(profile)
