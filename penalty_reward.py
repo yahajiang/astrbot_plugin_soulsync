@@ -95,6 +95,14 @@ class BehaviorProfile:
     # 已达成的里程碑
     achieved_milestones: List[str] = field(default_factory=list)
 
+    # 关系危机事件（v2.16 P7：高好感随机信任考验）
+    crisis_active: bool = False            # 考验进行中
+    crisis_type: str = ""                  # 考验类型
+    crisis_started_ts: float = 0.0         # 考验开始时间
+    crisis_last_ts: float = 0.0            # 上次考验时间（冷却）
+    crisis_passed: int = 0                 # 累计通过次数
+    crisis_failed: int = 0                 # 累计失败次数
+
     # 待衰减的奖惩队列 [(apply_ts, delta_fav, delta_int, reason), ...]
     pending_effects: List[Tuple[float, float, float, str]] = field(default_factory=list)
 

@@ -361,11 +361,119 @@
     "slider": {"min": -3.0, "max": -0.1, "step": 0.1}
   },
   "pr_weight": {
-    "description": "惩罚奖励融合权重",
-    "hint": "惩罚奖励机制结果的融合权重（0~1），权重越高影响越大",
+    "description": "惩罚奖励权重",
+    "hint": "惩罚奖励结果融入情感变化的权重",
     "type": "float",
     "default": 0.6,
-    "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
+    "slider": {"min": 0.0, "max": 1.0, "step": 0.1}
+  },
+  "enable_crisis_events": {
+    "description": "关系危机事件（信任考验）",
+    "hint": "高好感阶段随机触发信任考验（秘密/误会/低谷/承诺），按用户回应判定通过（好感奖励）/失败（好感惩罚+阶段倒退）/超时冷淡",
+    "type": "bool",
+    "default": true
+  },
+  "crisis_threshold": {
+    "description": "考验触发好感阈值",
+    "hint": "好感度达到该值才可能触发信任考验",
+    "type": "float",
+    "default": 55.0,
+    "slider": {"min": 0, "max": 200, "step": 5}
+  },
+  "crisis_probability": {
+    "description": "考验触发概率（每轮）",
+    "hint": "满足条件时每轮对话触发信任考验的概率",
+    "type": "float",
+    "default": 0.12,
+    "slider": {"min": 0.0, "max": 1.0, "step": 0.02}
+  },
+  "crisis_cooldown_days": {
+    "description": "考验冷却（天）",
+    "hint": "两次信任考验之间的最短间隔天数",
+    "type": "int",
+    "default": 3,
+    "slider": {"min": 0, "max": 30, "step": 1}
+  },
+  "crisis_pass_reward": {
+    "description": "考验通过奖励",
+    "hint": "通过信任考验获得的好感度奖励",
+    "type": "float",
+    "default": 1.5,
+    "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
+  },
+  "crisis_fail_penalty": {
+    "description": "考验失败惩罚",
+    "hint": "未通过信任考验的好感度惩罚（负值）",
+    "type": "float",
+    "default": -2.5,
+    "slider": {"min": -10, "max": 0, "step": 0.1}
+  },
+  "crisis_timeout_hours": {
+    "description": "考验超时（小时）",
+    "hint": "考验开始后超过该时长无回应，视为冷淡失败",
+    "type": "int",
+    "default": 24,
+    "slider": {"min": 1, "max": 168, "step": 1}
+  },
+  "crisis_step_down": {
+    "description": "失败阶段倒退",
+    "hint": "考验失败或超时时，关系阶段倒退一级（仅正阶段）",
+    "type": "bool",
+    "default": true
+  },
+  "enable_crisis_events": {
+    "description": "关系危机事件（信任考验）",
+    "hint": "高好感阶段随机触发信任考验（秘密/误会/低谷/承诺），按用户回应判定通过（好感奖励）/失败（好感惩罚+阶段倒退）/超时冷淡",
+    "type": "bool",
+    "default": true
+  },
+  "crisis_threshold": {
+    "description": "考验触发好感阈值",
+    "hint": "好感度达到该值才可能触发信任考验",
+    "type": "float",
+    "default": 55.0,
+    "slider": {"min": 0, "max": 200, "step": 5}
+  },
+  "crisis_probability": {
+    "description": "考验触发概率（每轮）",
+    "hint": "满足条件时每轮对话触发信任考验的概率",
+    "type": "float",
+    "default": 0.12,
+    "slider": {"min": 0.0, "max": 1.0, "step": 0.02}
+  },
+  "crisis_cooldown_days": {
+    "description": "考验冷却（天）",
+    "hint": "两次信任考验之间的最短间隔天数",
+    "type": "int",
+    "default": 3,
+    "slider": {"min": 0, "max": 30, "step": 1}
+  },
+  "crisis_pass_reward": {
+    "description": "考验通过奖励",
+    "hint": "通过信任考验获得的好感度奖励",
+    "type": "float",
+    "default": 1.5,
+    "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
+  },
+  "crisis_fail_penalty": {
+    "description": "考验失败惩罚",
+    "hint": "未通过信任考验的好感度惩罚（负值）",
+    "type": "float",
+    "default": -2.5,
+    "slider": {"min": -10, "max": 0, "step": 0.1}
+  },
+  "crisis_timeout_hours": {
+    "description": "考验超时（小时）",
+    "hint": "考验开始后超过该时长无回应，视为冷淡失败",
+    "type": "int",
+    "default": 24,
+    "slider": {"min": 1, "max": 168, "step": 1}
+  },
+  "crisis_step_down": {
+    "description": "失败阶段倒退",
+    "hint": "考验失败或超时时，关系阶段倒退一级（仅正阶段）",
+    "type": "bool",
+    "default": true
   },
 
   "_section_anniversary": {

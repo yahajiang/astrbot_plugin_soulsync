@@ -37,6 +37,7 @@ from .smart_updater import SmartUpdater
 from .memory_manager import LongTermMemory
 from .llm_analyzer import LLMAnalyzer
 from .penalty_reward import PenaltyRewardEngine, BehaviorProfile, MILESTONES
+from .relationship_crisis import CrisisManager
 from .anniversary import AnniversaryManager, parse_month_day
 from .stats_tracker import StatsTracker
 from .relationship_roles import (
@@ -122,6 +123,16 @@ class SoulSyncPro(Star):
         self.tension_threshold: float = float(config.get("tension_threshold", 85.0))
         self.tension_release_per_day: float = float(config.get("tension_release_per_day", 10.0))
         self.eruption_fav_penalty: float = float(config.get("eruption_fav_penalty", -2.0))
+
+        # ── 关系危机事件参数（高好感随机信任考验，动态读取支持热更新）──
+        self.crisis_engine = CrisisManager(
+            threshold=float(config.get("crisis_threshold", 55.0)),
+            probability=float(config.get("crisis_probability", 0.12)),
+            cooldown_days=float(config.get("crisis_cooldown_days", 3.0)),
+            pass_reward=float(config.get("crisis_pass_reward", 1.5)),
+            fail_penalty=float(config.get("crisis_fail_penalty", -2.5)),
+            timeout_hours=float(config.get("crisis_timeout_hours", 24.0)),
+        )
 
         # ── 图片输出参数 ──
         self.image_output_default: bool = config.get("image_output_default", False)
@@ -1121,6 +1132,10 @@ class SoulSyncPro(Star):
                 lines.append(f"  🕊️ 道歉次数：{bp.apology_count}")
             if bp.comeback_count > 0:
                 lines.append(f"  💫 回归次数：{bp.comeback_count}")
+            if bp.crisis_passed > 0 or bp.crisis_failed > 0:
+                lines.append(f"  ⚖️ 信任考验：通过 {bp.crisis_passed} 次 · 失败 {bp.crisis_failed} 次")
+            if bp.crisis_active:
+                lines.append(f"  ⏳ 信任考验进行中：{bp.crisis_type}")
             if bp.achieved_milestones:
                 milestone_names = {v[0]: v[1] for v in MILESTONES.values()}
                 names = [milestone_names.get(m, m) for m in bp.achieved_milestones]
@@ -1591,6 +1606,51 @@ class SoulSyncPro(Star):
                                 "并可以提及其中的细节。"
                             )
 
+            # ── 第一步半c：关系危机事件（信任考验：进行中则判定本轮回应，否则概率触发）──
+            crisis_ctx = ""
+            crisis_result_ctx = ""
+            if self.config.get("enable_crisis_events", True):
+                if behavior_profile.crisis_active:
+                    crisis_ev = self.crisis_engine.evaluate(
+                        profile, behavior_profile, fav_delta, time.time()
+                    )
+                    res = crisis_ev["result"]
+                    if res in ("pass", "fail", "timeout"):
+                        if res == "timeout":
+                            profile.favorability = max(
+                                -100.0, min(FAVORABILITY_MAX,
+                                            profile.favorability + crisis_ev["fav_delta"])
+                            )
+                        else:
+                            fav_delta += crisis_ev["fav_delta"]
+                        if (crisis_ev["step_down"]
+                                and self.config.get("crisis_step_down", True)
+                                and profile.stage_index > 0):
+                            profile.stage_index -= 1
+                        name = crisis_ev.get("name", "")
+                        delta = crisis_ev["fav_delta"]
+                        self.long_memory.add_event(profile.user_id, {
+                            "favorability": round(profile.favorability, 1),
+                            "stage": self._get_stage_label(profile),
+                            "description": {
+                                "pass": f"🌱 考验通过·{name}：ta的回应温暖了你的心（好感{delta:+.1f}）",
+                                "fail": f"💔 考验失败·{name}：失望让这段关系蒙上阴影（好感{delta:+.1f}）",
+                                "timeout": f"🌫️ 考验冷淡·{name}：等了一整天没有回应（好感{delta:+.1f}）",
+                            }[res],
+                            "message": text[:80],
+                            "emotions": dict(profile.emotions),
+                            "fav_delta": round(delta, 1),
+                        })
+                        crisis_result_ctx = crisis_ev["ctx"]
+                    else:
+                        crisis_ctx = crisis_ev["ctx"]
+                else:
+                    crisis_new = self.crisis_engine.maybe_start(
+                        profile, behavior_profile, time.time()
+                    )
+                    if crisis_new:
+                        crisis_ctx = crisis_new["ctx"]
+
             # ── 第二步：惩罚奖励机制分析 ──
             pr_events = []
             dyn_pr_enabled = any([
@@ -1805,6 +1865,14 @@ class SoulSyncPro(Star):
             # ── 注入惊喜回忆上下文 ──
             if recall_ctx:
                 req.extra_user_content_parts.append(TextPart(text=recall_ctx))
+
+            # ── 注入信任考验上下文（剧情或结果）──
+            if crisis_ctx:
+                req.extra_user_content_parts.append(TextPart(text=crisis_ctx))
+            if crisis_result_ctx:
+                req.extra_user_content_parts.append(
+                    TextPart(text=f"（这段关系的信任考验有了结果：{crisis_result_ctx}请在回复中自然流露此刻的心情，不要直接说明这是机制。）")
+                )
 
             # ── 注入情绪爆发上下文 ──
             if eruption_ctx:
