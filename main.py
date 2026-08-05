@@ -274,6 +274,7 @@ class SoulSyncPro(Star):
         """GET - 档案数据"""
         try:
             import datetime as _dt
+            from .report import compare_recent
             today = _dt.date.today()
             profiles = []
             for p in self.profiles.values():
