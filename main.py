@@ -31,7 +31,7 @@ from .emotion_engine import (
     EmotionEngine, EmotionProfile, STAGES, NEGATIVE_STAGES,
     EMOTION_DIMENSIONS, DIM_LABELS, DIM_ICONS,
     intimacy_from_favorability, FAVORABILITY_MAX,
-    detect_compound_emotions,
+    detect_compound_emotions, tension_state,
 )
 from .smart_updater import SmartUpdater
 from .memory_manager import LongTermMemory
@@ -114,6 +114,14 @@ class SoulSyncPro(Star):
         # ── 数据统计参数 ──
         self.stats_history_days: int = config.get("stats_history_days", 30)
         self.trend_default_days: int = config.get("trend_default_days", 14)
+
+        # ── 情绪传染参数（张力积累→延迟爆发，动态读取支持热更新）──
+        self.enable_emotion_contagion: bool = config.get("enable_emotion_contagion", True)
+        self.tension_accumulate_rate: float = float(config.get("tension_accumulate_rate", 2.0))
+        self.tension_release_rate: float = float(config.get("tension_release_rate", 3.0))
+        self.tension_threshold: float = float(config.get("tension_threshold", 85.0))
+        self.tension_release_per_day: float = float(config.get("tension_release_per_day", 10.0))
+        self.eruption_fav_penalty: float = float(config.get("eruption_fav_penalty", -2.0))
 
         # ── 图片输出参数 ──
         self.image_output_default: bool = config.get("image_output_default", False)
@@ -1071,6 +1079,11 @@ class SoulSyncPro(Star):
             compound = detect_compound_emotions(profile.emotions)
             if compound:
                 lines.append(f"  🎯 复合情绪：{' · '.join(compound)}")
+            if self.config.get("enable_emotion_contagion", True):
+                tension = profile.tension
+                tstate = tension_state(tension, self.config.get("tension_threshold", 85.0))
+                tlabel = {"calm": "平静", "uneasy": "阴郁", "strained": "临界", "bursting": "即将爆发"}.get(tstate, tstate)
+                lines.append(f"  🌋 情绪张力：{tension:.0f}/100（{tlabel}）")
             lines.append("")
 
         # ── 互动统计 ──
@@ -1689,6 +1702,33 @@ class SoulSyncPro(Star):
                 profile, fav_delta, int_delta, emotion_deltas, llm_adjust
             )
 
+            # ── 第五步半：情绪传染模型（张力积累 → 延迟爆发）──
+            eruption_ctx = ""
+            if self.config.get("enable_emotion_contagion", True):
+                self.emotion_engine.accumulate_tension(
+                    profile, emotion_deltas,
+                    accumulate_rate=self.config.get("tension_accumulate_rate", 2.0),
+                    release_rate=self.config.get("tension_release_rate", 3.0),
+                )
+                if self.emotion_engine.check_eruption(
+                    profile, self.config.get("tension_threshold", 85.0)
+                ):
+                    eruption_fav = self.config.get("eruption_fav_penalty", -2.0)
+                    profile.favorability = max(-100.0, min(FAVORABILITY_MAX, profile.favorability + eruption_fav))
+                    self.long_memory.add_event(profile.user_id, {
+                        "favorability": round(profile.favorability, 1),
+                        "stage": self._get_stage_label(profile),
+                        "description": "🔥 情绪爆发：长期压抑的情绪终于倾泻而出",
+                        "message": text[:80],
+                        "emotions": dict(profile.emotions),
+                        "fav_delta": round(eruption_fav, 1),
+                    })
+                    eruption_ctx = (
+                        "🌋 你的情绪刚刚爆发了——这是长期压抑积累的结果。"
+                        "此刻你内心复杂而疲惫，既有释放后的空洞，也有一丝愧疚。"
+                        "请在回复中自然流露这种状态，但不要直接说破机制。"
+                    )
+
             if profile.stage_index != old_stage:
                 self.long_memory.add_event(profile.user_id, {
                     "favorability": round(profile.favorability, 1),
@@ -1754,6 +1794,10 @@ class SoulSyncPro(Star):
             # ── 注入惊喜回忆上下文 ──
             if recall_ctx:
                 req.extra_user_content_parts.append(TextPart(text=recall_ctx))
+
+            # ── 注入情绪爆发上下文 ──
+            if eruption_ctx:
+                req.extra_user_content_parts.append(TextPart(text=eruption_ctx))
 
             # ── 注入惩罚奖励事件提示 ──
             if pr_events:
@@ -1958,6 +2002,11 @@ class SoulSyncPro(Star):
             compound = detect_compound_emotions(profile.emotions)
             if compound:
                 lines.append(f"  🎯 复合情绪：{' · '.join(compound)}")
+            if self.config.get("enable_emotion_contagion", True):
+                tension = profile.tension
+                tstate = tension_state(tension, self.config.get("tension_threshold", 85.0))
+                tlabel = {"calm": "平静", "uneasy": "阴郁", "strained": "临界", "bursting": "即将爆发"}.get(tstate, tstate)
+                lines.append(f"  🌋 情绪张力：{tension:.0f}/100（{tlabel}）")
 
             custom = self.relationship_manager.custom_info(profile.user_id)
             if custom["attitude"]:
@@ -1985,6 +2034,20 @@ class SoulSyncPro(Star):
         parts.append(f"好感度：{profile.favorability:+.1f}/{FAVORABILITY_MAX:.0f}")
         parts.append(f"亲密度：{profile.intimacy:.1f}/100")
         parts.append(f"关系阶段：{self._get_stage_label(profile)}")
+
+        # 情绪张力状态（情绪传染模型）
+        if self.config.get("enable_emotion_contagion", True):
+            t = profile.tension
+            st = tension_state(t, self.config.get("tension_threshold", 85.0))
+            if st != "calm":
+                hint = {
+                    "uneasy": "（ta最近情绪有些起伏，回复时语气温柔耐心些）",
+                    "strained": "（ta心中积压着情绪，已接近临界点，不要刺激ta）",
+                    "bursting": "（ta的情绪一触即发，此刻非常脆弱敏感）",
+                }.get(st, "")
+                parts.append(f"情绪张力：{t:.0f}%（{hint}）")
+            if profile.last_eruption_ts and time.time() - profile.last_eruption_ts < 7200:
+                parts.append("（你刚刚经历了一次情绪爆发，内心还带着余波与疲惫）")
 
         if enable_att:
             custom = self.relationship_manager.custom_info(profile.user_id)
@@ -2384,5 +2447,12 @@ class SoulSyncPro(Star):
             })
             settled += 1
             logger.info(f"SoulSync 每日冷落惩罚 [{uid}]: {evt}")
+
+        # 情绪传染：每日张力自然缓解
+        if self.config.get("enable_emotion_contagion", True):
+            release = float(self.config.get("tension_release_per_day", 10.0))
+            for profile in self.profiles.values():
+                if profile.tension > 0:
+                    profile.tension = max(0.0, profile.tension - release)
 
         self._save_all()

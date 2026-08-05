@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import time
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional
 
@@ -47,6 +48,29 @@ def detect_compound_emotions(emotions: Optional[dict]) -> list:
         if all(emotions.get(d, 0) >= t for d, t in conds.items()):
             out.append(label)
     return out
+
+
+# ─── 情绪传染模型（张力积累 → 延迟爆发）──────────────────────────
+TENSION_MAX = 100.0
+TENSION_STATES = [
+    ("calm", 30),      # 平静
+    ("uneasy", 60),    # 阴郁
+    ("strained", 85),  # 临界
+    ("bursting", 101), # 即将爆发
+]
+
+
+def tension_state(tension: float, threshold: float = 85.0) -> str:
+    """按张力值返回情绪状态：calm / uneasy / strained / bursting"""
+    t = max(0.0, min(TENSION_MAX, tension))
+    th = max(30.0, min(TENSION_MAX, threshold))
+    if t < 30:
+        return "calm"
+    if t < 60:
+        return "uneasy"
+    if t < th:
+        return "strained"
+    return "bursting"
 
 # ─── 关系阶段定义（十二阶段，好感上限 200 后阈值加大间距）────────
 @dataclass
@@ -144,6 +168,11 @@ class EmotionProfile:
     # 复合评分
     composite_score: float = 0.0
 
+    # 情绪张力（情绪传染模型）：0~100，负面情绪积累、正面情绪缓解
+    tension: float = 0.0
+    # 最近一次情绪爆发时间戳（供 LLM 上下文提示"刚刚爆发"）
+    last_eruption_ts: float = 0.0
+
     # 最近更新时间戳
     last_update_ts: float = 0.0
     # 对话轮数计数
@@ -215,6 +244,36 @@ class EmotionEngine:
             "emotion_deltas": emotion_deltas,
             "matched_keywords": matched,
         }
+
+    # ── 情绪传染模型（张力积累 → 延迟爆发）──
+    def accumulate_tension(
+        self,
+        profile: EmotionProfile,
+        emotion_deltas: dict,
+        accumulate_rate: float = 2.0,
+        release_rate: float = 3.0,
+    ) -> float:
+        """按本轮情感变化积累/缓解情绪张力（0~100）。
+        负面维度上升按 accumulate_rate 积累；正面维度上升按 release_rate 缓解。
+        返回更新后的张力值。"""
+        neg = sum(v for d, v in emotion_deltas.items()
+                  if isinstance(v, (int, float)) and v > 0 and d in ("anger", "sadness", "disgust", "fear"))
+        pos = sum(v for d, v in emotion_deltas.items()
+                  if isinstance(v, (int, float)) and v > 0 and d in ("joy", "trust", "anticipation", "surprise"))
+        profile.tension = max(0.0, min(
+            TENSION_MAX,
+            profile.tension + neg * accumulate_rate - pos * release_rate,
+        ))
+        return profile.tension
+
+    @staticmethod
+    def check_eruption(profile: EmotionProfile, threshold: float = 85.0) -> bool:
+        """张力达到阈值 → 触发爆发：张力归零并记录爆发时刻。返回是否爆发"""
+        if profile.tension >= max(30.0, min(TENSION_MAX, threshold)):
+            profile.tension = 0.0
+            profile.last_eruption_ts = time.time()
+            return True
+        return False
 
     # ── 复合评分（情感画像计算系统 v2）──
     def calc_composite(self, profile: EmotionProfile) -> float:

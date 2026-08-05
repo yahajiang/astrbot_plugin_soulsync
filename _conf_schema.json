@@ -78,6 +78,47 @@
     "default": 0.07,
     "slider": {"min": 0.0, "max": 1.0, "step": 0.02}
   },
+  "enable_emotion_contagion": {
+    "description": "情绪传染模型（张力积累→爆发）",
+    "hint": "开启后：负面情绪按倍率积累情绪张力，正面情绪缓解；张力达到阈值触发延迟爆发（好感惩罚+记忆事件+语气注入）",
+    "type": "bool",
+    "default": true
+  },
+  "tension_accumulate_rate": {
+    "description": "张力积累倍率",
+    "hint": "每轮负面情感上升量 × 该倍率 = 张力增加",
+    "type": "float",
+    "default": 2.0,
+    "slider": {"min": 0.0, "max": 6.0, "step": 0.5}
+  },
+  "tension_release_rate": {
+    "description": "张力缓解倍率",
+    "hint": "每轮正面情感上升量 × 该倍率 = 张力减少",
+    "type": "float",
+    "default": 3.0,
+    "slider": {"min": 0.0, "max": 8.0, "step": 0.5}
+  },
+  "tension_threshold": {
+    "description": "爆发阈值（张力）",
+    "hint": "张力达到该值触发情绪爆发（张力归零+好感惩罚+爆发记忆事件）",
+    "type": "float",
+    "default": 85.0,
+    "slider": {"min": 40, "max": 100, "step": 5}
+  },
+  "tension_release_per_day": {
+    "description": "每日张力自然缓解",
+    "hint": "每日结算时张力自动降低的量（情绪随时间平复）",
+    "type": "float",
+    "default": 10.0,
+    "slider": {"min": 0.0, "max": 50.0, "step": 2}
+  },
+  "eruption_fav_penalty": {
+    "description": "爆发好感惩罚",
+    "hint": "情绪爆发时对好感度的惩罚（负值）",
+    "type": "float",
+    "default": -2.0,
+    "slider": {"min": -10, "max": 0, "step": 0.5}
+  },
 
   "_section_smart_update": {
     "description": "═══ 智能更新参数 ═══",
