@@ -553,6 +553,12 @@
     "type": "bool",
     "default": true
   },
+  "enable_weather_perception": {
+    "description": "启用季节/天气感知",
+    "hint": "按日期确定性模拟季节与天气（晴/多云/阴/小雨/雷阵雨/小雪/大风），注入角色心情与话题倾向（雨天感性、晴天活跃）",
+    "type": "bool",
+    "default": true
+  },
   "holiday_country": {
     "description": "节假日国家/地区",
     "hint": "节假日判断的国家代码，如 CN(中国)、JP(日本) 等",

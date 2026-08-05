@@ -51,6 +51,7 @@ from .time_perception import (
     build_time_info,
     build_holiday_info,
     build_lunar_info,
+    build_weather_info,
 )
 
 
@@ -2268,6 +2269,10 @@ class SoulSyncPro(Star):
                 linfo = build_lunar_info(now)
                 if linfo:
                     parts.append(linfo)
+            if self.config.get("enable_weather_perception", True):
+                winfo = build_weather_info(now)
+                if winfo:
+                    parts.append(winfo)
             if anniv_events and self.config.get("anniv_inject_context", True):
                 parts.append("特别日子: " + "、".join(anniv_events))
             return " | ".join(parts)
