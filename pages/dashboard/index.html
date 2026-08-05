@@ -110,10 +110,17 @@ textarea.fld{min-height:56px;resize:vertical}
 .mem-box .hd{font-weight:700;font-size:13px;margin-bottom:4px}
 .advice{background:linear-gradient(135deg,rgba(255,243,224,.85),rgba(255,248,225,.85));border:1px solid #ffe0b2;border-radius:12px;padding:10px;margin-bottom:10px;font-size:12px}
 .advice .hd{font-weight:700;font-size:13px;margin-bottom:4px;color:#e65100}
-::-webkit-scrollbar{width:8px;height:8px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(31,38,135,.18);border-radius:4px}
-::-webkit-scrollbar-thumb:hover{background:rgba(31,38,135,.3)}
+*{scrollbar-width:none}
+::-webkit-scrollbar{width:0;height:0}
+.mm-sc{position:absolute;top:2px;right:2px;bottom:2px;width:10px;z-index:9;opacity:0;pointer-events:none;transition:opacity .15s ease-out}
+.mm-sc.mm-fixed{position:fixed}
+.mm-sc.vis{opacity:1;pointer-events:auto}
+.mm-thumb{position:absolute;top:0;right:0;width:4px;min-height:40px;border-radius:999px;background:rgba(0,0,0,.12);box-shadow:none;transition:width .2s ease-out,background .2s ease-out,box-shadow .2s ease-out}
+.mm-sc.hov .mm-thumb{width:8px;background:rgba(0,0,0,.21);box-shadow:0 0 2px rgba(0,0,0,.1)}
+.mm-sc.drag .mm-thumb{width:8px;background:rgba(0,0,0,.3);box-shadow:0 0 2px rgba(0,0,0,.1)}
+.mm-has-sc{position:relative}
+@media(pointer:coarse){.mm-sc{display:none}}
+@media(prefers-reduced-motion:reduce){.mm-sc,.mm-thumb{transition:none}}
 @keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes driftA{from{transform:translate(0,0)}to{transform:translate(48px,40px)}}
 @keyframes driftB{from{transform:translate(0,0)}to{transform:translate(-42px,-36px)}}
@@ -226,7 +233,7 @@ function status(){
   const sk=Bp.filter(b=>b.current_streak_count>=3);
   const bt=Bp.reduce((s,b)=>s+(b.betrayal_count||0),0);
   const cb=Bp.reduce((s,b)=>s+(b.comeback_count||0),0);
-  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.17 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
+  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.18 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
 }
 
 function detail(uid){
@@ -606,6 +613,45 @@ for(const b of document.querySelectorAll('#oAdm button[data-d]'))b.onclick=()=>{
   adm('set_favorability',id,p.favorability+d);
 };
 for(const id of['oCfg','oDet','oLB','oFest','oRole','oAdm']){$(id).onclick=e=>{if(e.target===$(id))$(id).classList.remove('on')}}
+
+// ── Minimal Modern 滚动条滑块：原生滚动 + 自定义滑块（静止0.4/悬停0.7/拖动1.0 透明度、150ms淡入、200ms宽度渐变、停止1s淡出）──
+function mmScroll(el,fixed){
+  const sc=document.createElement('div');sc.className='mm-sc'+(fixed?' mm-fixed':'');
+  const th=document.createElement('div');th.className='mm-thumb';sc.appendChild(th);
+  (fixed?document.body:el).appendChild(sc);
+  if(!fixed)el.classList.add('mm-has-sc');
+  const dim=()=>fixed?{c:innerHeight,s:document.documentElement.scrollHeight,t:scrollY}:{c:el.clientHeight,s:el.scrollHeight,t:el.scrollTop};
+  const up=()=>{
+    const d=dim();
+    if(d.s<=d.c+1){sc.classList.remove('vis');th.style.height='0';return}
+    const h=Math.max(40,d.c*d.c/d.s);
+    th.style.height=h+'px';
+    th.style.transform='translateY('+((d.t/(d.s-d.c))*(d.c-h))+'px)';
+  };
+  let raf=0;
+  const onScroll=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;up()});show()};
+  const show=()=>{sc.classList.add('vis');clearTimeout(sc._t);sc._t=setTimeout(()=>{if(!sc.classList.contains('drag')&&!sc._ov)sc.classList.remove('vis')},1000)};
+  (fixed?addEventListener('scroll',onScroll,{passive:true}):el.addEventListener('scroll',onScroll,{passive:true}));
+  addEventListener('resize',()=>{if(!raf){raf=requestAnimationFrame(()=>{raf=0;up()})}});
+  if('ResizeObserver' in window)new ResizeObserver(up).observe(fixed?document.body:el);
+  sc.addEventListener('mouseenter',()=>{sc._ov=true;sc.classList.add('hov');clearTimeout(sc._t);show()});
+  sc.addEventListener('mouseleave',()=>{sc._ov=false;sc.classList.remove('hov');clearTimeout(sc._t);sc._t=setTimeout(()=>{if(!sc.classList.contains('drag'))sc.classList.remove('vis')},1000)});
+  th.addEventListener('mousedown',e=>{
+    if(e.button)return;e.preventDefault();
+    sc.classList.add('drag');
+    const d0=dim(),dy=e.clientY-th.getBoundingClientRect().top,ds=d0.t;
+    const mv=ev=>{
+      const d=dim(),hh=Math.max(40,d.c*d.c/d.s);
+      const nv=ds+((ev.clientY-dy)/(d.c-hh))*(d.s-d.c);
+      if(fixed)scrollTo(0,nv);else el.scrollTop=nv;
+    };
+    const mu=()=>{sc.classList.remove('drag');removeEventListener('mousemove',mv);removeEventListener('mouseup',mu);show()};
+    addEventListener('mousemove',mv);addEventListener('mouseup',mu);
+  });
+  up();
+}
+mmScroll(document.body,true);
+for(const m of document.querySelectorAll('.modal-bd'))mmScroll(m,false);
 
 await load();
 </script>
