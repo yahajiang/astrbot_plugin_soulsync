@@ -6,6 +6,12 @@
     "invisible": true
   },
 
+  "enable_multi_role": {
+    "description": "多角色并行关系",
+    "hint": "同一用户可与多位自定义角色并行发展关系：好感/记忆/阶段按角色独立，纪念日/统计共享；角色命令：/创建角色 /切换角色 /角色列表",
+    "type": "bool",
+    "default": true
+  },
   "enable_attitude_system": {
     "description": "启用态度关系系统",
     "hint": "开启后会在情感上下文中注入 AI 对用户的态度描述和关系描述",

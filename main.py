@@ -41,6 +41,7 @@ from .penalty_reward import PenaltyRewardEngine, BehaviorProfile, MILESTONES
 from .relationship_crisis import CrisisManager
 from .anniversary import AnniversaryManager, parse_month_day
 from .stats_tracker import StatsTracker
+from .character_manager import CharacterManager
 from .relationship_roles import (
     RelationshipRoleManager,
     resolve_relationship_key,
@@ -184,6 +185,7 @@ class SoulSyncPro(Star):
         self.anniversary_manager = AnniversaryManager(self.data_dir)
         self.stats_tracker = StatsTracker(self.data_dir, max_days=self.stats_history_days)
         self.relationship_manager = RelationshipRoleManager(self.data_dir)
+        self.character_manager = CharacterManager(self.data_dir)
         self.image_renderer = ImageRenderer(self.data_dir)
         self.image_mode: Dict[str, bool] = {}
 
@@ -276,6 +278,12 @@ class SoulSyncPro(Star):
             profiles = []
             for p in self.profiles.values():
                 d = p.to_dict()
+                raw_uid, _, cid = p.user_id.rpartition("::")
+                role = self.character_manager.role_info(raw_uid or p.user_id)
+                d["state_key"] = p.user_id
+                d["role_cid"] = cid
+                d["role_name"] = role["name"]
+                d["role_emoji"] = role["emoji"]
                 d["stage_label"] = self._get_stage_label(p)
                 d["anniversaries"] = self.anniversary_manager.list_user_anniversaries(
                     p.user_id, today
@@ -1310,9 +1318,10 @@ class SoulSyncPro(Star):
             yield event.plain_result("用法：/重置好感 <用户ID>")
             return
         user_id = parts[1]
-        self.profiles.pop(user_id, None)
-        self.behavior_profiles.pop(user_id, None)
-        self.long_memory.clear_user(user_id)
+        key = self._state_key(user_id)
+        self.profiles.pop(key, None)
+        self.behavior_profiles.pop(key, None)
+        self.long_memory.clear_user(key)
         self._save_all()
         yield event.plain_result(f"✅ 已重置 {user_id} 的所有情感数据（含行为档案）")
 
@@ -1328,7 +1337,7 @@ class SoulSyncPro(Star):
             return
         user_id = parts[1]
         profile = self._get_or_create_profile_by_id(user_id)
-        bp = self.behavior_profiles.get(user_id)
+        bp = self.behavior_profiles.get(self._state_key(user_id))
         lines = self._format_profile(profile, event, detail=True, behavior_profile=bp)
         path = self._try_render_image(event, f"{profile.user_name or user_id} 完整档案", lines)
         if path:
@@ -1421,7 +1430,7 @@ class SoulSyncPro(Star):
     @filter.command("标记重要回忆")
     async def cmd_mark_important(self, event: AstrMessageEvent):
         """用户：把某条长期记忆标记为重要（永不忘却）。用法：/标记重要回忆 <序号>"""
-        uid = self._get_user_id(event)
+        uid = self._state_key(self._get_user_id(event))
         events = self.long_memory.get_events(uid, 10)
         if not events:
             yield event.plain_result("📭 当前没有长期记忆可标记")
@@ -1450,7 +1459,7 @@ class SoulSyncPro(Star):
     @filter.command("忘记这件事")
     async def cmd_forget(self, event: AstrMessageEvent):
         """用户：忘掉某条长期记忆。用法：/忘记这件事 <序号>"""
-        uid = self._get_user_id(event)
+        uid = self._state_key(self._get_user_id(event))
         events = self.long_memory.get_events(uid, 10)
         if not events:
             yield event.plain_result("📭 当前没有长期记忆可遗忘")
@@ -1488,7 +1497,7 @@ class SoulSyncPro(Star):
     @filter.command("月报")
     async def cmd_monthly_report(self, event: AstrMessageEvent):
         """用户：查看本月（或上月）关系月报。用法：/月度报告 [月] 或 /月度报告 上月"""
-        uid = self._get_user_id(event)
+        uid = self._state_key(self._get_user_id(event))
         from datetime import date as _rdate
         today_r = _rdate.today()
         kw = event.message_str.strip()
@@ -1508,7 +1517,7 @@ class SoulSyncPro(Star):
     @filter.command("回顾")
     async def cmd_role_report(self, event: AstrMessageEvent):
         """用户：以角色口吻总结最近一段时间的相处。用法：/角色回顾 [天数]（默认14）"""
-        uid = self._get_user_id(event)
+        uid = self._state_key(self._get_user_id(event))
         kw = event.message_str.strip()
         days = int(self.config.get("report_window_days", 14))
         try:
@@ -1531,7 +1540,7 @@ class SoulSyncPro(Star):
     @filter.command("对比雷达")
     async def cmd_radar(self, event: AstrMessageEvent):
         """用户：对比最近两段各 N 天的关系维度。用法：/雷达图 [天数]（默认7）"""
-        uid = self._get_user_id(event)
+        uid = self._state_key(self._get_user_id(event))
         kw = event.message_str.strip()
         days = 7
         try:
@@ -1552,7 +1561,7 @@ class SoulSyncPro(Star):
     @filter.command("时间回溯")
     async def cmd_time_jump(self, event: AstrMessageEvent):
         """用户：回溯关键时刻的时间线叙事（最多5条）"""
-        uid = self._get_user_id(event)
+        uid = self._state_key(self._get_user_id(event))
         kms = self.long_memory.get_key_memories(uid, 5)
         if not kms:
             yield event.plain_result("📭 还没有值得回溯的关键时刻")
@@ -1569,6 +1578,80 @@ class SoulSyncPro(Star):
                 f"{e.get('description', '')}"
             )
         yield event.plain_result("\n".join(lines))
+
+    @filter.command("角色列表")
+    async def cmd_character_list(self, event: AstrMessageEvent):
+        """用户：查看可对话的角色列表。用法：/角色列表"""
+        uid = self._get_user_id(event)
+        rows = self.character_manager.list_for(uid)
+        lines = ["🎭 角色列表", "━" * 20]
+        for r in rows:
+            mark = "▶️ " if r["active"] else "  "
+            lines.append(f"{mark}{r['emoji']} {r['name']}")
+        lines.append("")
+        lines.append("💡 /切换角色 <名字> 切换；/创建角色 <名字> [emoji] [性格] 创建")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("切换角色")
+    async def cmd_character_switch(self, event: AstrMessageEvent):
+        """用户：切换当前对话角色。用法：/切换角色 <名字|默认>"""
+        uid = self._get_user_id(event)
+        parts = event.message_str.split(maxsplit=1)
+        if len(parts) < 2:
+            yield event.plain_result("用法：/切换角色 <名字|默认>\n/角色列表 查看可选角色")
+            return
+        cid = self.character_manager.find_cid(uid, parts[1])
+        if cid is None:
+            yield event.plain_result(f"❌ 未找到角色「{parts[1]}」，/角色列表 查看可选角色")
+            return
+        self.character_manager.set_active(uid, cid)
+        info = self.character_manager.role_info(uid)
+        name = f"{info['emoji']} {info['name']}"
+        if not cid:
+            yield event.plain_result(f"✅ 已切回默认角色（{name}），关系档案独立保留")
+            return
+        yield event.plain_result(
+            f"✅ 已切换到「{name}」。你们的关系将从全新的档案开始，"
+            "之前角色的好感与记忆互不影响。"
+        )
+
+    @filter.command("创建角色")
+    async def cmd_character_create(self, event: AstrMessageEvent):
+        """用户：创建并切换到一个自定义角色。用法：/创建角色 <名字> [emoji] [性格描述]"""
+        uid = self._get_user_id(event)
+        parts = event.message_str.split(maxsplit=1)
+        if len(parts) < 2:
+            yield event.plain_result("用法：/创建角色 <名字> [emoji] [性格描述]")
+            return
+        args = parts[1].split(maxsplit=2)
+        name = args[0]
+        emoji = ""
+        persona = ""
+        if len(args) > 1:
+            if (len(args[1]) <= 4
+                    and any('\U0001F000' <= c <= '\U0001FAFF' or '\u2600' <= c <= '\u27BF'
+                            for c in args[1])):
+                emoji = args[1]
+                persona = args[2] if len(args) > 2 else ""
+            else:
+                persona = " ".join(args[1:])
+        cid, msg = self.character_manager.create(uid, name, emoji, persona)
+        yield event.plain_result(msg)
+
+    @filter.command("删除角色")
+    async def cmd_character_remove(self, event: AstrMessageEvent):
+        """用户：删除一个自建角色（档案保留不删）。用法：/删除角色 <名字>"""
+        uid = self._get_user_id(event)
+        parts = event.message_str.split(maxsplit=1)
+        if len(parts) < 2:
+            yield event.plain_result("用法：/删除角色 <名字>")
+            return
+        cid = self.character_manager.find_cid(uid, parts[1])
+        if cid is None:
+            yield event.plain_result(f"❌ 未找到角色「{parts[1]}」")
+            return
+        ok, msg = self.character_manager.remove(uid, cid)
+        yield event.plain_result(msg)
 
     @filter.command("调试事件")
     async def cmd_debug_event(self, event: AstrMessageEvent):
@@ -1591,7 +1674,7 @@ class SoulSyncPro(Star):
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        uid = self._get_user_id(event)
+        uid = self._state_key(self._get_user_id(event))
         ltm_summary = self.long_memory.get_summary(uid)
         recent = self.recent_messages.get(uid, [])
         bp = self.behavior_profiles.get(uid)
@@ -1713,7 +1796,7 @@ class SoulSyncPro(Star):
                         from report import aggregate_month, format_report, last_month_label
                         ly, lm = last_month_label(today_m.year, today_m.month)
                         mstats = aggregate_month(
-                            self.long_memory.get_events(uid, 5000), ly, lm
+                            self.long_memory.get_events(profile.user_id, 5000), ly, lm
                         )
                         if mstats:
                             monthly_ctx = (
@@ -1735,7 +1818,7 @@ class SoulSyncPro(Star):
                         behavior_profile.role_report_last_ts = now_r
                         from report import aggregate_window, format_role_report
                         rstats = aggregate_window(
-                            self.long_memory.get_events(uid, 5000),
+                            self.long_memory.get_events(profile.user_id, 5000),
                             now_r - interval, now_r,
                         )
                         if rstats:
@@ -1756,7 +1839,7 @@ class SoulSyncPro(Star):
                     now_t = time.time()
                     t_interval = float(self.config.get("time_jump_interval_days", 3)) * 86400.0
                     if now_t - behavior_profile.time_jump_last_ts >= t_interval:
-                        kms = self.long_memory.get_key_memories(uid, 1)
+                        kms = self.long_memory.get_key_memories(profile.user_id, 1)
                         if (kms and random.random()
                                 < float(self.config.get("time_jump_probability", 0.1))):
                             behavior_profile.time_jump_last_ts = now_t
@@ -1779,9 +1862,9 @@ class SoulSyncPro(Star):
             if self.config.get("enable_memory_recall", True):
                 self.long_memory.set_half_life(self.config.get("memory_half_life_days", 30))
                 if any(kw in text for kw in ("还记得", "记不记得", "想起来", "记得吗", "还记得吗")):
-                    faded = self.long_memory.get_faded_events(uid, 3)
+                    faded = self.long_memory.get_faded_events(profile.user_id, 3)
                     if faded:
-                        recalled = self.long_memory.recall(uid, faded[0]["ts"])
+                        recalled = self.long_memory.recall(profile.user_id, faded[0]["ts"])
                         if recalled:
                             fav_delta += self.config.get("memory_recall_bonus", 0.3)
                             recall_desc = recalled.get("description", "")
@@ -2049,6 +2132,13 @@ class SoulSyncPro(Star):
             emotion_context = self._build_emotion_context(profile)
             if emotion_context:
                 req.extra_user_content_parts.append(TextPart(text=emotion_context))
+
+            # ── 注入多角色 persona（自定义角色扮演）──
+            role_block = self._role_prompt_block(uid)
+            if role_block and "<char_role>" not in (req.system_prompt or ""):
+                req.system_prompt = (
+                    f"{req.system_prompt or ''}\n\n<char_role>{role_block}</char_role>"
+                )
 
             # ── 注入惊喜回忆上下文 ──
             if recall_ctx:
@@ -2553,6 +2643,25 @@ class SoulSyncPro(Star):
             return event.unified_msg_origin
         return event.get_sender_id()
 
+    def _state_key(self, uid: str) -> str:
+        """档案状态键：多角色启用且当前激活自定义角色时 → uid::cid，否则原样 uid。
+        档案/记忆/行为按状态键隔离；纪念日与统计按原始 uid 共享"""
+        return self.character_manager.state_key(
+            uid, enabled=self.config.get("enable_multi_role", True)
+        )
+
+    def _role_prompt_block(self, uid: str) -> str:
+        """当前角色的 persona 提示块（注入 LLM 时使用；默认角色返回空）"""
+        info = self.character_manager.role_info(uid)
+        if not info["cid"]:
+            return ""
+        parts = [f"你是角色「{info['emoji']} {info['name']}」"]
+        if info.get("persona"):
+            parts.append(f"性格/设定：{info['persona']}")
+        if info.get("system"):
+            parts.append(f"额外的扮演要求：{info['system']}")
+        return "；".join(parts) + "。请始终以该角色身份与用户互动。"
+
     @staticmethod
     def _parse_admin_ids(raw: str) -> set:
         if not raw or not raw.strip():
@@ -2572,36 +2681,38 @@ class SoulSyncPro(Star):
             return False
 
     def _get_or_create_profile(self, event: AstrMessageEvent) -> EmotionProfile:
-        uid = self._get_user_id(event)
-        if uid not in self.profiles:
-            self.profiles[uid] = EmotionProfile(
-                user_id=uid,
+        key = self._state_key(self._get_user_id(event))
+        if key not in self.profiles:
+            self.profiles[key] = EmotionProfile(
+                user_id=key,
                 user_name=event.get_sender_name(),
                 favorability=self.default_favorability,
                 intimacy=intimacy_from_favorability(self.default_favorability),
                 last_update_ts=time.time(),
             )
-            logger.info(f"SoulSync 创建新档案 [{uid}] ({event.get_sender_name()})")
-        profile = self.profiles[uid]
+            logger.info(f"SoulSync 创建新档案 [{key}] ({event.get_sender_name()})")
+        profile = self.profiles[key]
         name = event.get_sender_name()
         if name:
             profile.user_name = name
         return profile
 
     def _get_or_create_profile_by_id(self, user_id: str) -> EmotionProfile:
-        if user_id not in self.profiles:
-            self.profiles[user_id] = EmotionProfile(
-                user_id=user_id,
+        key = self._state_key(user_id)
+        if key not in self.profiles:
+            self.profiles[key] = EmotionProfile(
+                user_id=key,
                 favorability=self.default_favorability,
                 intimacy=intimacy_from_favorability(self.default_favorability),
                 last_update_ts=time.time(),
             )
-        return self.profiles[user_id]
+        return self.profiles[key]
 
     def _get_or_create_behavior_profile(self, uid: str) -> BehaviorProfile:
-        if uid not in self.behavior_profiles:
-            self.behavior_profiles[uid] = BehaviorProfile(user_id=uid)
-        return self.behavior_profiles[uid]
+        key = self._state_key(uid)
+        if key not in self.behavior_profiles:
+            self.behavior_profiles[key] = BehaviorProfile(user_id=key)
+        return self.behavior_profiles[key]
 
     def _load_profiles(self):
         f = self.data_dir / "profiles.json"
