@@ -163,9 +163,11 @@ textarea.fld{min-height:56px;resize:vertical}
 <div class="ov" id="oFest"><div class="modal modal-sm"><div class="modal-hd"><h3>📅 节日与纪念日</h3><button class="btn" id="fCan">关闭</button></div><div class="modal-bd"><div id="fBody"></div></div></div></div>
 <div class="ov" id="oRole"><div class="modal"><div class="modal-hd"><h3>🎭 关系角色</h3><button class="btn" id="rCan">关闭</button></div><div class="modal-bd"><div id="rBody"></div><div class="tst" id="rTst"></div></div></div></div>
 <div class="ov" id="oAdm"><div class="modal modal-sm"><div class="modal-hd"><h3>🔧 管理员</h3><button class="btn" id="aCan">关闭</button></div><div class="modal-bd">
+  <div class="cs"><div class="cs-t">👤 选择用户</div><div class="cr"><div><div class="cn">档案用户</div></div><div><select class="fld" id="aUser"><option value="">— 选择或手动输入下方 ID —</option></select></div></div><div style="font-size:11px;color:var(--dim);margin-top:2px" id="aPrev"></div></div>
   <div class="cs"><div class="cs-t">📝 设置好感度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aFId"></div></div><div class="cr"><div><div class="cn">好感 (-100~200)</div></div><div><input class="fld" type="number" id="aFV"></div></div><button class="btn pri" id="aFB" style="margin-top:6px">设置</button></div>
-  <div class="cs"><div class="cs-t">💕 设置亲密度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aIId"></div></div><div class="cr"><div><div class="cn">亲密 (0~100)</div></div><div><input class="fld" type="number" id="aIV"></div></div><button class="btn pri" id="aIB" style="margin-top:6px">设置</button><div style="font-size:11px;color:var(--dim)">亲密度按好感度百分比派生（=(好感+100)/3），请直接设置好感度</div></div>
-  <div class="cs"><div class="cs-t">🔄 重置用户</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aRId"></div></div><button class="btn dan" id="aRB" style="margin-top:6px">⚠️ 重置</button></div>
+  <div class="cs"><div class="cs-t">🎚️ 快捷调整</div><div class="cr"><div><div class="cn">当前好感</div></div><div style="font-weight:800" id="aCur">—</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><button class="btn sm" data-d="50">+50</button><button class="btn sm" data-d="10">+10</button><button class="btn sm" data-d="5">+5</button><button class="btn sm" data-d="-5">-5</button><button class="btn sm" data-d="-10">-10</button><button class="btn sm" data-d="-50">-50</button></div><div style="font-size:11px;color:var(--dim);margin-top:4px">基于当前好感即时增减（-100 ~ 200 自动钳制）</div></div>
+  <div class="cs"><div class="cs-t">🧹 清空长期记忆</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aMId"></div></div><button class="btn" id="aMB" style="margin-top:6px">🧹 清空记忆</button><div style="font-size:11px;color:var(--dim);margin-top:4px">仅清除长期记忆，保留好感/阶段等档案数据</div></div>
+  <div class="cs"><div class="cs-t">🔄 重置用户</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aRId"></div></div><button class="btn dan" id="aRB" style="margin-top:6px">⚠️ 重置</button><div style="font-size:11px;color:var(--dim);margin-top:4px">删除该用户全部档案（好感/记忆/行为），不可恢复</div></div>
   <div class="tst" id="aTst"></div>
 </div></div></div>
 
@@ -224,7 +226,7 @@ function status(){
   const sk=Bp.filter(b=>b.current_streak_count>=3);
   const bt=Bp.reduce((s,b)=>s+(b.betrayal_count||0),0);
   const cb=Bp.reduce((s,b)=>s+(b.comeback_count||0),0);
-  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.16 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
+  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.17 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
 }
 
 function detail(uid){
@@ -572,7 +574,20 @@ $('bLB').onclick=()=>lb(false);
 $('bNeg').onclick=()=>lb(true);
 $('bFest').onclick=fest;
 $('bRole').onclick=role;
-$('bAdm').onclick=()=>{tst('aTst','');$('oAdm').classList.add('on')};
+function fillAdmUsers(){
+  const sel=$('aUser');const cur=sel.value;
+  sel.innerHTML='<option value="">— 选择或手动输入下方 ID —</option>'+[...P].sort((a,b)=>b.favorability-a.favorability).map(p=>`<option value="${esc(p.user_id)}">${esc(p.user_name||p.user_id)} · ${stg(p)}</option>`).join('');
+  if(cur)sel.value=cur;
+  admPick(sel);
+}
+function admPick(sel){
+  const id=(sel.value||'').trim();
+  $('aPrev').innerHTML=id?(()=>{const p=P.find(x=>x.user_id===id);if(!p)return`⚠️ ${esc(id)} 无档案`;const co=fc(p.favorability);return`当前：好感 <span style="color:${co};font-weight:800">${p.favorability>=0?'+':''}${p.favorability.toFixed(1)}</span> · 亲密 ${p.intimacy.toFixed(0)} · ${stg(p)}`})():'';
+  $('aCur').textContent=id?(()=>{const p=P.find(x=>x.user_id===id);return p?(p.favorability>=0?'+':'')+p.favorability.toFixed(1):'—'})():'—';
+  for(const f of['aFId','aMId','aRId'])$(f).value=id;
+}
+$('bAdm').onclick=()=>{tst('aTst','');fillAdmUsers();$('oAdm').classList.add('on')};
+$('aUser').onchange=e=>admPick(e.target);
 $('cSave').onclick=saveCfg;
 $('cCan').onclick=()=>$('oCfg').classList.remove('on');
 $('dCan').onclick=()=>$('oDet').classList.remove('on');
@@ -581,8 +596,15 @@ $('fCan').onclick=()=>$('oFest').classList.remove('on');
 $('rCan').onclick=()=>$('oRole').classList.remove('on');
 $('aCan').onclick=()=>$('oAdm').classList.remove('on');
 $('aFB').onclick=()=>adm('set_favorability',$('aFId').value.trim(),parseFloat($('aFV').value));
-$('aIB').onclick=()=>adm('set_intimacy',$('aIId').value.trim(),parseFloat($('aIV').value));
-$('aRB').onclick=()=>{const id=$('aRId').value.trim();if(id&&confirm(`确认重置 ${id}？`))adm('reset',id)};
+$('aMB').onclick=()=>{const id=$('aMId').value.trim();if(id)adm('clear_memory',id);else tst('aTst','⚠️ 请先填写用户 ID',true)};
+$('aRB').onclick=()=>{const id=$('aRId').value.trim();if(id&&confirm(`⚠️ 确认重置 ${id}？\n将删除其全部档案（好感/记忆/行为），不可恢复`))adm('reset',id)};
+for(const b of document.querySelectorAll('#oAdm button[data-d]'))b.onclick=()=>{
+  const id=$('aFId').value.trim(),d=Number(b.dataset.d);
+  if(!id){tst('aTst','⚠️ 请先填写用户 ID',true);return}
+  const p=P.find(x=>x.user_id===id);
+  if(!p){tst('aTst','⚠️ 该用户无档案，无法增减',true);return}
+  adm('set_favorability',id,p.favorability+d);
+};
 for(const id of['oCfg','oDet','oLB','oFest','oRole','oAdm']){$(id).onclick=e=>{if(e.target===$(id))$(id).classList.remove('on')}}
 
 await load();
