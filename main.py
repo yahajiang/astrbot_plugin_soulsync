@@ -1785,6 +1785,13 @@ class SoulSyncPro(Star):
         5. 注入情感上下文到 LLM 请求
         """
         try:
+            # ── Agent 模式下指令兜底 ──
+            # AstrBot 的 Agent（智能体）会话激活时会吞掉指令消息（包括 /指令），
+            # 导致插件指令不执行、LLM 直接以对话回复。这里检测纯指令词，
+            # 直接执行插件命令并发送结果（图片/文本），同时 stop 事件阻止 LLM 生成。
+            if await self._try_intercept_command_in_llm(event):
+                return
+
             uid = self._get_user_id(event)
             profile = self._get_or_create_profile(event)
             behavior_profile = self._get_or_create_behavior_profile(uid)
@@ -2288,6 +2295,57 @@ class SoulSyncPro(Star):
 
         except Exception as e:
             logger.error(f"SoulSync on_llm_request 异常: {e}", exc_info=True)
+
+    # ── Agent 模式指令兜底拦截 ──
+    _LLM_CMD_MAP = {
+        "雷达图": "cmd_radar",
+        "对比雷达": "cmd_radar",
+        "月度报告": "cmd_monthly_report",
+        "月报": "cmd_monthly_report",
+        "角色回顾": "cmd_role_report",
+        "回顾": "cmd_role_report",
+        "时间回溯": "cmd_time_jump",
+        "角色列表": "cmd_character_list",
+        "标记重要回忆": "cmd_mark_important",
+        "忘记这件事": "cmd_forget",
+    }
+
+    async def _try_intercept_command_in_llm(self, event) -> bool:
+        """Agent 会话吞掉指令时：检测纯指令词并直接执行插件命令输出结果。
+
+        命中时执行对应 cmd 并把结果（图片/文本）发送给用户，随后 stop 事件
+        阻止 LLM 生成；未命中或执行失败返回 False，不影响正常 LLM 流程。
+        """
+        try:
+            text = (event.message_str or "").strip().lstrip("/").strip()
+            if not text:
+                return False
+            cmd_name = None
+            for name, cn in self._LLM_CMD_MAP.items():
+                if text == name or text.startswith(name + " "):
+                    cmd_name = cn
+                    break
+            if not cmd_name:
+                return False
+            cmd = getattr(self, cmd_name, None)
+            if cmd is None:
+                return False
+            sent_any = False
+            async for res in cmd(event):
+                try:
+                    await event.send(res)
+                    sent_any = True
+                except Exception as e:
+                    logger.warning(f"SoulSync 指令拦截发送失败: {e}")
+            if sent_any:
+                try:
+                    event.stop_event()
+                except Exception:
+                    pass
+            return True
+        except Exception as e:
+            logger.warning(f"SoulSync 指令拦截执行失败: {e}")
+            return False
 
     @filter.on_llm_response()
     async def on_llm_response(self, event, response):
