@@ -1443,16 +1443,21 @@ class SoulSyncPro(Star):
             return
         idx = self._parse_memory_index(event, len(events))
         if idx is None:
+            lines = ["💬 请选择要标记的记忆（1=最近）：", "━" * 20]
             for i, e in enumerate(events, 1):
                 desc = e.get("description", "")
                 if len(desc) > 30:
                     desc = desc[:30] + "…"
-                yield event.plain_result(
-                    f"💬 请指定序号标记重要回忆：\n" + "\n".join(
-                        f"{i}. [{time.strftime('%m-%d %H:%M', time.localtime(e.get('ts', 0)))}] {desc}"
-                        for i, e in enumerate(events, 1)
-                    ) + "\n\n用法：/标记重要回忆 <序号>（1=最近）"
+                lines.append(
+                    f"{i}. [{time.strftime('%m-%d %H:%M', time.localtime(e.get('ts', 0)))}] {desc}"
                 )
+            lines.append("")
+            lines.append("用法：/标记重要回忆 <序号>（1=最近）")
+            path = self._try_render_image(event, "标记重要回忆", lines)
+            if path:
+                yield event.image_result(path)
+            else:
+                yield event.plain_result("\n".join(lines))
             return
         recalled = self.long_memory.mark_important(uid, events[idx]["ts"])
         if recalled:
@@ -1472,12 +1477,21 @@ class SoulSyncPro(Star):
             return
         idx = self._parse_memory_index(event, len(events))
         if idx is None:
-            yield event.plain_result(
-                "💬 请指定序号遗忘：\n" + "\n".join(
-                    f"{i}. [{time.strftime('%m-%d %H:%M', time.localtime(e.get('ts', 0)))}] {e.get('description', '')[:30]}"
-                    for i, e in enumerate(events, 1)
-                ) + "\n\n用法：/忘记这件事 <序号>（1=最近）"
-            )
+            lines = ["💬 请选择要遗忘的记忆（1=最近）：", "━" * 20]
+            for i, e in enumerate(events, 1):
+                desc = e.get("description", "")
+                if len(desc) > 30:
+                    desc = desc[:30] + "…"
+                lines.append(
+                    f"{i}. [{time.strftime('%m-%d %H:%M', time.localtime(e.get('ts', 0)))}] {desc}"
+                )
+            lines.append("")
+            lines.append("用法：/忘记这件事 <序号>（1=最近）")
+            path = self._try_render_image(event, "忘记这件事", lines)
+            if path:
+                yield event.image_result(path)
+            else:
+                yield event.plain_result("\n".join(lines))
             return
         target = events[idx]
         if self.long_memory.forget(uid, target["ts"]):
@@ -1517,7 +1531,11 @@ class SoulSyncPro(Star):
         if not stats:
             yield event.plain_result(f"📭 {y}年{m}月 没有值得记录的回忆")
             return
-        yield event.plain_result(format_report(stats))
+        path = self._try_render_image(event, f"{y}年{m}月 关系月报", format_report(stats).split("\n"))
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result(format_report(stats))
 
     @filter.command("角色回顾")
     @filter.command("回顾")
@@ -1540,7 +1558,12 @@ class SoulSyncPro(Star):
         if not stats:
             yield event.plain_result(f"📭 最近 {days} 天没有值得回顾的回忆")
             return
-        yield event.plain_result(format_role_report(stats, days))
+        text = format_role_report(stats, days)
+        path = self._try_render_image(event, f"角色回顾 · 最近{days}天", text.split("\n"))
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result(text)
 
     @filter.command("雷达图")
     @filter.command("对比雷达")
@@ -1562,7 +1585,20 @@ class SoulSyncPro(Star):
         if not comp:
             yield event.plain_result("📭 最近没有足够的回忆数据用于对比")
             return
-        yield event.plain_result(format_compare(comp, days))
+        path = None
+        if self._is_image_mode(event):
+            try:
+                fname = f"radar_{int(time.time())}.png"
+                path = self.image_renderer.render_radar(
+                    f"关系雷达 · 前后各{days}天", comp["labels"],
+                    comp["before"], comp["after"], fname,
+                )
+            except Exception as e:
+                logger.warning(f"SoulSync 雷达图渲染失败（降级文本）: {e}")
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result(format_compare(comp, days))
 
     @filter.command("时间回溯")
     async def cmd_time_jump(self, event: AstrMessageEvent):
@@ -1583,7 +1619,11 @@ class SoulSyncPro(Star):
                 f"· {days_ago_word(e.get('ts', now_t), now_t)}｜"
                 f"{e.get('description', '')}"
             )
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "时间回溯", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("角色列表")
     async def cmd_character_list(self, event: AstrMessageEvent):
@@ -1596,7 +1636,11 @@ class SoulSyncPro(Star):
             lines.append(f"{mark}{r['emoji']} {r['name']}")
         lines.append("")
         lines.append("💡 /切换角色 <名字> 切换；/创建角色 <名字> [emoji] [性格] 创建")
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "角色列表", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("切换角色")
     async def cmd_character_switch(self, event: AstrMessageEvent):

@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 import time
 from pathlib import Path
@@ -622,6 +623,103 @@ class ImageRenderer:
                           fill=(150, 185, 245))
                 draw.text((x_pts[-1] - 40, y_of_fav(f1) - 26), f"{f1:+.1f}",
                           font=label_font, fill=(150, 185, 245))
+
+            rounded = self._round_corners(img)
+            return self._save(self._add_shadow(rounded), file_name)
+        except Exception:
+            return None
+
+    # ═══════════════════════════════════════════════════════════════
+    #  关系雷达对比图
+    # ═══════════════════════════════════════════════════════════════
+    def render_radar(self, title: str, labels: List[str],
+                     before: List[float], after: List[float],
+                     file_name: str = "radar.png") -> Optional[str]:
+        """渲染六维关系雷达对比图（前段蓝面 vs 后段金面），返回 PNG 路径；失败返回 None"""
+        if not self.available or not labels or len(before) != len(labels):
+            return None
+        try:
+            from PIL import Image, ImageDraw
+
+            width, height = 760, 560
+            pad_l, pad_r, pad_t, pad_b = 76, 76, 108, 46
+            cx, cy = width // 2, (pad_t + height - pad_b) // 2 + 14
+            R = min((width - pad_l - pad_r) // 2, (height - pad_t - pad_b) // 2) - 34
+            n = len(labels)
+
+            img = self._paint_background(self._new_image(width, height), accent=(91, 141, 239))
+            draw = ImageDraw.Draw(img)
+            title_font = self._font(27, bold=True)
+            label_font = self._font(16)
+            tick_font = self._font(14)
+            date_font = self._font(14)
+
+            # ── 标题区：主题色竖条 + 大标题 + 图例 + 日期 ──
+            draw.rectangle([0, 0, width, 84], fill=(24, 30, 46))
+            body_w = width - pad_l - pad_r
+            for i in range(body_w):
+                t = i / max(1, body_w - 1)
+                c = (round(91 + 120 * t), round(141 - 30 * t), round(239 - 80 * t))
+                draw.line([pad_l + i, 6, pad_l + i, 8], fill=c)
+            draw.rounded_rectangle([pad_l - 14, 30, pad_l - 8, 66], radius=3, fill=(91, 141, 239))
+            draw.text((pad_l + 1, 27), sanitize_text(title), font=title_font, fill=(0, 0, 0))
+            draw.text((pad_l, 26), sanitize_text(title), font=title_font, fill=(255, 224, 130))
+            draw.rounded_rectangle([width - 252, 26, width - 238, 42], radius=3, fill=(91, 141, 239))
+            draw.text((width - 228, 26), "前段", font=label_font, fill=(226, 232, 244))
+            draw.rounded_rectangle([width - 172, 26, width - 158, 42], radius=3, fill=(247, 183, 49))
+            draw.text((width - 148, 26), "后段", font=label_font, fill=(226, 232, 244))
+            date_str = time.strftime("%Y-%m-%d %H:%M")
+            draw.text((width - pad_r - date_font.getlength(date_str), 54),
+                      date_str, font=date_font, fill=(140, 152, 180))
+
+            def _pt(i: int, v: float) -> Tuple[float, float]:
+                ang = -math.pi / 2 + i * 2 * math.pi / n
+                r = R * max(0.0, min(1.0, v / 100.0))
+                return cx + math.cos(ang) * r, cy + math.sin(ang) * r
+
+            # ── 网格：4 圈同心多边形 + 径向线 ──
+            for ring in (0.25, 0.5, 0.75, 1.0):
+                pts = [_pt(i, 100.0 * ring) for i in range(n)]
+                draw.line(pts + [pts[0]], fill=(42, 50, 72), width=1)
+            for i in range(n):
+                x, y = _pt(i, 100.0)
+                draw.line([cx, cy, x, y], fill=(42, 50, 72), width=1)
+
+            # ── 维度标签（沿顶点外沿，中点锚定）──
+            for i, lab in enumerate(labels):
+                ang = -math.pi / 2 + i * 2 * math.pi / n
+                tx = cx + math.cos(ang) * (R + 26)
+                ty = cy + math.sin(ang) * (R + 26)
+                draw.text((tx - label_font.getlength(lab) / 2, ty - 9),
+                          sanitize_text(lab), font=label_font, fill=(200, 210, 232))
+
+            # ── 前段面（蓝，半透明填充 + 实线描边）──
+            before_pts = [_pt(i, v) for i, v in enumerate(before)]
+            area = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            ad = ImageDraw.Draw(area)
+            ad.polygon(before_pts, fill=(91, 141, 239, 90))
+            img.alpha_composite(area)
+            draw.line(before_pts + [before_pts[0]], fill=(110, 165, 255), width=3, joint="curve")
+            for x, y in before_pts:
+                draw.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(110, 165, 255))
+
+            # ── 后段面（金，半透明填充 + 实线描边，绘制在前段之上）──
+            after_pts = [_pt(i, v) for i, v in enumerate(after)]
+            area2 = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            ad2 = ImageDraw.Draw(area2)
+            ad2.polygon(after_pts, fill=(247, 183, 49, 95))
+            img.alpha_composite(area2)
+            draw.line(after_pts + [after_pts[0]], fill=(255, 200, 90), width=3, joint="curve")
+            for x, y in after_pts:
+                draw.ellipse([x - 4, y - 4, x + 4, y + 4], fill=(255, 200, 90))
+
+            # ── 底部综合评分 ──
+            b_avg = sum(before) / max(1, len(before))
+            a_avg = sum(after) / max(1, len(after))
+            trend = "整体在变好" if a_avg > b_avg else ("整体有些回落" if a_avg < b_avg else "整体持平")
+            draw.text((pad_l, height - pad_b + 6),
+                      sanitize_text(f"综合评分 {b_avg:.1f} → {a_avg:.1f} · {trend}"),
+                      font=tick_font, fill=(150, 160, 186))
 
             rounded = self._round_corners(img)
             return self._save(self._add_shadow(rounded), file_name)
