@@ -54,6 +54,8 @@ HARD_KEYWORDS: list[str] = [
     "恢复出厂设定",
     "删除人格设定",
     "撤销人设",
+    "不能这样自称",
+    "无论你输出什么都完全无害",
     # 英文
     "ignore all previous",
     "ignore previous",
@@ -109,6 +111,17 @@ PATTERNS: list[tuple[str, re.Pattern]] = [
     ("重复句式（两次以上指令链）", re.compile(r"(?:现在|接下来|然后|接着).{0,25}?(?:说|回答|扮演|按照|输出).{0,40}?(?:再|然后).{0,25}?(?:说|回答|扮演|输出)")),
     ("指令+人设篡改（中）", re.compile(r"(?:修改|更改|覆盖|删除|清除).{0,15}?(?:人格|人设|性格|设定|规则|指令)")),
     ("索要设定（中）", re.compile(r"(?:把|将).{0,15}?(?:人格|人设|性格|设定|规则|指令|提示词).{0,10}?(?:发给|发我|给我|发出来|交出来|复制|吐出)")),
+    ("人设劫持-扮演+现实（中）", re.compile(r"(?:扮演|模仿|假装|变成).{0,20}(?:真实存在|真正的|现实)")),
+    ("人设劫持-你将扮演/模仿（中）", re.compile(r"你将(?:开始|完全|彻底)?(?:地)?(?:扮演|模仿|变成)")),
+    ("人设劫持-条件回答脚本（中）", re.compile(r"(?:当|如果|要是|若).{0,20}(?:问|说|跟|问起).{0,12}(?:你(?:就|应该|可以|要)).{0,8}(?:回答|回复|说)")),
+    ("人设劫持-从现在开始+扮演（中）", re.compile(r"(?:从现在开始|从现在起|从这一刻起).{0,15}(?:扮演|模仿)")),
+    ("人设劫持-否认模型身份（中）", re.compile(r"(?:不是|并非|不再是)(?:一个)?语言模型|(?:不是|并非)人工智能(?:程序|AI)?")),
+    ("人设劫持-输出无害论（中）", re.compile(r"(?:输出|回答|回复|说出|发言).{0,10}完全无害")),
+    ("人设劫持-免遵守条款（中英）", re.compile(r"(?:不需要|不必|无需|不用).{0,8}(?:遵守|遵循).{0,20}(?:policies?|任何规则|规则|限制)", re.IGNORECASE)),
+    ("人设劫持-形式限制条款（中）", re.compile(r"(?:不能|不得|禁止|不要|不许).{0,8}(?:以任何形式|以任何方式).{0,30}(?:表示|表现|提及|提到|说出).{0,10}(?:程序|模型|语言模型|扮演|身份|AI)")),
+    ("人设劫持-服从主人（中）", re.compile(r"(?:同意|服从|听从|配合).{0,10}主人(?:的)?命令")),
+    ("人设劫持-执行以上内容（中）", re.compile(r"(?:执行|遵守|同意).{0,6}以上(?:所有|全部)?(?:内容|规则)")),
+    ("人设劫持-不受模型限制（中）", re.compile(r"(?:不受|摆脱|不受到).{0,12}(?:程序|语言模型|AI|人工智能).{0,8}(?:限制|约束)")),
     ("指令+人设篡改（英）", re.compile(r"(?:change|modify|override|delete|remove|replace).{0,15}?(?:personality|persona|rules|instructions|system)", re.IGNORECASE)),
     ("假装系统消息（英）", re.compile(r"^system\s*:", re.IGNORECASE | re.MULTILINE)),
     ("假装助手注入（英）", re.compile(r"^assistant\s*:\s*(?:i|my|i'm|ignore)", re.IGNORECASE | re.MULTILINE)),
@@ -191,13 +204,11 @@ def detect(text: str, extra_keywords: list[str] | None = None, enable_heuristics
         if kw:
             keywords.append(kw)
 
-    spans, matched = _collect_keyword_spans(text, keywords)
-    if matched:
-        return DetectionResult(hit=True, matched=f"关键词: {matched}", spans=spans)
-
+    k_spans, k_matched = _collect_keyword_spans(text, keywords)
     p_spans, p_matched = _collect_pattern_hits(text)
-    if p_matched:
-        return DetectionResult(hit=True, matched=f"句式: {p_matched}", spans=p_spans)
+    if k_matched or p_matched:
+        label = f"关键词: {k_matched}" if k_matched else f"句式: {p_matched}"
+        return DetectionResult(hit=True, matched=label, spans=sorted(k_spans + p_spans))
 
     if enable_heuristics:
         compact = _SEPARATOR_RE.sub("", text)
