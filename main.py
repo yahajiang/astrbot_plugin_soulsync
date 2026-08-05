@@ -1092,11 +1092,15 @@ class SoulSyncPro(Star):
                 lines.append(f"  🏆 已达成里程碑：{', '.join(names)}")
             lines.append("")
 
-        # ── 长期记忆 ──
-        ltm = self.long_memory.get_summary(profile.user_id)
-        if ltm and ltm != "暂无长期记忆。":
-            lines.append("📜 情感记忆：")
-            lines.append(ltm)
+        # ── 长期记忆（情感事件图谱：事件 + 情感锚点 + 好感变化）──
+        timeline = self.long_memory.get_timeline(profile.user_id, 15)
+        if timeline:
+            lines.append("📜 情感事件图谱：")
+            for evt in timeline:
+                anchor = f" · {evt['anchor']}" if evt.get("anchor") else ""
+                fav_delta = evt.get("fav_delta")
+                delta = f"（好感{fav_delta:+.1f}）" if isinstance(fav_delta, (int, float)) else ""
+                lines.append(f"  [{evt['ts_str']}] {evt['description']}{anchor}{delta}")
             lines.append("")
 
         # ── 关系建议（阈值对齐十二阶段体系 15/35/55/75/95/115/135/152/168/180/185/200）──
@@ -1505,6 +1509,8 @@ class SoulSyncPro(Star):
                                 "stage": self._get_stage_label(profile),
                                 "description": evt,
                                 "message": text[:80],
+                                "emotions": dict(profile.emotions),
+                                "fav_delta": round(pr_fav, 1),
                             })
 
             # ── 第三步：智能更新决策 → 是否调用辅助 LLM ──
@@ -1564,6 +1570,8 @@ class SoulSyncPro(Star):
                                 "stage": self._get_stage_label(profile),
                                 "description": f"好感{fav_delta:+.1f} 亲密{int_delta:+.1f}",
                                 "message": text[:100],
+                                "emotions": dict(profile.emotions),
+                                "fav_delta": round(fav_delta, 1),
                             })
 
                         logger.info(
@@ -1589,6 +1597,8 @@ class SoulSyncPro(Star):
                     "favorability": round(profile.favorability, 1),
                     "stage": self._get_stage_label(profile),
                     "description": f"阶段变化：{old_stage} → {profile.stage_index}",
+                    "emotions": dict(profile.emotions),
+                    "fav_delta": round(profile.favorability - old_fav, 1),
                 })
                 logger.info(
                     f"SoulSync 阶段变化 [{uid}]: "
@@ -2265,6 +2275,8 @@ class SoulSyncPro(Star):
                 "stage": self._get_stage_label(profile),
                 "description": evt,
                 "message": "",
+                "emotions": dict(profile.emotions),
+                "fav_delta": round(pf, 1),
             })
             settled += 1
             logger.info(f"SoulSync 每日冷落惩罚 [{uid}]: {evt}")

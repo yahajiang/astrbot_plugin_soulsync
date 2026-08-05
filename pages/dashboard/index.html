@@ -199,6 +199,12 @@ await B.ready();
 const S=['🌱 初识期','🌿 好感期','🤝 信任期','🍀 熟悉期','💬 交心期','💛 深化期','🧡 心动期','💜 默契期','💖 依恋期','💞 缠绵期','🌳 承诺期','🌸 共生期'];
 const N=['😐 冷淡','😠 反感','💢 厌恶','🔥 敌对'];
 const DM={joy:'喜悦',sadness:'悲伤',anger:'愤怒',fear:'恐惧',surprise:'惊讶',disgust:'厌恶',trust:'信任',anticipation:'期待'};
+const DI={joy:'😊',sadness:'😢',anger:'😠',fear:'😨',surprise:'😲',disgust:'🤢',trust:'🤗',anticipation:'✨'};
+function anchorOf(em){
+  if(!em||typeof em!=='object')return '';
+  return Object.entries(em).sort((a,b)=>b[1]-a[1]).slice(0,2)
+    .map(([d,v])=>`${DI[d]||'•'}${DM[d]||d}${Math.round(v)}`).join(' · ');
+}
 const DC={joy:'#fdcb6e',sadness:'#74b9ff',anger:'#e17055',fear:'#a29bfe',surprise:'#ffeaa7',disgust:'#55efc4',trust:'#00b894',anticipation:'#6c5ce7'};
 
 let P=[],Bp=[],schema={},draft={},Fest=[],Roles=[];
@@ -411,7 +417,9 @@ function detail(uid){
     for(const e of p.memory){
       const ts=new Date(e.ts*1000).toLocaleString('zh-CN');
       const stgTag=e.stage?` · <span style="color:var(--blue)">${esc(e.stage)}</span>`:'';
-      h+=`<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #f0f2f5"><div style="color:var(--dim);font-size:10px">🕒 ${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}${stgTag}</div><div>${esc(e.description||'')}</div>${e.message?`<div style="color:var(--dim);font-size:11px;padding-left:10px">💬 ${esc(String(e.message))}</div>`:''}</div>`;
+      const anc=anchorOf(e.emotions)?`<span style="color:var(--gold);font-size:11px;margin-left:6px">${esc(anchorOf(e.emotions))}</span>`:'';
+      const delta=typeof e.fav_delta==='number'?` · <span style="color:${e.fav_delta>=0?'var(--green)':'var(--red)'}">好感${e.fav_delta>=0?'+':''}${e.fav_delta}</span>`:'';
+      h+=`<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #f0f2f5"><div style="color:var(--dim);font-size:10px">🕒 ${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}${stgTag}${delta}</div><div>${esc(e.description||'')}${anc}</div>${e.message?`<div style="color:var(--dim);font-size:11px;padding-left:10px">💬 ${esc(String(e.message))}</div>`:''}</div>`;
     }
     h+='</div>';
   }else if(p.user_id){

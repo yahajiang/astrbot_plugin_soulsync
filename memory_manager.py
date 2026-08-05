@@ -5,7 +5,24 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
+
+from emotion_engine import DIM_ICONS, DIM_LABELS
+
+
+def emotion_anchor(emotions: Optional[dict], top_n: int = 2) -> str:
+    """从 8 维情感快照提取情感锚点文本（取最高 top_n 维），如 😊喜悦62 · 🤗信任71"""
+    if not emotions:
+        return ""
+    dims = sorted(
+        ((v, d) for d, v in emotions.items() if isinstance(v, (int, float))),
+        reverse=True,
+    )
+    parts = [
+        f"{DIM_ICONS.get(d, '•')}{DIM_LABELS.get(d, d)}{v:.0f}"
+        for v, d in dims[:top_n]
+    ]
+    return " · ".join(parts)
 
 
 class LongTermMemory:
@@ -54,6 +71,24 @@ class LongTermMemory:
             desc = e.get("description", "")
             lines.append(f"[{ts_str}] 好感={fav} {stage} | {desc}")
         return "\n".join(lines)
+
+    def get_timeline(self, user_id: str, limit: int = 15) -> List[dict]:
+        """获取带情感锚点的记忆时间线（供自画像展示）"""
+        events = self.get_events(user_id, limit)
+        out = []
+        for e in events:
+            anchor = emotion_anchor(e.get("emotions"))
+            out.append({
+                "ts": e.get("ts", 0),
+                "ts_str": time.strftime("%m-%d %H:%M", time.localtime(e.get("ts", 0))),
+                "favorability": e.get("favorability"),
+                "stage": e.get("stage", ""),
+                "fav_delta": e.get("fav_delta"),
+                "anchor": anchor,
+                "description": e.get("description", ""),
+                "message": e.get("message", ""),
+            })
+        return out
 
     def clear_user(self, user_id: str):
         self._memory.pop(user_id, None)
