@@ -351,9 +351,9 @@ function detail(uid){
   const dimIc={joy:'😊',sadness:'😢',anger:'😠',fear:'😨',surprise:'😲',disgust:'🤢',trust:'🤗',anticipation:'✨'};
   for(const d of Object.keys(DM)){const v=(p.emotions&&p.emotions[d])||50;h+=`<div class="ei"><div class="n">${dimIc[d]||''} ${DM[d]}</div><div class="v" style="color:${DC[d]}">${v.toFixed(0)}</div><div class="eb"><div class="ef" style="width:${v}%;background:${DC[d]}"></div></div></div>`}
   const cmp=compoundOf(p.emotions);
-  if(cmp.length)h+=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;font-size:12px;margin-top:8px;color:var(--dim);white-space:nowrap">🎯 复合情绪：${cmp.map(c=>`<span style="display:inline-block;background:var(--gold-l);color:var(--gold-d);border-radius:10px;padding:1px 8px;font-size:11px;white-space:nowrap">${esc(c)}</span>`).join('')}</div>`;
+  if(cmp.length)h+=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;grid-column:1/-1;min-width:0;font-size:12px;margin-top:8px;color:var(--dim);white-space:nowrap">🎯 复合情绪：${cmp.map(c=>`<span style="display:inline-block;background:var(--gold-l);color:var(--gold-d);border-radius:10px;padding:1px 8px;font-size:11px;white-space:nowrap">${esc(c)}</span>`).join('')}</div>`;
   if(typeof p.tension==='number'){const tsT=p.tension;const tSt=tsT<30?'平静':tsT<60?'阴郁':tsT<85?'临界':'即将爆发';const tC=tsT<60?'var(--green)':tsT<85?'var(--orange)':'var(--red)';
-    h+=`<div style="font-size:12px;margin-top:8px;color:var(--dim)">🌋 情绪张力：${tsT.toFixed(0)}/100（<span style="color:${tC}">${tSt}</span>）</div>`}
+    h+=`<div style="font-size:12px;margin-top:8px;color:var(--dim);grid-column:1/-1">🌋 情绪张力：${tsT.toFixed(0)}/100（<span style="color:${tC}">${tSt}</span>）</div>`}
   h+='</div>';
 
   // ── 互动统计 ──
