@@ -8,9 +8,9 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#f5f6fa;--card:#fff;--border:#e2e5ec;--text:#1a1d26;--dim:#7a8299;--pink:#e84393;--green:#00b894;--blue:#3869d8;--red:#e55039;--orange:#f0932b;--purple:#6c5ce7;--glass-bg:rgba(255,255,255,.58);--glass-bg-strong:rgba(255,255,255,.72);--glass-border:rgba(255,255,255,.6);--glass-line:rgba(31,38,135,.08);--glass-shadow:0 8px 32px rgba(31,38,135,.1)}
 body{position:relative;overflow-x:hidden;min-height:100vh;background:linear-gradient(135deg,#f0f4ff 0%,#fdf0f6 45%,#eef7f2 100%);background-attachment:fixed;color:var(--text);font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-body::before,body::after{content:"";position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0}
-body::before{width:480px;height:480px;background:rgba(232,67,147,.22);top:-140px;left:-120px}
-body::after{width:540px;height:540px;background:rgba(56,105,216,.2);bottom:-160px;right:-140px}
+body::before,body::after{content:"";position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+body::before{width:660px;height:660px;background:radial-gradient(circle at center,rgba(232,67,147,.16) 0%,rgba(232,67,147,.09) 50%,rgba(232,67,147,.03) 74%,rgba(232,67,147,0) 92%);top:-230px;left:-210px}
+body::after{width:720px;height:720px;background:radial-gradient(circle at center,rgba(56,105,216,.15) 0%,rgba(56,105,216,.08) 50%,rgba(56,105,216,.02) 74%,rgba(56,105,216,0) 92%);bottom:-250px;right:-230px}
 .wrap{max-width:1200px;margin:0 auto;padding:20px;position:relative;z-index:1}
 .grid{display:grid;grid-template-columns:1fr 320px;gap:16px}
 .card{background:var(--glass-bg);-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%);border:1px solid var(--glass-border);border-radius:16px;overflow:hidden;box-shadow:var(--glass-shadow)}
@@ -51,10 +51,10 @@ body::after{width:540px;height:540px;background:rgba(56,105,216,.2);bottom:-160p
 .act-btn.hot{background:linear-gradient(135deg,var(--pink),#fd79a8);color:#fff;border-color:rgba(255,255,255,.4);box-shadow:0 6px 20px rgba(232,67,147,.28)}
 .act-btn.hot:hover{background:linear-gradient(135deg,#d63384,#e84393);transform:translateX(3px)}
 .sys{font-size:12px;color:var(--dim);line-height:1.8}
-.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,20,40,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);z-index:10;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility .22s ease}
-.ov.on{opacity:1;visibility:visible;pointer-events:auto}
-.modal{width:min(800px,100%);max-height:min(640px,calc(100vh - 40px));display:grid;grid-template-rows:auto 1fr;background:var(--glass-bg-strong);-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);border-radius:18px;border:1px solid var(--glass-border);box-shadow:0 24px 64px rgba(10,14,24,.28);overflow:hidden;transform:translateY(16px) scale(.96);opacity:0;transition:transform .28s cubic-bezier(.34,1.4,.64,1),opacity .22s ease}
-.ov.on .modal{transform:translateY(0) scale(1);opacity:1}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,20,40,.35);z-index:10;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility 0s linear .22s}
+.ov.on{opacity:1;visibility:visible;pointer-events:auto;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:opacity .22s ease,visibility 0s linear 0s}
+.modal{width:min(800px,100%);max-height:min(640px,calc(100vh - 40px));display:grid;grid-template-rows:auto 1fr;background:var(--glass-bg-strong);border-radius:18px;border:1px solid var(--glass-border);box-shadow:0 24px 64px rgba(10,14,24,.28);overflow:hidden;transform:translateY(16px) scale(.96);opacity:0;transition:transform .28s cubic-bezier(.34,1.4,.64,1),opacity .22s ease}
+.ov.on .modal{transform:translateY(0) scale(1);opacity:1;-webkit-backdrop-filter:blur(20px) saturate(160%);backdrop-filter:blur(20px) saturate(160%);will-change:transform,opacity}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--glass-line)}
 .modal-hd h3{font-size:15px;font-weight:700}
 .modal-bd{overflow:auto;padding:16px}
@@ -211,7 +211,7 @@ function status(){
   const sk=Bp.filter(b=>b.current_streak_count>=3);
   const bt=Bp.reduce((s,b)=>s+(b.betrayal_count||0),0);
   const cb=Bp.reduce((s,b)=>s+(b.comeback_count||0),0);
-  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.14 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
+  $('xSys').innerHTML=`<div>📊 档案 <strong>${P.length}</strong></div><div>🎯 行为档案 <strong>${Bp.length}</strong></div><div>📅 节日 <strong>${Fest.length}</strong> · 🎭 关系角色 <strong>${Roles.length}</strong></div><div>🔥 活跃势头 <strong>${sk.length}</strong></div><div>💔 背叛 <strong>${bt}</strong> · 💫 回归 <strong>${cb}</strong></div><div style="margin-top:4px;font-size:11px;color:#aaa">心旅知音 SoulSync v2.15 · 十二阶段 · 纪念日 · 统计 · 关系角色 · 感知 · 图片</div>`;
 }
 
 function detail(uid){

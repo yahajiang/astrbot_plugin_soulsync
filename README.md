@@ -1,4 +1,4 @@
-# 心旅知音 (SoulSync) v2.14 - 融合版情感智能插件（自用）
+# 心旅知音 (SoulSync) v2.15 - 融合版情感智能插件（自用）
 
 > 本插件由 AI 编写，参考融合 EmotionAI 与 FavourPro 精华，实现「关键词+LLM 双通道情感分析 · 8 维情感 · 好感/亲密度 · 十二阶段演进 · 惩罚奖励 · 长期记忆 · 关系角色 · 纪念日节日 · 时间感知 · 数据趋势 · 情感自画像 · 图片输出 · WebUI 控制台」，打造真实、渐进、可养成的 AI 情感交互系统。
 
@@ -436,7 +436,11 @@ astrbot_plugin_soulsync/
 
 ## 📜 版本更新记录
 
-### v2.14（当前版本）
+### v2.15（当前版本）
+- **WebUI 性能优化（观感不变）**：背景光斑由 `filter:blur(90px)` 实时高斯采样改为预模糊 `radial-gradient`（纯静态绘制，滚动零开销）；弹窗遮罩/玻璃 `backdrop-filter` 改为仅在弹窗开启时生效（关闭时零滤镜合成）；弹窗动画加 `will-change:transform,opacity` 提升流畅度
+- **弹窗关闭动画修复**：关闭时先 0.22s 淡出再隐藏（原先被 `visibility` 立即打断，实际为瞬隐），视觉过渡完整
+
+### v2.14
 - **WebUI 毛玻璃玻璃态美化**：卡片/弹窗/统计卡 `backdrop-filter` 高斯模糊 + 半透明渐变背景；页面背景渐变色 + 双模糊光斑装饰；弹窗弹入/淡出动画（transform+opacity，GPU 合成）
 - **动画流畅性提升**：hover 微上浮/侧滑、进度条 cubic-bezier 过渡、滚动条美化；`prefers-reduced-motion` 降级 + `@supports` 兼容非 WebKit 环境（低端设备自动回退为不透明背景）
 
