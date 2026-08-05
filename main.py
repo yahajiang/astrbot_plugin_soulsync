@@ -1606,6 +1606,8 @@ class SoulSyncPro(Star):
                 )
             except Exception as e:
                 logger.warning(f"SoulSync 雷达图渲染失败（降级文本）: {e}")
+            if not path:
+                logger.warning("SoulSync 雷达图渲染返回空（render_radar 内部失败或渲染器不可用），降级文本")
         if path:
             yield event.image_result(path)
         else:

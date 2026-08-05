@@ -505,8 +505,11 @@ class ImageRenderer:
                 y += row_h
 
             rounded = self._round_corners(img)
-            return self._save(rounded, file_name)
-        except Exception:
+            return self._save(self._add_shadow(rounded), file_name)
+        except Exception as e:
+            import traceback as _tb
+            _tb.print_exc()
+            print(f"[SoulSync] render_radar 渲染失败: {e}")
             return None
 
     # ═══════════════════════════════════════════════════════════════
