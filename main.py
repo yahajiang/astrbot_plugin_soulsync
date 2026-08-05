@@ -285,18 +285,19 @@ class SoulSyncPro(Star):
                 d["role_name"] = role["name"]
                 d["role_emoji"] = role["emoji"]
                 d["stage_label"] = self._get_stage_label(p)
+                raw_uid = raw_uid or p.user_id
                 d["anniversaries"] = self.anniversary_manager.list_user_anniversaries(
-                    p.user_id, today
+                    raw_uid, today
                 )
-                d["trend"] = self.stats_tracker.to_web(p.user_id, 7)
-                d["trend_summary"] = self.stats_tracker.summary(p.user_id, 7)
+                d["trend"] = self.stats_tracker.to_web(raw_uid, 7)
+                d["trend_summary"] = self.stats_tracker.summary(raw_uid, 7)
                 d["relationships"] = self.relationship_manager.status(
-                    p.user_id, p.favorability, p.intimacy, p.total_interactions
+                    raw_uid, p.favorability, p.intimacy, p.total_interactions
                 )
-                d["rel_active"] = self.relationship_manager.active_role(p.user_id)
-                d["rel_locked"] = self.relationship_manager.is_locked(p.user_id)
-                d["rel_pinned"] = self.relationship_manager.pinned_role(p.user_id)
-                d["rel_custom"] = self.relationship_manager.custom_info(p.user_id)
+                d["rel_active"] = self.relationship_manager.active_role(raw_uid)
+                d["rel_locked"] = self.relationship_manager.is_locked(raw_uid)
+                d["rel_pinned"] = self.relationship_manager.pinned_role(raw_uid)
+                d["rel_custom"] = self.relationship_manager.custom_info(raw_uid)
                 d["memory"] = self.long_memory.get_events(p.user_id, 20)
                 d["radar"] = compare_recent(
                     self.long_memory.get_events(p.user_id, 5000), time.time(), 7
@@ -629,7 +630,9 @@ class SoulSyncPro(Star):
             lines.append(f"💡 距下一阶段还需：{need:.1f} 分")
         else:
             lines.append("🌸 已达最高阶段！")
-        custom = self.relationship_manager.custom_info(profile.user_id)
+        custom = self.relationship_manager.custom_info(
+            str(profile.user_id).rpartition("::")[0] or profile.user_id
+        )
         if custom["attitude"]:
             lines.append(f"💭 态度：{custom['attitude']}")
         if custom["relationship"]:
@@ -1090,8 +1093,10 @@ class SoulSyncPro(Star):
                         lines.append(f"  {r['desc']}")
                     lines.append("")
 
-        # ── 自定义态度/关系描述（合并进关系角色系统）──
-        custom = self.relationship_manager.custom_info(profile.user_id)
+        # ── 自定义态度/关系描述（合并进关系角色系统，按原始 uid 共享）──
+        custom = self.relationship_manager.custom_info(
+            str(profile.user_id).rpartition("::")[0] or profile.user_id
+        )
         if custom["attitude"]:
             lines.append(f"💭 AI 对你的态度：{custom['attitude']}")
         if custom["relationship"]:
@@ -1810,7 +1815,7 @@ class SoulSyncPro(Star):
 
             # ── 第一步半a3：角色视角独白（按间隔以角色口吻回望最近的情感历程）──
             role_ctx = ""
-            if self.config.get("enable_role_report", True):
+            if self.config.get("enable_role_report", True) and not monthly_ctx:
                 try:
                     now_r = time.time()
                     interval = float(self.config.get("role_report_interval_days", 7)) * 86400.0
@@ -1834,7 +1839,7 @@ class SoulSyncPro(Star):
 
             # ── 第一步半a4：时间跳跃叙事（回忆关键时刻，跨越时间线）──
             timejump_ctx = ""
-            if self.config.get("enable_time_jump", True):
+            if self.config.get("enable_time_jump", True) and not monthly_ctx and not role_ctx:
                 try:
                     now_t = time.time()
                     t_interval = float(self.config.get("time_jump_interval_days", 3)) * 86400.0
@@ -2089,10 +2094,10 @@ class SoulSyncPro(Star):
                 profile.turns_since_update = 0
                 profile.last_update_ts = time.time()
 
-            # ── 数据统计：记录每日快照 ──
+            # ── 数据统计：记录每日快照（按原始 uid 共享时间线）──
             if self.config.get("enable_stats_tracking", True):
                 self.stats_tracker.update(
-                    uid=profile.user_id,
+                    uid=uid,
                     favorability=profile.favorability,
                     intimacy=profile.intimacy,
                     stage_index=profile.stage_index,
@@ -2214,16 +2219,17 @@ class SoulSyncPro(Star):
 
         recent_count = self.config.get("llm_recent_messages_count", 5)
         memory_summary = self.long_memory.get_summary(profile.user_id)
-        recent = self.recent_messages.get(profile.user_id, [])
+        raw_uid = str(profile.user_id).rpartition("::")[0] or profile.user_id
+        recent = self.recent_messages.get(raw_uid, [])
         recent_text = "\n".join(f"- {m}" for m in recent[-recent_count:]) if recent else "暂无"
 
-        # 角色上下文：让态度/关系描述贴合当前关系角色
+        # 角色上下文：让态度/关系描述贴合当前关系角色（关系角色按原始 uid 共享）
         role_context = ""
         if self.config.get("enable_relationship_roles", True):
-            content = self.relationship_manager.custom_content(profile.user_id)
-            content += " " + " ".join(self.recent_messages.get(profile.user_id, [])[-4:])
+            content = self.relationship_manager.custom_content(raw_uid)
+            content += " " + " ".join(self.recent_messages.get(raw_uid, [])[-4:])
             rk = self.relationship_manager.resolve_active(
-                profile.user_id, profile.favorability, profile.intimacy,
+                raw_uid, profile.favorability, profile.intimacy,
                 profile.total_interactions,
                 auto_assign=self.config.get("relationship_auto_assign", True),
                 content=content,
@@ -2381,7 +2387,9 @@ class SoulSyncPro(Star):
                 tlabel = {"calm": "平静", "uneasy": "阴郁", "strained": "临界", "bursting": "即将爆发"}.get(tstate, tstate)
                 lines.append(f"  🌋 情绪张力：{tension:.0f}/100（{tlabel}）")
 
-            custom = self.relationship_manager.custom_info(profile.user_id)
+            custom = self.relationship_manager.custom_info(
+                str(profile.user_id).rpartition("::")[0] or profile.user_id
+            )
             if custom["attitude"]:
                 lines.append(f"\n💭 态度：{custom['attitude']}")
             if custom["relationship"]:
@@ -2432,7 +2440,9 @@ class SoulSyncPro(Star):
                 parts.append("（你刚刚经历了一次情绪爆发，内心还带着余波与疲惫）")
 
         if enable_att:
-            custom = self.relationship_manager.custom_info(profile.user_id)
+            custom = self.relationship_manager.custom_info(
+                str(profile.user_id).rpartition("::")[0] or profile.user_id
+            )
             if custom["attitude"]:
                 parts.append(f"你对ta的态度：{custom['attitude']}")
             if custom["relationship"]:
