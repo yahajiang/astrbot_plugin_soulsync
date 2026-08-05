@@ -1374,6 +1374,72 @@ class SoulSyncPro(Star):
         self._save_all()
         yield event.plain_result(f"✅ 已修正 {fixed} 个用户的互动统计")
 
+    @filter.command("标记重要回忆")
+    async def cmd_mark_important(self, event: AstrMessageEvent):
+        """用户：把某条长期记忆标记为重要（永不忘却）。用法：/标记重要回忆 <序号>"""
+        uid = self._get_user_id(event)
+        events = self.long_memory.get_events(uid, 10)
+        if not events:
+            yield event.plain_result("📭 当前没有长期记忆可标记")
+            return
+        idx = self._parse_memory_index(event, len(events))
+        if idx is None:
+            for i, e in enumerate(events, 1):
+                desc = e.get("description", "")
+                if len(desc) > 30:
+                    desc = desc[:30] + "…"
+                yield event.plain_result(
+                    f"💬 请指定序号标记重要回忆：\n" + "\n".join(
+                        f"{i}. [{time.strftime('%m-%d %H:%M', time.localtime(e.get('ts', 0)))}] {desc}"
+                        for i, e in enumerate(events, 1)
+                    ) + "\n\n用法：/标记重要回忆 <序号>（1=最近）"
+                )
+            return
+        recalled = self.long_memory.mark_important(uid, events[idx]["ts"])
+        if recalled:
+            yield event.plain_result(
+                f"⭐ 已标记为重要回忆（永不忘却）：{recalled.get('description', '')}"
+            )
+        else:
+            yield event.plain_result("❌ 未找到该记忆")
+
+    @filter.command("忘记这件事")
+    async def cmd_forget(self, event: AstrMessageEvent):
+        """用户：忘掉某条长期记忆。用法：/忘记这件事 <序号>"""
+        uid = self._get_user_id(event)
+        events = self.long_memory.get_events(uid, 10)
+        if not events:
+            yield event.plain_result("📭 当前没有长期记忆可遗忘")
+            return
+        idx = self._parse_memory_index(event, len(events))
+        if idx is None:
+            yield event.plain_result(
+                "💬 请指定序号遗忘：\n" + "\n".join(
+                    f"{i}. [{time.strftime('%m-%d %H:%M', time.localtime(e.get('ts', 0)))}] {e.get('description', '')[:30]}"
+                    for i, e in enumerate(events, 1)
+                ) + "\n\n用法：/忘记这件事 <序号>（1=最近）"
+            )
+            return
+        target = events[idx]
+        if self.long_memory.forget(uid, target["ts"]):
+            yield event.plain_result(f"🌫️ 已遗忘这段回忆：{target.get('description', '')}")
+        else:
+            yield event.plain_result("❌ 未找到该记忆")
+
+    @staticmethod
+    def _parse_memory_index(event, count: int) -> Optional[int]:
+        """解析记忆序号参数（1=最近一条），非法返回 None"""
+        parts = event.message_str.split()
+        if len(parts) < 2:
+            return None
+        try:
+            n = int(parts[1])
+        except ValueError:
+            return None
+        if n < 1 or n > count:
+            return None
+        return count - n
+
     @filter.command("调试事件")
     async def cmd_debug_event(self, event: AstrMessageEvent):
         """管理员：输出事件结构（排障用）"""

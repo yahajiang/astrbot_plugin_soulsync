@@ -51,6 +51,7 @@ class LongTermMemory:
         event["ts"] = time.time()
         event.setdefault("vividness", 100)          # 清晰度基准 0~100
         event.setdefault("last_recalled_ts", 0)     # 最近一次被唤醒时间
+        event.setdefault("important", False)        # 重要记忆（永不遗忘）
         self._memory[user_id].append(event)
 
         # 超过上限则淘汰最旧的
@@ -62,7 +63,9 @@ class LongTermMemory:
     @staticmethod
     def vividness_of(event: dict, half_life_days: float = 30.0, now: float = 0.0) -> int:
         """遗忘曲线：按指数衰减计算事件当前清晰度（0~100）。
-        base × 0.5^(天数/半衰期)，回忆唤醒后从唤醒时刻重新衰减。"""
+        重要记忆恒为 100（永不遗忘）；其余 base × 0.5^(天数/半衰期)，回忆唤醒后从唤醒时刻重新衰减。"""
+        if event.get("important"):
+            return 100
         now = now or time.time()
         base = float(event.get("vividness", 100))
         anchor = event.get("last_recalled_ts") or event.get("ts") or now
@@ -110,9 +113,10 @@ class LongTermMemory:
         return "\n".join(lines)
 
     def get_faded_events(self, user_id: str, limit: int = 3, max_vividness: int = 80) -> List[dict]:
-        """获取最模糊（清晰度低于阈值、按模糊度升序）的事件，供记忆唤醒"""
+        """获取最模糊（清晰度低于阈值、按模糊度升序）的事件，供记忆唤醒（重要记忆不参与）"""
         events = [e for e in self._memory.get(user_id, [])
-                  if self.vividness_of(e, self.half_life_days) < max_vividness]
+                  if not e.get("important")
+                  and self.vividness_of(e, self.half_life_days) < max_vividness]
         events.sort(key=lambda e: self.vividness_of(e, self.half_life_days))
         return events[:limit]
 
@@ -126,6 +130,27 @@ class LongTermMemory:
                 self._save_user(user_id)
                 return e
         return None
+
+    def mark_important(self, user_id: str, ts: float) -> Optional[dict]:
+        """标记重要记忆：永不忘却（清晰度恒 100，不参与遗忘/唤醒）。
+        返回被标记的事件（无则 None）"""
+        for e in self._memory.get(user_id, []):
+            if e.get("ts") == ts:
+                e["important"] = True
+                e["vividness"] = 100
+                self._save_user(user_id)
+                return e
+        return None
+
+    def forget(self, user_id: str, ts: float) -> bool:
+        """忘掉一段记忆：从长期记忆中删除。返回是否删除成功"""
+        events = self._memory.get(user_id, [])
+        for i, e in enumerate(events):
+            if e.get("ts") == ts:
+                del events[i]
+                self._save_user(user_id)
+                return True
+        return False
 
     def get_timeline(self, user_id: str, limit: int = 15) -> List[dict]:
         """获取带情感锚点的记忆时间线（供自画像展示）"""
@@ -141,6 +166,7 @@ class LongTermMemory:
                 "fav_delta": e.get("fav_delta"),
                 "anchor": anchor,
                 "vividness": self.vividness_of(e, self.half_life_days),
+                "important": bool(e.get("important")),
                 "description": e.get("description", ""),
                 "message": e.get("message", ""),
             })

@@ -427,7 +427,8 @@ function detail(uid){
       const anc=anchorOf(e.emotions)?`<span style="color:var(--gold);font-size:11px;margin-left:6px">${esc(anchorOf(e.emotions))}</span>`:'';
       const delta=typeof e.fav_delta==='number'?` · <span style="color:${e.fav_delta>=0?'var(--green)':'var(--red)'}">好感${e.fav_delta>=0?'+':''}${e.fav_delta}</span>`:'';
       const vivid=typeof e.vividness==='number'?` · <span style="color:${e.vividness>=60?'var(--dim)':'var(--purple)'}">清晰度${e.vividness}%${e.vividness<60?' 🌫️':''}</span>`:'';
-      h+=`<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #f0f2f5"><div style="color:var(--dim);font-size:10px">🕒 ${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}${stgTag}${delta}${vivid}</div><div>${esc(e.description||'')}${anc}</div>${e.message?`<div style="color:var(--dim);font-size:11px;padding-left:10px">💬 ${esc(String(e.message))}</div>`:''}</div>`;
+      const imp=e.important?' · <span style="color:var(--gold)">⭐ 重要回忆</span>':'';
+      h+=`<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #f0f2f5"><div style="color:var(--dim);font-size:10px">🕒 ${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}${stgTag}${delta}${vivid}${imp}</div><div>${esc(e.description||'')}${anc}</div>${e.message?`<div style="color:var(--dim);font-size:11px;padding-left:10px">💬 ${esc(String(e.message))}</div>`:''}</div>`;
     }
     h+='</div>';
   }else if(p.user_id){
