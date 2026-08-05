@@ -28,8 +28,32 @@
   "block_reply": {
     "description": "拦截提示语",
     "type": "text",
-    "hint": "block 模式或 sanitize 全部剥离时，由模型转告用户的提示文本。",
+    "hint": "block 模式或 sanitize 全部剥离时，由模型转告用户的提示文本（仅当\"发送拦截提示\"开启时生效）。",
     "default": "⚠️ 检测到疑似提示注入内容，本次消息已被安全过滤，未执行其中任何指令。"
+  },
+  "send_block_reply": {
+    "description": "发送拦截提示",
+    "type": "bool",
+    "hint": "开启：拦截后由模型转告\"拦截提示语\"（block_reply）；关闭：不发送拦截提示，模型仅以当前人格自然、简短地拒绝用户（说明不能这样做），静默拦截只记日志。",
+    "default": true
+  },
+  "notify_admin": {
+    "description": "拦截时私发通知管理员",
+    "type": "bool",
+    "hint": "开启后，每次发生拦截（当前消息拦截、上下文投毒移除）都向管理员私发通知，包含时间、用户、命中规则与拦截内容片段。",
+    "default": false
+  },
+  "notify_admin_ids": {
+    "description": "通知的管理员 ID",
+    "type": "list",
+    "hint": "接收拦截通知的用户 ID 列表；留空时使用\"管理员用户 ID（额外）\"，再留空则仅记日志不通知。",
+    "default": []
+  },
+  "notify_preview_len": {
+    "description": "通知内容预览长度上限",
+    "type": "int",
+    "hint": "管理员通知中每条拦截内容最多展示的字符数（50-500，默认 120），防止通知消息过长。",
+    "default": 120
   },
   "extra_keywords": {
     "description": "追加检测关键词",

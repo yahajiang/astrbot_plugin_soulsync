@@ -1,7 +1,7 @@
 name: astrbot_plugin_soulsync_shield
 display_name: 心旅知音 · 注入防护盾
-desc: 心旅知音（SoulSync）衍伸系列：防止提示注入（Prompt Injection）与恶意调教，保护 AI 人格设定不被污染——system prompt 加固、关键词/句式/混淆检测、block/sanitize/warn 三级处置、SoulSync 内置关系角色豁免、白名单豁免、命中统计与持久化日志、/injguard 管理指令。
-version: 1.1.0
+desc: 心旅知音（SoulSync）衍伸系列：防止提示注入（Prompt Injection）与恶意调教，保护 AI 人格设定不被污染——system prompt 加固、关键词/句式/混淆检测、block/sanitize/warn 三级处置、拦截提示开关、管理员私发通知（含拦截内容）、SoulSync 内置关系角色豁免、白名单豁免、命中统计与持久化日志、/injguard 管理指令。
+version: 1.2.0
 author: Yahajiang
 repo: "https://github.com/yahajiang/astrbot_plugin_soulsync_shield"
 astrbot_version: ">=4.10.0"
