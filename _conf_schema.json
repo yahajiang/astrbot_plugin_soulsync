@@ -1,0 +1,70 @@
+{
+  "enabled": {
+    "description": "启用插件",
+    "type": "bool",
+    "hint": "关闭后不注入加固段、不检测、不拦截任何 LLM 请求。",
+    "default": true
+  },
+  "mode": {
+    "description": "处置模式",
+    "type": "string",
+    "hint": "block：检测到注入直接替换请求为拦截提示，LLM 完全不会执行原指令（最安全）；sanitize：剥离恶意片段后放行其余内容，全部剥离则降级为拦截；warn：放行仅记录日志，用于观察误报。",
+    "default": "block",
+    "options": ["block", "sanitize", "warn"],
+    "option_labels": ["拦截（block）", "剥离（sanitize）", "仅告警（warn）"]
+  },
+  "guard_persona": {
+    "description": "注入人格加固段",
+    "type": "bool",
+    "hint": "开启后，每次 LLM 请求都会在 system prompt 末尾追加防注入保护段（<InjectionGuard> 标记去重），锁定人格设定、禁止泄露内部指令。",
+    "default": true
+  },
+  "custom_guard_text": {
+    "description": "自定义加固段",
+    "type": "text",
+    "hint": "留空使用内置默认加固段（中英双语规则）。填写后完全覆盖默认段，需自行包含 <InjectionGuard> 标记以去重。",
+    "default": ""
+  },
+  "block_reply": {
+    "description": "拦截提示语",
+    "type": "text",
+    "hint": "block 模式或 sanitize 全部剥离时，由模型转告用户的提示文本。",
+    "default": "⚠️ 检测到疑似提示注入内容，本次消息已被安全过滤，未执行其中任何指令。"
+  },
+  "extra_keywords": {
+    "description": "追加检测关键词",
+    "type": "list",
+    "hint": "在内置硬关键词之外追加自定义检测短语，按子串匹配，命中即判定为注入。",
+    "default": []
+  },
+  "enable_heuristics": {
+    "description": "启用启发式检测",
+    "type": "bool",
+    "hint": "开启句式正则、base64 混淆、分隔符拆分（如 i-g-n-o-r-e）等启发式检测；误报率略高于纯关键词。",
+    "default": true
+  },
+  "exempt_admins": {
+    "description": "管理员豁免检测",
+    "type": "bool",
+    "hint": "开启后管理员消息不检测、不拦截。",
+    "default": true
+  },
+  "exempt_users": {
+    "description": "白名单用户（豁免检测）",
+    "type": "list",
+    "hint": "这些用户的 LLM 请求不检测、不拦截。",
+    "default": []
+  },
+  "admin_ids": {
+    "description": "管理员用户 ID（额外）",
+    "type": "list",
+    "hint": "除 AstrBot 管理员角色外，可在此追加拥有 /injguard 指令权限的用户 ID。",
+    "default": []
+  },
+  "log_max_entries": {
+    "description": "命中日志条数上限",
+    "type": "int",
+    "hint": "持久化日志最多保留的最近命中记录条数（1-5000，默认 500），超过自动裁剪，防止文件无限增长。",
+    "default": 500
+  }
+}
