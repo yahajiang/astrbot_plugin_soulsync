@@ -112,6 +112,9 @@ class BehaviorProfile:
     # 角色视角独白（v2.16 P11：以角色口吻总结这段时间的情感历程）
     role_report_last_ts: float = 0.0       # 上次注入内心独白的 ts
 
+    # 时间跳跃叙事（v2.16 P13：回忆关键时刻，跨越时间线）
+    time_jump_last_ts: float = 0.0         # 上次时间跳跃叙事的 ts
+
     # 待衰减的奖惩队列 [(apply_ts, delta_fav, delta_int, reason), ...]
     pending_effects: List[Tuple[float, float, float, str]] = field(default_factory=list)
 

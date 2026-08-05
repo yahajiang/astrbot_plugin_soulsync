@@ -600,10 +600,30 @@
     "default": true
   },
   "enable_weather_perception": {
-    "description": "启用季节/天气感知",
-    "hint": "按日期确定性模拟季节与天气（晴/多云/阴/小雨/雷阵雨/小雪/大风），注入角色心情与话题倾向（雨天感性、晴天活跃）",
+    "description": "季节/天气感知",
+    "hint": "注入当天季节与天气（按日期确定性模拟），影响角色心情与话题",
     "type": "bool",
     "default": true
+  },
+  "enable_time_jump": {
+    "description": "时间跳跃叙事",
+    "hint": "按间隔概率回忆关键时刻（重要记忆/大幅变化/考验/里程碑），跨越时间线讲述过去与现在",
+    "type": "bool",
+    "default": true
+  },
+  "time_jump_interval_days": {
+    "description": "时间跳跃间隔（天）",
+    "hint": "两次时间跳跃叙事之间的最少间隔天数",
+    "type": "int",
+    "default": 3,
+    "slider": {"min": 1, "max": 30, "step": 1}
+  },
+  "time_jump_probability": {
+    "description": "时间跳跃概率",
+    "hint": "间隔满足后，每轮对话触发时间跳跃叙事的概率",
+    "type": "float",
+    "default": 0.1,
+    "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
   },
   "holiday_country": {
     "description": "节假日国家/地区",

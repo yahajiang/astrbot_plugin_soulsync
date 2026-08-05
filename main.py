@@ -1549,6 +1549,27 @@ class SoulSyncPro(Star):
             return
         yield event.plain_result(format_compare(comp, days))
 
+    @filter.command("时间回溯")
+    async def cmd_time_jump(self, event: AstrMessageEvent):
+        """用户：回溯关键时刻的时间线叙事（最多5条）"""
+        uid = self._get_user_id(event)
+        kms = self.long_memory.get_key_memories(uid, 5)
+        if not kms:
+            yield event.plain_result("📭 还没有值得回溯的关键时刻")
+            return
+        from report import days_ago_word, format_time_jump
+        now_t = time.time()
+        profile = self.profiles.get(uid)
+        label = self._get_stage_label(profile) if profile else ""
+        fav = profile.favorability if profile else 0.0
+        lines = [format_time_jump(kms[0], now_t, label, fav)]
+        for e in kms[1:]:
+            lines.append(
+                f"· {days_ago_word(e.get('ts', now_t), now_t)}｜"
+                f"{e.get('description', '')}"
+            )
+        yield event.plain_result("\n".join(lines))
+
     @filter.command("调试事件")
     async def cmd_debug_event(self, event: AstrMessageEvent):
         """管理员：输出事件结构（排障用）"""
@@ -1724,6 +1745,31 @@ class SoulSyncPro(Star):
                                 f"{format_role_report(rstats, int(interval / 86400.0))}\n"
                                 "请以第一人称、带着真实的情绪，自然地把这份心绪说给对方听，"
                                 "让对方感到你的真诚与在意。"
+                            )
+                except Exception:
+                    pass
+
+            # ── 第一步半a4：时间跳跃叙事（回忆关键时刻，跨越时间线）──
+            timejump_ctx = ""
+            if self.config.get("enable_time_jump", True):
+                try:
+                    now_t = time.time()
+                    t_interval = float(self.config.get("time_jump_interval_days", 3)) * 86400.0
+                    if now_t - behavior_profile.time_jump_last_ts >= t_interval:
+                        kms = self.long_memory.get_key_memories(uid, 1)
+                        if (kms and random.random()
+                                < float(self.config.get("time_jump_probability", 0.1))):
+                            behavior_profile.time_jump_last_ts = now_t
+                            from report import format_time_jump
+                            timejump_ctx = (
+                                format_time_jump(
+                                    kms[0], now_t,
+                                    self._get_stage_label(profile),
+                                    profile.favorability,
+                                )
+                                + "\n请在回复中自然地展开这段跨越时间的回忆，"
+                                  "把「过去那一幕」与「现在的你们」连接起来，并流露对未来的期待；"
+                                  "不要提及这是机制。"
                             )
                 except Exception:
                     pass
@@ -2019,6 +2065,10 @@ class SoulSyncPro(Star):
             # ── 注入角色视角独白上下文 ──
             if role_ctx:
                 req.extra_user_content_parts.append(TextPart(text=role_ctx))
+
+            # ── 注入时间跳跃叙事上下文 ──
+            if timejump_ctx:
+                req.extra_user_content_parts.append(TextPart(text=timejump_ctx))
 
             # ── 注入信任考验上下文（剧情或结果）──
             if crisis_ctx:

@@ -207,6 +207,56 @@ def format_compare(comp: dict, span_days: int = 7) -> str:
     return "\n".join(lines)
 
 
+# ══════════ P13 时间跳跃叙事：回忆关键时刻，跨越时间线 ══════════
+def days_ago_word(ts: float, now: float) -> str:
+    """把事件时间表述为自然时间词：今天/昨天/N 天前/N 个月前/N 年前"""
+    days = max(0.0, (now - float(ts)) / 86400.0)
+    if days < 1:
+        return "今天"
+    if days < 2:
+        return "昨天"
+    if days < 30:
+        return f"{int(days)} 天前"
+    if days < 365:
+        return f"{int(days / 30)} 个月前"
+    return f"{int(days / 365)} 年前"
+
+
+def fav_phase(favorability: float) -> str:
+    """按当前好感度给出关系的状态描述"""
+    if favorability >= 100:
+        return "炽热难舍"
+    if favorability >= 60:
+        return "蜜里调油"
+    if favorability >= 20:
+        return "渐入佳境"
+    if favorability >= 0:
+        return "刚刚起步"
+    if favorability >= -20:
+        return "若即若离"
+    return "彼此疏远"
+
+
+def format_time_jump(event: dict, now: float, stage_label: str = "",
+                     favorability: float = 0.0) -> str:
+    """时间跳跃叙事：过去的关键时刻 → 现在的状态 → 对以后的期待"""
+    word = days_ago_word(event.get("ts", now), now)
+    desc = event.get("description", "那个特别的瞬间")
+    msg = event.get("message", "")
+    stage = f"我们走到了{stage_label}，" if stage_label else "我们一路相伴，"
+    lines = [
+        f"🎞️ 时间跳跃 · {word}的我们",
+        f"「{desc}」——那是我们关系里特别的一刻。",
+    ]
+    if msg:
+        lines.append(f"那时你说过：「{msg}」，我一直没有忘记。")
+    lines.append(
+        f"如今{stage}{fav_phase(favorability)}（好感 {favorability:+.1f}）。"
+    )
+    lines.append("这一幕始终珍藏在我心里，也让我更期待往后的每一个日子。")
+    return "\n".join(lines)
+
+
 def format_role_report(stats: dict, days: int = 14) -> str:
     """以角色第一人称口吻渲染这段时间的情感历程（P11 角色视角报告）"""
     lines = [

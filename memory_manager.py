@@ -172,6 +172,27 @@ class LongTermMemory:
             })
         return out
 
+    def get_key_memories(self, user_id: str, limit: int = 5) -> List[dict]:
+        """获取关键时刻（重要/大幅变化/考验/里程碑），按重要度排序（P13 时间跳跃叙事）"""
+        events = self._memory.get(user_id, [])
+        keys = []
+        for e in events:
+            fav = abs(float(e.get("fav_delta", 0.0)))
+            desc = e.get("description", "")
+            score = 0
+            if e.get("important"):
+                score += 1000
+            if fav >= 2:
+                score += int(fav * 50)
+            if any(m in desc for m in ("🌱", "💔", "🌫️")):
+                score += 300
+            if "🎉" in desc:
+                score += 200
+            if score > 0:
+                keys.append((score, e))
+        keys.sort(key=lambda x: (-x[0], -float(x[1].get("ts", 0))))
+        return [e for _, e in keys][:limit]
+
     def clear_user(self, user_id: str):
         self._memory.pop(user_id, None)
         f = self.data_dir / f"{user_id}.json"
