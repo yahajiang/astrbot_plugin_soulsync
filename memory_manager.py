@@ -1,4 +1,4 @@
-"""EmotionAI Pro - 长期记忆管理器（落盘存储重要情感事件）"""
+"""SoulSync - 长期记忆管理器（落盘存储重要情感事件）"""
 
 from __future__ import annotations
 

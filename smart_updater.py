@@ -1,4 +1,4 @@
-"""EmotionAI Pro - 智能更新决策引擎（四维判断）"""
+"""SoulSync - 智能更新决策引擎（四维判断）"""
 
 from __future__ import annotations
 

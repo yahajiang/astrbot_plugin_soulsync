@@ -1,4 +1,4 @@
-"""EmotionAI Pro - 时间/节假日/农历感知
+"""SoulSync - 时间/节假日/农历感知
 
 参考 astrbot_plugin_LLMPerception 的实现方式：
 - chinese_calendar / lunarcalendar 为可选依赖，懒加载，未安装自动降级；

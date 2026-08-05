@@ -1,4 +1,4 @@
-"""EmotionAI Pro - 关系危机事件（高好感随机信任考验，行为选择影响阶段）"""
+"""SoulSync - 关系危机事件（高好感随机信任考验，行为选择影响阶段）"""
 
 from __future__ import annotations
 

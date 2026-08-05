@@ -1,4 +1,4 @@
-"""EmotionAI Pro - 指令输出图片渲染器
+"""SoulSync - 指令输出图片渲染器
 
 将文本指令输出渲染为卡片/趋势图 PNG 图片（Pillow）。
 - 自动探测系统 CJK 字体（Windows / Linux / macOS）

@@ -1,4 +1,4 @@
-"""EmotionAI Pro - 8 维情感模型 + 好感/亲密度双核引擎（十二阶段版）"""
+"""SoulSync - 8 维情感模型 + 好感/亲密度双核引擎（十二阶段版）"""
 
 from __future__ import annotations
 

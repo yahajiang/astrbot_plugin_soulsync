@@ -218,7 +218,7 @@ class SoulSyncPro(Star):
 
         # ── 启动日志 ──
         logger.info(
-            f"SoulSync v2.15 已加载 | "
+            f"SoulSync v2.16 已加载 | "
             f"智能更新={self.enable_smart_update} | "
             f"辅助LLM={self.enable_secondary_llm} | "
             f"态度系统={self.enable_attitude} | "
@@ -240,7 +240,7 @@ class SoulSyncPro(Star):
         if self._save_task and not self._save_task.done():
             self._save_task.cancel()
         self._save_all()
-        logger.info("SoulSync v2.15 已停止，数据已保存")
+        logger.info("SoulSync v2.16 已停止，数据已保存")
 
     # ═══════════════════════════════════════════════════════════════
     #  WebUI
@@ -1507,11 +1507,11 @@ class SoulSyncPro(Star):
         today_r = _rdate.today()
         kw = event.message_str.strip()
         if "上月" in kw or "上个月" in kw:
-            from report import last_month_label
+            from .report import last_month_label
             y, m = last_month_label(today_r.year, today_r.month)
         else:
             y, m = today_r.year, today_r.month
-        from report import aggregate_month, format_report
+        from .report import aggregate_month, format_report
         stats = aggregate_month(self.long_memory.get_events(uid, 5000), y, m)
         if not stats:
             yield event.plain_result(f"📭 {y}年{m}月 没有值得记录的回忆")
@@ -1531,7 +1531,7 @@ class SoulSyncPro(Star):
                 days = num
         except Exception:
             pass
-        from report import aggregate_window, format_role_report
+        from .report import aggregate_window, format_role_report
         now_r = time.time()
         stats = aggregate_window(
             self.long_memory.get_events(uid, 5000), now_r - days * 86400.0, now_r
@@ -1554,7 +1554,7 @@ class SoulSyncPro(Star):
                 days = num
         except Exception:
             pass
-        from report import compare_recent, format_compare
+        from .report import compare_recent, format_compare
         comp = compare_recent(
             self.long_memory.get_events(uid, 5000), time.time(), days
         )
@@ -1571,7 +1571,7 @@ class SoulSyncPro(Star):
         if not kms:
             yield event.plain_result("📭 还没有值得回溯的关键时刻")
             return
-        from report import days_ago_word, format_time_jump
+        from .report import days_ago_word, format_time_jump
         now_t = time.time()
         profile = self.profiles.get(uid)
         label = self._get_stage_label(profile) if profile else ""
@@ -1798,7 +1798,7 @@ class SoulSyncPro(Star):
                     label_m = f"{today_m.year:04d}-{today_m.month:02d}"
                     if behavior_profile.monthly_report_last != label_m:
                         behavior_profile.monthly_report_last = label_m
-                        from report import aggregate_month, format_report, last_month_label
+                        from .report import aggregate_month, format_report, last_month_label
                         ly, lm = last_month_label(today_m.year, today_m.month)
                         mstats = aggregate_month(
                             self.long_memory.get_events(profile.user_id, 5000), ly, lm
@@ -1821,7 +1821,7 @@ class SoulSyncPro(Star):
                     interval = float(self.config.get("role_report_interval_days", 7)) * 86400.0
                     if now_r - behavior_profile.role_report_last_ts >= interval:
                         behavior_profile.role_report_last_ts = now_r
-                        from report import aggregate_window, format_role_report
+                        from .report import aggregate_window, format_role_report
                         rstats = aggregate_window(
                             self.long_memory.get_events(profile.user_id, 5000),
                             now_r - interval, now_r,
@@ -1848,7 +1848,7 @@ class SoulSyncPro(Star):
                         if (kms and random.random()
                                 < float(self.config.get("time_jump_probability", 0.1))):
                             behavior_profile.time_jump_last_ts = now_t
-                            from report import format_time_jump
+                            from .report import format_time_jump
                             timejump_ctx = (
                                 format_time_jump(
                                     kms[0], now_t,

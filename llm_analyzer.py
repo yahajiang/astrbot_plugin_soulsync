@@ -1,4 +1,4 @@
-"""EmotionAI Pro - 辅助 LLM 情感分析专家"""
+"""SoulSync - 辅助 LLM 情感分析专家"""
 
 from __future__ import annotations
 
