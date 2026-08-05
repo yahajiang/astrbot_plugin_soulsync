@@ -1,6 +1,6 @@
 {
   "_info_header": {
-    "description": "══════ EmotionAI Pro v4.4.0 配置 ══════",
+    "description": "══════ 心旅知音 (SoulSync) v2.16 配置 ══════",
     "type": "string",
     "default": "",
     "invisible": true
@@ -193,20 +193,6 @@
     "type": "int",
     "default": 5,
     "slider": {"min": 1, "max": 10, "step": 1}
-  },
-  "attitude_max_length": {
-    "description": "态度描述最大字数",
-    "hint": "AI 生成的态度描述截断长度",
-    "type": "int",
-    "default": 25,
-    "slider": {"min": 10, "max": 50, "step": 5}
-  },
-  "relationship_max_length": {
-    "description": "关系描述最大字数",
-    "hint": "AI 生成的关系描述截断长度",
-    "type": "int",
-    "default": 25,
-    "slider": {"min": 10, "max": 50, "step": 5}
   },
 
   "_section_memory": {
