@@ -183,6 +183,26 @@
     "default": 300,
     "slider": {"min": 60, "max": 1800, "step": 60}
   },
+  "enable_memory_recall": {
+    "description": "惊喜回忆（遗忘曲线唤醒）",
+    "hint": "开启后：久远记忆按遗忘曲线逐渐模糊；用户提及\"还记得/记不记得\"等时唤醒最模糊的记忆并给予好感奖励",
+    "type": "bool",
+    "default": true
+  },
+  "memory_half_life_days": {
+    "description": "记忆半衰期（天）",
+    "hint": "记忆清晰度减半所需天数，越小遗忘越快",
+    "type": "int",
+    "default": 30,
+    "slider": {"min": 7, "max": 180, "step": 1}
+  },
+  "memory_recall_bonus": {
+    "description": "唤醒回忆好感奖励",
+    "hint": "成功唤醒一段模糊记忆时获得的好感度加成",
+    "type": "float",
+    "default": 0.3,
+    "slider": {"min": 0.0, "max": 2.0, "step": 0.1}
+  },
 
   "_section_privacy": {
     "description": "═══ 隐私与安全 ═══",

@@ -84,6 +84,9 @@ class SoulSyncPro(Star):
         self.significance_threshold: float = config.get("emotional_significance_threshold", 5.0)
         self.max_ltm_events: int = config.get("max_long_term_events", 50)
         self.auto_save_sec: int = config.get("auto_save_interval_sec", 300)
+        # 遗忘曲线：半衰期（天）与记忆唤醒奖励
+        self.memory_half_life_days: float = float(config.get("memory_half_life_days", 30))
+        self.memory_recall_bonus: float = float(config.get("memory_recall_bonus", 0.3))
 
         # ── 隐私与安全 ──
         self.session_based: bool = config.get("session_based", False)
@@ -146,7 +149,11 @@ class SoulSyncPro(Star):
         # ── 存储 ──
         self.profiles: Dict[str, EmotionProfile] = {}
         self.behavior_profiles: Dict[str, BehaviorProfile] = {}
-        self.long_memory = LongTermMemory(self.data_dir, max_events_per_user=self.max_ltm_events)
+        self.long_memory = LongTermMemory(
+            self.data_dir,
+            max_events_per_user=self.max_ltm_events,
+            half_life_days=self.memory_half_life_days,
+        )
         self.show_status: Dict[str, bool] = {}
 
         # ── 近期对话缓存（用于辅助 LLM 分析）──
@@ -1474,6 +1481,26 @@ class SoulSyncPro(Star):
                 fav_delta += anniv_bonus_fav
                 int_delta += anniv_bonus_int
 
+            # ── 第一步半b：惊喜回忆（遗忘曲线唤醒：提及回忆关键词时唤醒最模糊的记忆）──
+            recall_ctx = ""
+            if self.config.get("enable_memory_recall", True):
+                self.long_memory.set_half_life(self.config.get("memory_half_life_days", 30))
+                if any(kw in text for kw in ("还记得", "记不记得", "想起来", "记得吗", "还记得吗")):
+                    faded = self.long_memory.get_faded_events(uid, 3)
+                    if faded:
+                        recalled = self.long_memory.recall(uid, faded[0]["ts"])
+                        if recalled:
+                            fav_delta += self.config.get("memory_recall_bonus", 0.3)
+                            recall_desc = recalled.get("description", "")
+                            recall_msg = recalled.get("message", "")
+                            recall_ctx = (
+                                "✨ 用户唤醒了你的一段记忆（此前已变得模糊）。被唤醒的记忆："
+                                f"{recall_desc}"
+                                f"{('（当时的话：' + recall_msg + '）') if recall_msg else ''}"
+                                "。请在回复中自然流露出回忆起这段往事的惊喜与温情，"
+                                "并可以提及其中的细节。"
+                            )
+
             # ── 第二步：惩罚奖励机制分析 ──
             pr_events = []
             dyn_pr_enabled = any([
@@ -1657,6 +1684,10 @@ class SoulSyncPro(Star):
             emotion_context = self._build_emotion_context(profile)
             if emotion_context:
                 req.extra_user_content_parts.append(TextPart(text=emotion_context))
+
+            # ── 注入惊喜回忆上下文 ──
+            if recall_ctx:
+                req.extra_user_content_parts.append(TextPart(text=recall_ctx))
 
             # ── 注入惩罚奖励事件提示 ──
             if pr_events:
