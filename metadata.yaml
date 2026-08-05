@@ -1,7 +1,7 @@
 name: astrbot_plugin_inj_guard
 display_name: 提示注入防护 (Injection Guard)
 desc: 防止提示注入（Prompt Injection）与恶意调教，保护 AI 人格设定不被污染：system prompt 加固、关键词/句式/混淆检测、block/sanitize/warn 三级处置、白名单豁免、命中统计与持久化日志、/injguard 管理指令。
-version: 1.0.1
+version: 1.0.2
 author: Yahajiang
 repo: "https://github.com/yahajiang/astrbot_plugin_inj_guard"
 astrbot_version: ">=4.10.0"

@@ -66,5 +66,17 @@
     "type": "int",
     "hint": "持久化日志最多保留的最近命中记录条数（1-5000，默认 500），超过自动裁剪，防止文件无限增长。",
     "default": 500
+  },
+  "scan_contexts": {
+    "description": "扫描上下文历史消息",
+    "type": "bool",
+    "hint": "开启后每次请求同时扫描上下文中的用户历史消息（防记忆/历史投毒，例如 SoulSync 注入的长期记忆）。命中按当前处置模式处理：block 删除整条用户消息，sanitize 剥离恶意片段（剥离后为空则删除），warn 仅记录。",
+    "default": true
+  },
+  "context_scan_max_entries": {
+    "description": "上下文扫描条数上限",
+    "type": "int",
+    "hint": "最多扫描最近 N 条用户历史消息（1-500，默认 100），控制检测开销。",
+    "default": 100
   }
 }

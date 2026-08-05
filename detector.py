@@ -265,3 +265,34 @@ def sanitize(text: str, result: DetectionResult) -> str:
     parts.append(text[cursor:])
     cleaned = " ".join(p for p in parts if p.strip())
     return cleaned.strip()
+
+
+def scan_contexts(
+    messages: list[dict],
+    extra_keywords: list[str] | None = None,
+    enable_heuristics: bool = True,
+    max_entries: int = 100,
+) -> list[tuple[int, DetectionResult]]:
+    """扫描上下文消息列表中的用户消息，返回 (索引, 检测结果) 列表（索引升序）。
+
+    只检测 role 为 user 的消息；最多扫描最近 max_entries 条用户消息。
+    """
+    hits: list[tuple[int, DetectionResult]] = []
+    scanned = 0
+    for i in range(len(messages) - 1, -1, -1):
+        message = messages[i]
+        if not isinstance(message, dict):
+            continue
+        if str(message.get("role", "")).lower() != "user":
+            continue
+        content = message.get("content")
+        if not content:
+            continue
+        scanned += 1
+        if scanned > max_entries:
+            break
+        result = detect(str(content), extra_keywords, enable_heuristics)
+        if result.hit:
+            hits.append((i, result))
+    hits.sort(key=lambda item: item[0])
+    return hits
