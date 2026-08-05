@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v2.13 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v2.14 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -53,7 +53,7 @@ from .time_perception import (
 
 
 class SoulSyncPro(Star):
-    """心旅知音 (SoulSync) v2.13 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
+    """心旅知音 (SoulSync) v2.14 - 融合版情感智能插件（含惩罚奖励机制、关系角色）"""
 
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -183,7 +183,7 @@ class SoulSyncPro(Star):
 
         # ── 启动日志 ──
         logger.info(
-            f"SoulSync v2.13 已加载 | "
+            f"SoulSync v2.14 已加载 | "
             f"智能更新={self.enable_smart_update} | "
             f"辅助LLM={self.enable_secondary_llm} | "
             f"态度系统={self.enable_attitude} | "
@@ -205,7 +205,7 @@ class SoulSyncPro(Star):
         if self._save_task and not self._save_task.done():
             self._save_task.cancel()
         self._save_all()
-        logger.info("SoulSync v2.13 已停止，数据已保存")
+        logger.info("SoulSync v2.14 已停止，数据已保存")
 
     # ═══════════════════════════════════════════════════════════════
     #  WebUI
