@@ -103,6 +103,9 @@ class BehaviorProfile:
     crisis_passed: int = 0                 # 累计通过次数
     crisis_failed: int = 0                 # 累计失败次数
 
+    # 倒计时事件（v2.16 P9：角色主动提及纪念日制造期待，防每日重复）
+    countdown_last_date: str = ""          # 上次提及倒计时的自然日 YYYY-MM-DD
+
     # 待衰减的奖惩队列 [(apply_ts, delta_fav, delta_int, reason), ...]
     pending_effects: List[Tuple[float, float, float, str]] = field(default_factory=list)
 

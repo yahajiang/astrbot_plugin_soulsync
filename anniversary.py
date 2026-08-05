@@ -401,6 +401,17 @@ class AnniversaryManager:
                 pass
         return rows
 
+    def get_next_countdown(self, uid: str, today: date, window_days: int = 7) -> Optional[dict]:
+        """倒计时事件：返回未来 window_days 天内最近的用户纪念日/生日/初次相识
+        （days_left 1~window_days），无则 None。供角色主动提及制造期待。"""
+        best = None
+        for r in self.list_user_anniversaries(uid, today):
+            d = r["days_left"]
+            if 1 <= d <= max(1, window_days):
+                if best is None or d < best["days_left"]:
+                    best = r
+        return best
+
     def list_festivals_with_dates(self, today: date) -> List[dict]:
         """节日列表（含本年内下次日期与倒计时）"""
         rows = []

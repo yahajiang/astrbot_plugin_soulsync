@@ -517,10 +517,30 @@
     "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
   },
   "anniv_inject_context": {
-    "description": "注入节日氛围提示",
-    "hint": "纪念日/节日当天在感知信息块中注入特别日子提示，让 AI 自然呼应节日氛围",
+    "description": "纪念日上下文注入",
+    "hint": "纪念日/节日当天向 LLM 注入特别日子提示",
     "type": "bool",
     "default": true
+  },
+  "enable_countdown_events": {
+    "description": "倒计时事件（纪念日期待）",
+    "hint": "角色在特别日子临近时（1~N 天）主动提及纪念日约定，制造期待（每天至多提及一次）",
+    "type": "bool",
+    "default": true
+  },
+  "countdown_window_days": {
+    "description": "倒计时窗口（天）",
+    "hint": "纪念日/生日/初次相识前多少天内开始主动提及",
+    "type": "int",
+    "default": 7,
+    "slider": {"min": 1, "max": 30, "step": 1}
+  },
+  "countdown_probability": {
+    "description": "倒计时提及概率",
+    "hint": "进入倒计时窗口后，每轮对话角色主动提及的概率",
+    "type": "float",
+    "default": 0.15,
+    "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
   },
 
   "_section_perception": {

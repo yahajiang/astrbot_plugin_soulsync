@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -1587,6 +1588,30 @@ class SoulSyncPro(Star):
                 fav_delta += anniv_bonus_fav
                 int_delta += anniv_bonus_int
 
+            # ── 第一步半a：倒计时事件（角色主动提及即将到来的纪念日，制造期待）──
+            countdown_ctx = ""
+            if self.config.get("enable_countdown_events", True):
+                try:
+                    from datetime import date as _cdate
+                    today_c = _cdate.today()
+                    if behavior_profile.countdown_last_date != today_c.isoformat():
+                        cd = self.anniversary_manager.get_next_countdown(
+                            uid, today_c,
+                            self.config.get("countdown_window_days", 7),
+                        )
+                        if cd and random.random() < float(self.config.get("countdown_probability", 0.15)):
+                            behavior_profile.countdown_last_date = today_c.isoformat()
+                            n = cd["days_left"]
+                            unit = "明天" if n == 1 else f"{n} 天后"
+                            countdown_ctx = (
+                                f"📅 距离「{cd['name']}」还有 {n} 天（{unit}）。"
+                                "这是你们之间特别的日子，你一直默默记着，心里在暗暗期待、"
+                                "盘算着那天要做什么。请在回复中自然流露这份期待，"
+                                "让对方感受到你的在意。"
+                            )
+                except Exception:
+                    pass
+
             # ── 第一步半b：惊喜回忆（遗忘曲线唤醒：提及回忆关键词时唤醒最模糊的记忆）──
             recall_ctx = ""
             if self.config.get("enable_memory_recall", True):
@@ -1866,6 +1891,10 @@ class SoulSyncPro(Star):
             # ── 注入惊喜回忆上下文 ──
             if recall_ctx:
                 req.extra_user_content_parts.append(TextPart(text=recall_ctx))
+
+            # ── 注入倒计时期待上下文 ──
+            if countdown_ctx:
+                req.extra_user_content_parts.append(TextPart(text=countdown_ctx))
 
             # ── 注入信任考验上下文（剧情或结果）──
             if crisis_ctx:
