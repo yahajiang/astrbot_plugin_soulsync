@@ -100,6 +100,14 @@
 | `/创建角色 <名字> [emoji] [性格]` | 创建并切换到自定义角色 |
 | `/删除角色 <名字>` | 删除自建角色（档案保留，回到默认角色） |
 
+**时间感知深化（v2.19）**：
+
+| 命令 | 说明 |
+|------|------|
+| `/天气` | 查看当前环境感知（天气/季节/节气/月相/心情倾向），支持图片模式 |
+| `/倒计时` | 查看即将到来的倒计时事件（类型/距离/得分），支持图片模式 |
+| `/跳跃` | 查看时间跳跃状态；`/跳跃 三天后见` 触发跳跃，支持图片模式 |
+
 **个性化训练（v2.17）**：
 
 | 命令 | 说明 |
@@ -152,6 +160,9 @@
 | `/调试事件` / `/调试记忆` | 输出事件结构 / 近期对话缓存、长期记忆、行为档案详情（排障） |
 | `/设置节日 <名称> <月日>` | 添加自定义节日（农历节日按阴历计算） |
 | `/删除节日 <名称>` | 删除自定义节日 |
+| `/强制跳跃 <ID> <天数>` | 强制指定用户时间跳跃（冻结冷落惩罚） |
+| `/重置跳跃 [ID]` | 重置用户跳跃状态（偏移归零、解冻） |
+| `/天气调试` | 查看天气获取调试信息（API/缓存/来源），支持图片模式 |
 
 管理员身份判定：AstrBot 内置管理员 **或** 配置项 `admin_ids` 中的用户 ID。
 
@@ -318,9 +329,9 @@ tpd_weather_api_provider: ""  # 留空即自动使用
 
 ## 🎮 WebUI 控制台
 
-独立控制台页面（AstrBot 插件详情页进入）：概览仪表盘（档案数/平均好感/平均亲密/最高阶段）、用户列表（好感排序）、用户自画像、125 项配置 12 组可视化编辑（保存即热更新）、正/负排行榜 TOP15、管理员工具（设置好感/清空记忆/重置/强制关系角色/添加节日）、系统状态。v2.17 新增「🎯 个性化训练」面板：选择用户后四标签页管理人格（20 参数滑块/下拉实时生效 + 锁定/重置）、知识库（6 分类增删）、语言风格（阶段/融合度/快照保存恢复/锁定）、私人记忆（4 类型增删/星标）。v2.18 新增「🌐 RDE 关系演进」面板：选择用户后四区块展示当前阶段叙事（含称谓/阈值/下一阶段）、危机状态与历史记录、角色关系网（全部关系边与系数）、完整阶段叙事配置列表。
+独立控制台页面（AstrBot 插件详情页进入）：概览仪表盘（档案数/平均好感/平均亲密/最高阶段）、用户列表（好感排序）、用户自画像、125 项配置 12 组可视化编辑（保存即热更新）、正/负排行榜 TOP15、管理员工具（设置好感/清空记忆/重置/强制关系角色/添加节日）、系统状态。v2.17 新增「🎯 个性化训练」面板：选择用户后四标签页管理人格（20 参数滑块/下拉实时生效 + 锁定/重置）、知识库（6 分类增删）、语言风格（阶段/融合度/快照保存恢复/锁定）、私人记忆（4 类型增删/星标）。v2.18 新增「🌐 RDE 关系演进」面板：选择用户后四区块展示当前阶段叙事（含称谓/阈值/下一阶段）、危机状态与历史记录、角色关系网（全部关系边与系数）、完整阶段叙事配置列表。v2.19 新增「🌤️ 时间感知」面板：三区块展示环境感知（天气/温度/季节/节气/月相/心情倾向）、倒计时事件（类型/距离/得分）、跳跃历史（偏移/冻结/记录），含用户选择器。
 
-**API：** `/data`(GET 档案) · `/config`(GET 配置+schema / POST 保存) · `/admin`(POST 管理员操作) · `/trainer/data`(GET 个性化数据/用户列表) · `/trainer/config`(POST 个性化配置) · `/trainer/persona`(POST 人格 set/reset/lock/unlock) · `/trainer/knowledge`(POST 知识增删) · `/trainer/memory`(POST 记忆增删/星标) · `/trainer/style`(POST 风格 lock/snapshot/restore) · `/rde/data`(GET RDE 数据/用户列表)
+**API：** `/data`(GET 档案) · `/config`(GET 配置+schema / POST 保存) · `/admin`(POST 管理员操作) · `/trainer/data`(GET 个性化数据/用户列表) · `/trainer/config`(POST 个性化配置) · `/trainer/persona`(POST 人格 set/reset/lock/unlock) · `/trainer/knowledge`(POST 知识增删) · `/trainer/memory`(POST 记忆增删/星标) · `/trainer/style`(POST 风格 lock/snapshot/restore) · `/rde/data`(GET RDE 数据/用户列表) · `/tpd/data`(GET TPD 环境/倒计时/跳跃数据)
 
 ---
 
@@ -570,6 +581,32 @@ _crisis("my_crisis", "trust", "你想自定义的事件", "s6", 130.0,
 | `enable_holiday_perception` | bool | `true` | 节假日感知（chinese-calendar 可选） |
 | `enable_lunar_perception` | bool | `true` | 农历感知（lunarcalendar 可选） |
 | `holiday_country` | string | `CN` | 节假日国家/地区代码 |
+
+### 时间感知深化（TPD，v2.19）
+
+| 配置键 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `tpd_enabled` | bool | `false` | TPD 总开关 |
+| `tpd_weather_enabled` | bool | `true` | 天气联动开关 |
+| `tpd_weather_api_provider` | string | `""` | API 提供商（hefeng/openweather/空=本地推算） |
+| `tpd_weather_api_key` | string | `""` | API Key |
+| `tpd_weather_api_city` | string | `""` | 查询城市 |
+| `tpd_weather_cache_minutes` | int | `60` | 缓存时间（分钟） |
+| `tpd_weather_mood_strength` | float | `0.3` | 天气心情影响强度 |
+| `tpd_season_mood_strength` | float | `0.2` | 季节心情影响强度 |
+| `tpd_moonphase_enabled` | bool | `true` | 月相影响开关 |
+| `tpd_moonphase_mood_strength` | float | `0.1` | 月相心情影响强度 |
+| `tpd_countdown_enabled` | bool | `true` | 倒计时事件开关 |
+| `tpd_countdown_mention_start_days` | int | `7` | 倒计时开始提及天数 |
+| `tpd_countdown_mention_freq_days` | int | `1` | 同一事件提及频率（天） |
+| `tpd_countdown_max_per_turn` | int | `1` | 每轮最多提及倒计时数 |
+| `tpd_countdown_auto_greet` | bool | `true` | T-0 当天自动问候 |
+| `tpd_skip_enabled` | bool | `true` | 时间跳跃开关 |
+| `tpd_skip_max_days` | int | `365` | 单次最大跳跃天数 |
+| `tpd_skip_freeze_penalty` | bool | `true` | 跳跃期间冻结冷落惩罚 |
+| `tpd_skip_emotion_drift` | bool | `true` | 跳跃期间情感漂移 |
+| `tpd_passive_gap_threshold_hours` | int | `6` | 被动离开检测阈值（小时） |
+| `tpd_return_narrative_enabled` | bool | `true` | 回归叙事开关 |
 
 ### 数据统计
 
