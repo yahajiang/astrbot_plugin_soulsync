@@ -290,7 +290,6 @@ class InjGuard(Star):
             return
         try:
             now = datetime.now()
-            preview_len = self._notify_preview_len()
             rows = [
                 {
                     "time": now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -332,7 +331,7 @@ class InjGuard(Star):
                     body = clean_preview_text(content)
                     body = body.replace("\n", " ⏎ ")
                     lines.append(f"① {label}｜{matched}")
-                    lines.append(f"　{body[:preview_len]}")
+                    lines.append(f"　{body}")
                 if len(items) > 5:
                     lines.append(f"…另有 {len(items) - 5} 条")
                 chain = MessageChain().message("\n".join(lines))

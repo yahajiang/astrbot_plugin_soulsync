@@ -312,7 +312,7 @@ class ImageRenderer:
 
         entries = [r for r in (rows or []) if isinstance(r, dict)][:5]
 
-        # 先算每条内容的折行行数，确定总高度
+        # 先按内容完整折行，确定总高度（不省略）
         probe = Image.new("RGB", (8, 8))
         pdraw = ImageDraw.Draw(probe)
         content_w = WIDTH - PAD * 2 - 36
@@ -320,8 +320,7 @@ class ImageRenderer:
         for item in entries:
             text = _EMOJI_RE.sub("□", str(item.get("content", "")).replace("\r", " "))
             wrapped = _wrap_text(pdraw, font_small, text, content_w)
-            max_lines = 5
-            entry_heights.append(104 + min(len(wrapped), max_lines) * 24)
+            entry_heights.append(104 + len(wrapped) * 24)
 
         header_h = 110
         footer_h = 64
@@ -376,9 +375,6 @@ class ImageRenderer:
 
             text = _EMOJI_RE.sub("□", str(item.get("content", "")).replace("\r", " "))
             wrapped = _wrap_text(draw, font_small, text, content_w)
-            wrapped = wrapped[:5]
-            if len(wrapped) > 0 and len(wrapped) == 5 and draw.textlength(wrapped[-1] + "…", font=font_small) <= content_w:
-                wrapped[-1] = wrapped[-1] + "…"
             ty = y + 78
             for ln in wrapped:
                 draw.text((x0 + 18, ty), ln, font=font_small, fill=DIM_FILL)
