@@ -962,6 +962,51 @@
     "type": "bool",
     "default": false
   },
+  "tpd_countdown_enabled": {
+    "description": "倒计时事件系统开关",
+    "hint": "纪念日/生日/节日/约定提前 T-7 起分级叙事（远期感知→预热→临近→当天→余韵→渐淡），增强 v2.16 当天触发",
+    "type": "bool",
+    "default": true
+  },
+  "tpd_countdown_mention_start_days": {
+    "description": "倒计时开始提及天数",
+    "hint": "事件前多少天开始提及（T-N），越近叙事强度越高",
+    "type": "int",
+    "default": 7,
+    "slider": {
+      "min": 1,
+      "max": 30,
+      "step": 1
+    }
+  },
+  "tpd_countdown_mention_freq_days": {
+    "description": "倒计时提及频率（天）",
+    "hint": "同一事件每 N 天最多提及 1 次，防止刷屏",
+    "type": "int",
+    "default": 1,
+    "slider": {
+      "min": 1,
+      "max": 7,
+      "step": 1
+    }
+  },
+  "tpd_countdown_max_per_turn": {
+    "description": "每轮最多提及倒计时数",
+    "hint": "每轮对话主动提及的倒计时事件数上限（其余事件仅在列表中顺带带出）",
+    "type": "int",
+    "default": 1,
+    "slider": {
+      "min": 1,
+      "max": 5,
+      "step": 1
+    }
+  },
+  "tpd_countdown_auto_greet": {
+    "description": "纪念日当天自动问候",
+    "hint": "T-0 当天自动问候（配合主动交互引擎；v2.16 当天奖励与氛围注入不受影响）",
+    "type": "bool",
+    "default": true
+  },
   "_section_stats": {
     "description": "═══ 情感数据统计 ═══",
     "type": "string",

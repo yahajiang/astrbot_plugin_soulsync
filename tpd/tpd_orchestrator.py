@@ -13,6 +13,9 @@ from __future__ import annotations
 import datetime
 from typing import Dict, Optional
 
+from .countdown_calculator import CountdownCalculator
+from .countdown_injector import build_countdown_info
+from .countdown_narrator import stage_of as stage_name_of
 from .env_injector import build_environment_info
 from .mood_mapper import mood_deltas, temperature_band
 from .weather_provider import WeatherProvider
@@ -42,12 +45,15 @@ def _cfg(config: Optional[dict], key: str, default):
 
 
 class TPDOrchestrator:
-    """TPD 统一调度器（Phase A：environment 全链路）"""
+    """TPD 统一调度器（Phase B：environment + countdown）"""
 
-    def __init__(self, config: Optional[dict] = None, data_dir: str = "data/tpd"):
+    def __init__(self, config: Optional[dict] = None, data_dir: str = "data/tpd",
+                 sources: Optional[dict] = None):
         self.config = config or {}
         self.data_dir = data_dir
+        self.sources = sources or {}
         self.weather_provider = WeatherProvider(data_dir, self.config)
+        self.countdown_calculator = CountdownCalculator(data_dir, self.sources)
         self._environment: Optional[dict] = None
         self._environment_deltas: Optional[Dict[str, float]] = None
         self._environment_info: str = ""
@@ -108,11 +114,41 @@ class TPDOrchestrator:
         result["timeskip"] = self.process_timeskip(uid, text, ctx)
         return result
 
-    # ── 子系统占位（Phase B/C 实现） ───────────────────────
+    # ── 子系统：倒计时（Phase B） ────────────────────────
     def process_countdown(self, uid: str, text: str = "", ctx: Optional[dict] = None) -> Optional[dict]:
-        """倒计时事件处理（Phase B 接入）"""
-        return None
+        """倒计时事件处理：选择可提及事件 → 记录提及 → 生成注入文本
 
+        依赖 sources["anniversaries"]（AnniversaryManager）；缺失时静默返回 None。
+        """
+        if not _cfg(self.config, "tpd_enabled", False):
+            return None
+        if not _cfg(self.config, "tpd_countdown_enabled", True):
+            return None
+        if not isinstance(self.sources.get("anniversaries"), object) or \
+                not hasattr(self.sources.get("anniversaries"), "get_countdown_sources"):
+            return None
+        start_days = _cfg(self.config, "tpd_countdown_mention_start_days", 7)
+        freq_days = _cfg(self.config, "tpd_countdown_mention_freq_days", 1)
+        max_per_turn = _cfg(self.config, "tpd_countdown_max_per_turn", 1)
+        today = datetime.date.today()
+        event = self.countdown_calculator.select_for_mention(
+            uid, today, start_days=max(7, start_days), freq_hours=freq_days * 24.0
+        )
+        if event is None:
+            return None
+        self.countdown_calculator.mark_mentioned(uid, event)
+        # 顺带列出的其他事件（即将到来，按得分取前 N 个）
+        upcoming = [
+            e for e in self.countdown_calculator.get_active_events(uid, today, window_days=30)
+            if e.days_left >= 1 and e.key != event.key
+        ]
+        upcoming.sort(key=lambda e: -e.score)
+        others = upcoming[: min(3, max(1, max_per_turn))]
+        inject = build_countdown_info(event, others, today)
+        return {"event": event.as_dict(), "inject_text": inject,
+                "stage": stage_name_of(event.days_left)[0]}
+
+    # ── 子系统占位（Phase C 实现） ───────────────────────
     def process_timeskip(self, uid: str, text: str = "", ctx: Optional[dict] = None) -> Optional[dict]:
         """时间跳跃处理（Phase C 接入）"""
         return None
@@ -128,4 +164,14 @@ class TPDOrchestrator:
             "environment": env,
             "mood_deltas": self._environment_deltas,
             "inject_text": self._environment_info,
+        }
+
+    def countdown_panel_data(self, uid: str) -> dict:
+        """倒计时面板：活跃倒计时列表 + 提及状态"""
+        today = datetime.date.today()
+        events = self.countdown_calculator.get_active_events(uid, today, window_days=30)
+        events.sort(key=lambda e: -e.score)
+        return {
+            "enabled": _cfg(self.config, "tpd_countdown_enabled", True),
+            "events": [e.as_dict() for e in events[:10]],
         }

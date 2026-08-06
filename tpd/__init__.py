@@ -25,6 +25,20 @@ from .mood_mapper import (
 )
 from .env_injector import build_environment_info, build_mood_tendency_text
 from .weather_provider import WeatherProvider, CANONICAL_WEATHERS
+from .countdown_calculator import (
+    CountdownCalculator,
+    CountdownEvent,
+    KIND_WEIGHTS,
+    MENTIONABLE_DAYS,
+)
+from .countdown_narrator import (
+    KIND_ICONS,
+    STAGE_META,
+    day_label,
+    stage_hint,
+    stage_of,
+)
+from .countdown_injector import build_countdown_info
 from .tpd_orchestrator import TPDOrchestrator, ENV_CONFIG_DEFAULTS
 
 __all__ = [
@@ -43,6 +57,16 @@ __all__ = [
     "build_mood_tendency_text",
     "WeatherProvider",
     "CANONICAL_WEATHERS",
+    "CountdownCalculator",
+    "CountdownEvent",
+    "KIND_WEIGHTS",
+    "MENTIONABLE_DAYS",
+    "KIND_ICONS",
+    "STAGE_META",
+    "day_label",
+    "stage_hint",
+    "stage_of",
+    "build_countdown_info",
     "TPDOrchestrator",
     "ENV_CONFIG_DEFAULTS",
 ]

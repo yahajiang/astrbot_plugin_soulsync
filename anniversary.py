@@ -160,6 +160,18 @@ def _next_occurrence(month: int, day: int, today: date) -> Optional[date]:
     return None
 
 
+def _prev_occurrence(month: int, day: int, today: date) -> Optional[date]:
+    """上一个 MM-DD 日期（不含今天）"""
+    for year in (today.year, today.year - 1):
+        try:
+            d = date(year, month, day)
+        except ValueError:
+            continue
+        if d < today:
+            return d
+    return None
+
+
 # ─── 内置节日 ────────────────────────────────────────────────────
 # (名称, 月, 日, 是否农历)
 DEFAULT_FESTIVALS: List[Tuple[str, int, int, bool]] = [
@@ -426,6 +438,63 @@ class AnniversaryManager:
                 if best is None or d < best["days_left"]:
                     best = r
         return best
+
+    def get_countdown_sources(self, uid: str, today: date, window_days: int = 7) -> List[dict]:
+        """TPD 倒计时事件源：认识周年/用户生日/自定义纪念日/节日（含农历）
+
+        返回窗口 [-window_days, +window_days] 内的所有事件：
+        [{name, kind, occurrence(date), days_left}]，days_left = 事件日 - 今天。
+        kind: first_meet | birthday | anniversary | festival
+        """
+        events: List[dict] = []
+
+        def _push(name: str, kind: str, occ: date):
+            days_left = (occ - today).days
+            if -window_days <= days_left <= window_days:
+                events.append({
+                    "name": name, "kind": kind, "occurrence": occ,
+                    "days_left": days_left,
+                })
+
+        # 用户自定义纪念日 + 生日（下次 + 上次出现，覆盖 T-7~T+7）
+        for a in self.anniversaries.get(uid, []):
+            month, day = a["month"], a["day"]
+            kind = a.get("kind", "anniversary")
+            nxt = _next_occurrence(month, day, today)
+            if nxt is not None:
+                _push(a["name"], kind, nxt)
+            prev = _prev_occurrence(month, day, today)
+            if prev is not None:
+                _push(a["name"], kind, prev)
+        # 认识周年（按首次互动 MM-DD 年循环，命名含周年数）
+        fm = self.first_meet.get(uid)
+        if fm:
+            try:
+                fy, fm_m, fm_d = map(int, fm.split("-"))
+                first = date(fy, fm_m, fm_d)
+                for occ in (_next_occurrence(fm_m, fm_d, today), _prev_occurrence(fm_m, fm_d, today)):
+                    if occ is None:
+                        continue
+                    years = occ.year - fy
+                    label = "初次相识" if years <= 0 else f"认识{years}周年"
+                    _push(label, "first_meet", occ)
+            except Exception:
+                pass
+        # 节日（含农历换算，三年窗口内取当日 ± window）
+        for name, fd in self._festival_dates(today.year):
+            if -window_days <= (fd - today).days <= window_days:
+                _push(name, "festival", fd)
+        # 去重（同名同日只留一个）
+        seen = set()
+        uniq = []
+        for e in events:
+            k = (e["kind"], e["name"], e["occurrence"].isoformat())
+            if k in seen:
+                continue
+            seen.add(k)
+            uniq.append(e)
+        uniq.sort(key=lambda e: (e["occurrence"], e["kind"]))
+        return uniq
 
     def list_festivals_with_dates(self, today: date) -> List[dict]:
         """节日列表（含本年内下次日期与倒计时）"""
