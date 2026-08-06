@@ -2,6 +2,9 @@
 import time
 from ..trainer_types import PrivateMemoryStore
 
+NEGATIVE_WORDS = ["难过", "伤心", "生气", "愤怒", "委屈", "失望", "害怕", "焦虑", "哭", "后悔", "吵架"]
+SWEET_WORDS = ["幸福", "甜蜜", "开心", "快乐", "温暖", "浪漫", "心动", "美好", "喜欢", "满足"]
+
 
 class PrivateMemoryRetriever:
     def retrieve(self, store: PrivateMemoryStore, context: dict = None, max_items: int = 5, budget: int = 120) -> list:
@@ -14,6 +17,10 @@ class PrivateMemoryRetriever:
         scored = []
         now = time.time()
         today = time.strftime("%Y-%m-%d")
+        persona = (context or {}).get("persona", {})
+        grudge = persona.get("grudge_coefficient", 1.0)
+        romantic = persona.get("romantic_memory_weight", 1.0)
+        forget = persona.get("forget_speed", 1.0)
 
         for mem in all_mems:
             if mem.sensitive and not (context and context.get("exact_match")):
@@ -33,7 +40,13 @@ class PrivateMemoryRetriever:
             score -= mem.access_count * 2
             if mem.last_accessed > 0:
                 days_since = (now - mem.last_accessed) / 86400
-                score += max(0, 30 - days_since)
+                score += max(0, 30 - days_since * forget)
+            if mem.type == "emotional":
+                tone = (mem.mood or "") + "".join(mem.emotion_tags)
+                if any(w in tone for w in NEGATIVE_WORDS):
+                    score += (grudge - 1.0) * 100
+                if any(w in tone for w in SWEET_WORDS):
+                    score += (romantic - 1.0) * 100
             scored.append((score, mem))
 
         scored.sort(key=lambda x: -x[0])

@@ -779,5 +779,12 @@
     "type": "int",
     "default": 120,
     "slider": {"min": 30, "max": 400, "step": 10}
+  },
+  "personalization_total_token_budget": {
+    "description": "个性化注入总预算（token）",
+    "hint": "人格/知识/记忆/风格四块注入的总token上限，超限时按 人格>知识>记忆>风格 优先级从低优先裁剪",
+    "type": "int",
+    "default": 450,
+    "slider": {"min": 100, "max": 1200, "step": 50}
   }
 }

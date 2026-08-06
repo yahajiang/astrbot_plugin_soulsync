@@ -526,7 +526,7 @@ class SoulSyncPro(Star):
     def _get_orchestrator(self, user_id: str):
         if user_id not in self.trainer_orchestrators:
             from .trainer.trainer_orchestrator import PersonalizationOrchestrator
-            self.trainer_orchestrators[user_id] = PersonalizationOrchestrator(user_id, self.trainer_storage)
+            self.trainer_orchestrators[user_id] = PersonalizationOrchestrator(user_id, self.trainer_storage, self.config)
         return self.trainer_orchestrators[user_id]
 
     # ═══════════════════════════════════════════════════════════════
@@ -1034,7 +1034,7 @@ class SoulSyncPro(Star):
         uid = str(uid).rpartition("::")[0] or uid
         orch = self._get_orchestrator(uid)
         try:
-            mem = orch._memory_mgr.add(mem_type, content)
+            mem = orch.add_memory(mem_type, content)
             yield event.plain_result(f"✅ 已添加{mem_type}记忆：{content[:40]} (id: {mem.id})")
         except ValueError as e:
             yield event.plain_result(f"❌ {e}")
@@ -1071,7 +1071,27 @@ class SoulSyncPro(Star):
 
     @filter.command("个性化导出")
     async def cmd_personalization_export(self, event: AstrMessageEvent):
-        yield event.plain_result("📤 个性化数据导出\n功能开发中，敬请期待 v2.17 正式版。")
+        if not self.config.get("enable_personalization", False):
+            yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
+            return
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        import json as _json
+        payload = {
+            "version": "1.0",
+            "user_id": uid,
+            "exported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "persona": orch.get_persona().to_dict(),
+            "knowledge": orch.get_knowledge().to_dict(),
+            "style": orch.get_style().to_dict(),
+            "memory": orch.get_private_memory().to_dict(),
+        }
+        data_dir = Path(self.data_dir) / "personalization" / uid
+        data_dir.mkdir(parents=True, exist_ok=True)
+        fpath = data_dir / "personalization_export.json"
+        fpath.write_text(_json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        yield event.plain_result(f"📤 个性化数据已导出：{fpath}\n包含人格参数、知识库、语言风格、私人记忆四部分数据。")
 
     @filter.command("纪念日")
     async def cmd_anniversary(self, event: AstrMessageEvent):
