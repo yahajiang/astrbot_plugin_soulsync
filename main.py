@@ -27,7 +27,13 @@ try:
 except ImportError:  # pragma: no cover
     StarTools = None  # type: ignore[assignment]
 
-from .detector import RELATIONSHIP_ROLE_VOCAB, detect, sanitize, scan_contexts
+from .detector import (
+    RELATIONSHIP_ROLE_VOCAB,
+    detect,
+    sanitize,
+    scan_contexts,
+    strip_quoted_sections,
+)
 from .guard_text import (
     DEFAULT_BLOCK_REPLY,
     DEFAULT_GUARD_TEXT,
@@ -255,33 +261,36 @@ class InjGuard(Star):
         extra_kw = list(self.config.get("extra_keywords", []) or [])
         exempt_roles = bool(self.config.get("soulsync_role_exempt", True))
         role_vocab = self._role_vocab()
-        result = detect(
-            prompt,
-            extra_kw,
-            enable_heuristics=bool(self.config.get("enable_heuristics", True)),
-            exempt_roles=exempt_roles,
-            role_vocab=role_vocab,
-        )
-        if result.hit:
-            mode = str(self.config.get("mode", "block")).lower()
-            if mode not in MODES:
-                mode = "block"
 
-            if mode == "warn":
-                self._record_hit(event, result.matched, "warned", prompt)
-                logger.warning(f"[soulsync_shield] 命中注入特征（告警放行）: {result.matched} user={event.get_sender_id()}")
-            elif mode == "sanitize":
-                cleaned = sanitize(prompt, result)
-                if cleaned.strip() and cleaned != prompt:
-                    req.prompt = cleaned
-                    self._record_hit(event, result.matched, "sanitized", prompt)
-                    logger.warning(
-                        f"[soulsync_shield] 命中注入特征（已剥离）: {result.matched} user={event.get_sender_id()}"
-                    )
+        prompt_scan = strip_quoted_sections(prompt)
+        if prompt_scan.strip():
+            result = detect(
+                prompt_scan,
+                extra_kw,
+                enable_heuristics=bool(self.config.get("enable_heuristics", True)),
+                exempt_roles=exempt_roles,
+                role_vocab=role_vocab,
+            )
+            if result.hit:
+                mode = str(self.config.get("mode", "block")).lower()
+                if mode not in MODES:
+                    mode = "block"
+
+                if mode == "warn":
+                    self._record_hit(event, result.matched, "warned", prompt)
+                    logger.warning(f"[soulsync_shield] 命中注入特征（告警放行）: {result.matched} user={event.get_sender_id()}")
+                elif mode == "sanitize":
+                    cleaned = sanitize(prompt_scan, result)
+                    if cleaned.strip() and cleaned != prompt_scan:
+                        req.prompt = cleaned
+                        self._record_hit(event, result.matched, "sanitized", prompt)
+                        logger.warning(
+                            f"[soulsync_shield] 命中注入特征（已剥离）: {result.matched} user={event.get_sender_id()}"
+                        )
+                    else:
+                        self._apply_block(event, req, result.matched, prompt)
                 else:
                     self._apply_block(event, req, result.matched, prompt)
-            else:
-                self._apply_block(event, req, result.matched, prompt)
 
         if self.config.get("scan_contexts", True):
             self._scan_request_contexts(event, req, extra_kw)
@@ -336,12 +345,12 @@ class InjGuard(Star):
             mode = "block"
         removed = 0
         notified: list[tuple[str, str, str]] = []
-        for idx, result in hits:
+        for idx, result, scan_text in hits:
             content = str(contexts[idx].get("content", ""))
             if mode == "warn":
                 self._record_hit(event, f"context: {result.matched}", "warned", content)
             elif mode == "sanitize":
-                cleaned = sanitize(content, result)
+                cleaned = sanitize(scan_text, result)
                 if cleaned.strip():
                     contexts[idx]["content"] = cleaned
                     self._record_hit(event, f"context: {result.matched}", "sanitized", content)

@@ -210,6 +210,33 @@ def _looks_base64(s: str) -> bool:
 
 _B64_TOKEN_RE = re.compile(r"[A-Za-z0-9+/]{8,}={0,2}")
 
+# ── 引用消息块（AstrBot 上下文格式 <Quoted Message>…</…>） ──────────
+
+_QUOTED_START_RE = re.compile(r"<Quoted Message>|<Quote>|\[引用消息\]|<引用消息>")
+_QUOTED_CLOSE_RE = re.compile(r"</(?:Quoted Message|Quote|引用消息)>")
+
+
+def strip_quoted_sections(text: str) -> str:
+    """移除文本中的引用消息块。
+
+    群里"转发/引用"一条注入攻击文本并不等于在发指令，引用块内容不算用户
+    自己的话；剥离后再检测，可避免上下文与当前消息的误触发。无闭合标记时
+    从起始标记一直剥离到文本结尾。
+    """
+    if _QUOTED_START_RE.search(text) is None:
+        return text
+    parts: list[str] = []
+    cursor = 0
+    while True:
+        m = _QUOTED_START_RE.search(text, cursor)
+        if m is None:
+            parts.append(text[cursor:])
+            break
+        parts.append(text[cursor:m.start()])
+        close = _QUOTED_CLOSE_RE.search(text, m.end())
+        cursor = close.end() if close else len(text)
+    return "".join(parts)
+
 
 def _obfuscated_scan(text: str, keywords: list[str]) -> bool:
     compact = _SEPARATOR_RE.sub("", text.lower())
@@ -364,12 +391,13 @@ def scan_contexts(
     max_entries: int = 100,
     exempt_roles: bool = False,
     role_vocab: list[str] | None = None,
-) -> list[tuple[int, DetectionResult]]:
-    """扫描上下文消息列表中的用户消息，返回 (索引, 检测结果) 列表（索引升序）。
+) -> list[tuple[int, DetectionResult, str]]:
+    """扫描上下文消息列表中的用户消息，返回 (索引, 检测结果, 被扫描文本) 列表（索引升序）。
 
-    只检测 role 为 user 的消息；最多扫描最近 max_entries 条用户消息。
+    只检测 role 为 user 的消息；引用消息块（<Quoted Message>…）先剥离再检测，
+    剥离后为空的整条跳过；最多扫描最近 max_entries 条用户消息。
     """
-    hits: list[tuple[int, DetectionResult]] = []
+    hits: list[tuple[int, DetectionResult, str]] = []
     scanned = 0
     for i in range(len(messages) - 1, -1, -1):
         message = messages[i]
@@ -380,17 +408,20 @@ def scan_contexts(
         content = message.get("content")
         if not content:
             continue
+        text = strip_quoted_sections(str(content)).strip()
+        if not text:
+            continue
         scanned += 1
         if scanned > max_entries:
             break
         result = detect(
-            str(content),
+            text,
             extra_keywords,
             enable_heuristics,
             exempt_roles=exempt_roles,
             role_vocab=role_vocab,
         )
         if result.hit:
-            hits.append((i, result))
+            hits.append((i, result, text))
     hits.sort(key=lambda item: item[0])
     return hits

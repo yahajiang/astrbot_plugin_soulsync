@@ -9,7 +9,7 @@
 [![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.10.0-blue)](https://github.com/Soulter/AstrBot)
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.10-green)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.3.1-8A2BE2)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.3.2-8A2BE2)](CHANGELOG.md)
 
 </div>
 
@@ -27,7 +27,7 @@
 
 ### 🎯 核心能力
 
-- **上下文扫描**：同时扫描用户历史消息（防记忆/历史投毒，对 SoulSync 等注入长期记忆的插件尤为重要），按当前模式剥离或删除，最多扫描最近 100 条（可配置）。
+- **上下文扫描**：同时扫描用户历史消息（防记忆/历史投毒，对 SoulSync 等注入长期记忆的插件尤为重要），按当前模式剥离或删除，最多扫描最近 100 条（可配置）；**引用消息**（`<Quoted Message>`）先剥离再检测，转发/引用攻击文本不算指令，避免误杀。
 - **关系角色豁免**：与 SoulSync 内置 39 个关系角色联动 —— 纯身份指派表达（"现在你是我的女朋友/恋人/妹妹"等）放行，保障合法关系推进；混入"忽略/泄露/服从/混淆"等攻击标记的仍拦截；可追加豁免词（如"主人"）。
 - **拦截提示开关**：开启（默认）时拦截后由模型转告拦截提示语；关闭时模型仅以当前人格自然、简短地拒绝用户，静默拦截只记日志。
 - **管理员通知**：每次拦截（当前消息拦截、上下文投毒移除）可私发通知管理员，含时间、用户、命中规则与拦截内容预览（长度可限制）。
