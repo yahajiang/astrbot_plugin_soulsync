@@ -2737,7 +2737,11 @@ class SoulSyncPro(Star):
                 mood_parts.append(f"{DIM_LABELS.get(dim, dim)}{arrow}{abs(v):g}")
         if mood_parts:
             lines.append("心情倾向: " + " ".join(mood_parts[:4]))
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "环境感知", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("倒计时")
     async def cmd_tpd_countdown(self, event: AstrMessageEvent):
@@ -2762,7 +2766,11 @@ class SoulSyncPro(Star):
             lines.append(f"{icon} {name} · {when}（得分 {e.get('score', 0):.2f}）")
         if len(events) > 10:
             lines.append(f"… 还有 {len(events) - 10} 个事件")
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "倒计时事件", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("跳跃")
     async def cmd_tpd_skip(self, event: AstrMessageEvent):
@@ -2811,7 +2819,11 @@ class SoulSyncPro(Star):
             lines.append(f"  最近: {last.get('cmd', '')} → {last.get('target_date', '')}（{last.get('days', 0)}天）")
         if not offset and not pending and not skip_log:
             lines.append("暂无跳跃记录")
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "时间跳跃状态", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("强制跳跃")
     async def cmd_tpd_force_skip(self, event: AstrMessageEvent):
@@ -2886,7 +2898,11 @@ class SoulSyncPro(Star):
         lines.append(f"缓存文件: {cache_file}")
         if cache_file.exists():
             lines.append(f"缓存大小: {cache_file.stat().st_size} 字节")
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "天气调试", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("角色列表")
     async def cmd_character_list(self, event: AstrMessageEvent):
@@ -3632,6 +3648,9 @@ class SoulSyncPro(Star):
         "角色列表": "cmd_character_list",
         "标记重要回忆": "cmd_mark_important",
         "忘记这件事": "cmd_forget",
+        "天气": "cmd_tpd_weather",
+        "倒计时": "cmd_tpd_countdown",
+        "跳跃": "cmd_tpd_skip",
     }
 
     async def _try_intercept_command_in_llm(self, event) -> bool:
