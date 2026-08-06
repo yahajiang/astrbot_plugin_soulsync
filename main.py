@@ -1021,7 +1021,11 @@ class SoulSyncPro(Star):
                   f"  遗忘速度：{params.forget_speed:.1f}x · 里程碑重视度：{params.milestone_sensitivity:.1f}x", "",
                   "💡 /人格参数 <名称> <值> 调整参数 · /人格重置 重置为默认",
                   "💡 /人格锁定 · /人格解锁"]
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "🎭 人格微调面板", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("人格参数")
     async def cmd_persona_params(self, event: AstrMessageEvent):
@@ -1128,7 +1132,11 @@ class SoulSyncPro(Star):
                     lines.append(f"  {src} {item.key}: {item.value[:40]}")
         lines.append("")
         lines.append("💡 /知识添加 <分类> <关键词> <内容> · /知识删除 <id>")
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "📚 知识库", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("知识添加")
     async def cmd_knowledge_add(self, event: AstrMessageEvent):
@@ -1199,7 +1207,11 @@ class SoulSyncPro(Star):
             "",
             "💡 /风格快照 管理快照 · /风格锁定 切换锁定",
         ]
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "💬 语言风格训练", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("风格快照")
     async def cmd_style_snapshot(self, event: AstrMessageEvent):
@@ -1276,7 +1288,11 @@ class SoulSyncPro(Star):
                 lines.append(f"  ... 还有{len(items) - 3}条")
         lines.append("")
         lines.append("💡 /记忆添加 <类型> <内容> · /记忆删除 <id> · /记忆星标 <id>")
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "🧠 私人记忆库", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("记忆添加")
     async def cmd_memory_add(self, event: AstrMessageEvent):
