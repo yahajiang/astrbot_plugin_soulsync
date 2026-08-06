@@ -5,12 +5,145 @@
     "default": "",
     "invisible": true
   },
-
   "enable_multi_role": {
     "description": "多角色并行关系",
     "hint": "同一用户可与多位自定义角色并行发展关系：好感/记忆/阶段按角色独立，纪念日/统计共享；角色命令：/创建角色 /切换角色 /角色列表",
     "type": "bool",
     "default": true
+  },
+  "enable_rde": {
+    "description": "启用 RDE 关系深度演进系统",
+    "hint": "v2.18：十二阶段叙事注入 + 关系危机系统（14事件/概率触发/选择处理/阶段倒退）+ 多角色关系网（跨角色好感传导/社交事件/关系感知）。开启后每轮对话注入关系阶段叙事",
+    "type": "bool",
+    "default": false
+  },
+  "enable_crisis_system": {
+    "description": "启用关系危机系统（RDE）",
+    "hint": "高阶段关系随机触发误会/冷落/信任/成长/外部/秘密/嫉妒七类危机事件，用户回应选择决定结果（好感变化/阶段倒退）",
+    "type": "bool",
+    "default": true
+  },
+  "enable_network": {
+    "description": "启用多角色关系网（RDE）",
+    "hint": "39 个角色间的稀疏关系矩阵：跨角色好感传导（延迟一轮）+ 吃醋/助攻/竞争/调解/误解传播社交事件 + 关系感知注入",
+    "type": "bool",
+    "default": true
+  },
+  "crisis_trigger_probability": {
+    "description": "危机基础触发概率",
+    "hint": "每轮对话触发关系危机的基准概率（另有阶段/好感/冷落/距上次/节日修正因子）",
+    "type": "float",
+    "default": 0.02,
+    "slider": {
+      "min": 0.0,
+      "max": 0.1,
+      "step": 0.005
+    }
+  },
+  "crisis_max_probability": {
+    "description": "危机触发概率上限",
+    "hint": "所有修正因子叠加后的触发概率上限",
+    "type": "float",
+    "default": 0.1,
+    "slider": {
+      "min": 0.02,
+      "max": 0.3,
+      "step": 0.01
+    }
+  },
+  "crisis_min_stage": {
+    "description": "危机最低触发阶段",
+    "hint": "低于该 RDE 阶段（s3 起）不触发危机",
+    "type": "str",
+    "default": "s3"
+  },
+  "crisis_min_cold_penalties": {
+    "description": "冷落型危机所需累积次数",
+    "hint": "每日冷落惩罚结算累积达到该次数后，冷落型危机才可触发",
+    "type": "int",
+    "default": 3,
+    "slider": {
+      "min": 0,
+      "max": 20,
+      "step": 1
+    }
+  },
+  "crisis_min_rounds_secret": {
+    "description": "秘密型危机所需总轮次",
+    "hint": "累计互动轮次达到该值后，秘密型危机才可触发",
+    "type": "int",
+    "default": 500,
+    "slider": {
+      "min": 0,
+      "max": 2000,
+      "step": 50
+    }
+  },
+  "crisis_protection_hours": {
+    "description": "危机阶段倒退保护期（小时）",
+    "hint": "危机导致阶段倒退后，该时长内不再重复倒退；且倒退期间回升需重新突破阈值+缓冲带",
+    "type": "int",
+    "default": 72,
+    "slider": {
+      "min": 0,
+      "max": 168,
+      "step": 6
+    }
+  },
+  "network_transmission_delay_turns": {
+    "description": "跨角色传导延迟轮数",
+    "hint": "好感变化传导到关联角色所需的轮数（下一轮体现）",
+    "type": "int",
+    "default": 1,
+    "slider": {
+      "min": 0,
+      "max": 5,
+      "step": 1
+    }
+  },
+  "social_event_cooldown_rounds": {
+    "description": "社交事件冷却轮数",
+    "hint": "同类型社交事件（吃醋/助攻等）触发的间隔轮数",
+    "type": "int",
+    "default": 10,
+    "slider": {
+      "min": 0,
+      "max": 50,
+      "step": 1
+    }
+  },
+  "jealousy_gap_threshold": {
+    "description": "吃醋触发好感差",
+    "hint": "情敌关系中，当前角色好感高于对方该差值时触发吃醋事件",
+    "type": "int",
+    "default": 20,
+    "slider": {
+      "min": 0,
+      "max": 100,
+      "step": 5
+    }
+  },
+  "assist_min_fav": {
+    "description": "助攻触发最低好感",
+    "hint": "闺蜜/兄弟关系双方好感均达到该值才触发助攻事件",
+    "type": "int",
+    "default": 100,
+    "slider": {
+      "min": 0,
+      "max": 200,
+      "step": 5
+    }
+  },
+  "competition_gap_threshold": {
+    "description": "竞争触发好感差",
+    "hint": "对手关系中，双方好感差小于该值且差距缩小时触发竞争事件",
+    "type": "int",
+    "default": 10,
+    "slider": {
+      "min": 0,
+      "max": 100,
+      "step": 5
+    }
   },
   "enable_attitude_system": {
     "description": "启用态度关系系统",
@@ -42,7 +175,6 @@
     "type": "bool",
     "default": false
   },
-
   "_section_emotion": {
     "description": "═══ 情感参数 ═══",
     "type": "string",
@@ -54,35 +186,55 @@
     "hint": "新用户的默认好感度，范围 -100 ~ 200（亲密度按好感度派生：亲密度=(好感+100)/3）",
     "type": "float",
     "default": 0.0,
-    "slider": {"min": -100, "max": 200, "step": 1}
+    "slider": {
+      "min": -100,
+      "max": 200,
+      "step": 1
+    }
   },
   "keyword_sensitivity": {
     "description": "关键词敏感度倍率",
     "hint": "控制关键词对好感度变化的影响强度，1.0 为标准",
     "type": "float",
     "default": 1.0,
-    "slider": {"min": 0.1, "max": 3.0, "step": 0.1}
+    "slider": {
+      "min": 0.1,
+      "max": 3.0,
+      "step": 0.1
+    }
   },
   "fav_growth_rate": {
     "description": "好感正向增长速率",
     "hint": "v2.13 增长放缓 50%：好感正向增长（关键词/微变化/惩罚奖励正向部分）统一乘以该系数，1.0 为原始速度；负向（惩罚）不受影响",
     "type": "float",
     "default": 0.5,
-    "slider": {"min": 0.1, "max": 1.0, "step": 0.05}
+    "slider": {
+      "min": 0.1,
+      "max": 1.0,
+      "step": 0.05
+    }
   },
   "micro_change_favorability": {
     "description": "无关键词时微变化（好感）",
     "hint": "普通对话未命中任何情绪关键词时，每轮好感度的微弱正向变化量（模拟互动积累）",
     "type": "float",
     "default": 0.21,
-    "slider": {"min": 0.0, "max": 2.0, "step": 0.05}
+    "slider": {
+      "min": 0.0,
+      "max": 2.0,
+      "step": 0.05
+    }
   },
   "micro_change_intimacy": {
     "description": "无关键词时微变化（亲密）",
     "hint": "普通对话未命中任何情绪关键词时，每轮亲密度的微弱正向变化量",
     "type": "float",
     "default": 0.07,
-    "slider": {"min": 0.0, "max": 1.0, "step": 0.02}
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.02
+    }
   },
   "enable_emotion_contagion": {
     "description": "情绪传染模型（张力积累→爆发）",
@@ -101,37 +253,56 @@
     "hint": "每轮负面情感上升量 × 该倍率 = 张力增加",
     "type": "float",
     "default": 2.0,
-    "slider": {"min": 0.0, "max": 6.0, "step": 0.5}
+    "slider": {
+      "min": 0.0,
+      "max": 6.0,
+      "step": 0.5
+    }
   },
   "tension_release_rate": {
     "description": "张力缓解倍率",
     "hint": "每轮正面情感上升量 × 该倍率 = 张力减少",
     "type": "float",
     "default": 3.0,
-    "slider": {"min": 0.0, "max": 8.0, "step": 0.5}
+    "slider": {
+      "min": 0.0,
+      "max": 8.0,
+      "step": 0.5
+    }
   },
   "tension_threshold": {
     "description": "爆发阈值（张力）",
     "hint": "张力达到该值触发情绪爆发（张力归零+好感惩罚+爆发记忆事件）",
     "type": "float",
     "default": 85.0,
-    "slider": {"min": 40, "max": 100, "step": 5}
+    "slider": {
+      "min": 40,
+      "max": 100,
+      "step": 5
+    }
   },
   "tension_release_per_day": {
     "description": "每日张力自然缓解",
     "hint": "每日结算时张力自动降低的量（情绪随时间平复）",
     "type": "float",
     "default": 10.0,
-    "slider": {"min": 0.0, "max": 50.0, "step": 2}
+    "slider": {
+      "min": 0.0,
+      "max": 50.0,
+      "step": 2
+    }
   },
   "eruption_fav_penalty": {
     "description": "爆发好感惩罚",
     "hint": "情绪爆发时对好感度的惩罚（负值）",
     "type": "float",
     "default": -2.0,
-    "slider": {"min": -10, "max": 0, "step": 0.5}
+    "slider": {
+      "min": -10,
+      "max": 0,
+      "step": 0.5
+    }
   },
-
   "_section_smart_update": {
     "description": "═══ 智能更新参数 ═══",
     "type": "string",
@@ -143,23 +314,34 @@
     "hint": "每隔多少轮对话强制触发一次辅助 LLM 深度分析",
     "type": "int",
     "default": 5,
-    "slider": {"min": 2, "max": 20, "step": 1}
+    "slider": {
+      "min": 2,
+      "max": 20,
+      "step": 1
+    }
   },
   "keyword_update_threshold": {
     "description": "关键词触发阈值",
     "hint": "消息中情绪关键词累计分数达到此值时触发深度分析",
     "type": "float",
     "default": 2.0,
-    "slider": {"min": 0.5, "max": 10.0, "step": 0.5}
+    "slider": {
+      "min": 0.5,
+      "max": 10.0,
+      "step": 0.5
+    }
   },
   "time_update_threshold_sec": {
     "description": "时间触发阈值（秒）",
     "hint": "距上次深度分析超过此时间后，下一条消息将触发深度分析",
     "type": "int",
     "default": 120,
-    "slider": {"min": 30, "max": 600, "step": 30}
+    "slider": {
+      "min": 30,
+      "max": 600,
+      "step": 30
+    }
   },
-
   "_section_llm": {
     "description": "═══ 辅助 LLM 参数 ═══",
     "type": "string",
@@ -178,23 +360,34 @@
     "hint": "辅助 LLM 分析结果的融合权重（0~1），关键词权重 = 1 - 此值",
     "type": "float",
     "default": 0.4,
-    "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+    }
   },
   "llm_call_timeout_sec": {
     "description": "LLM 调用超时（秒）",
     "hint": "辅助 LLM 调用的最大等待时间，超时则降级为纯关键词分析",
     "type": "int",
     "default": 15,
-    "slider": {"min": 5, "max": 60, "step": 5}
+    "slider": {
+      "min": 5,
+      "max": 60,
+      "step": 5
+    }
   },
   "llm_recent_messages_count": {
     "description": "传入 LLM 的近期消息数",
     "hint": "辅助 LLM 分析时携带的最近 N 轮对话",
     "type": "int",
     "default": 5,
-    "slider": {"min": 1, "max": 10, "step": 1}
+    "slider": {
+      "min": 1,
+      "max": 10,
+      "step": 1
+    }
   },
-
   "_section_memory": {
     "description": "═══ 记忆与存储 ═══",
     "type": "string",
@@ -206,21 +399,33 @@
     "hint": "LLM 判定事件重要性达到此值时记入长期记忆（0~10）",
     "type": "float",
     "default": 5.0,
-    "slider": {"min": 1.0, "max": 10.0, "step": 0.5}
+    "slider": {
+      "min": 1.0,
+      "max": 10.0,
+      "step": 0.5
+    }
   },
   "max_long_term_events": {
     "description": "每用户长期记忆上限",
     "hint": "每个用户最多保留的重要情感事件数",
     "type": "int",
     "default": 50,
-    "slider": {"min": 10, "max": 200, "step": 10}
+    "slider": {
+      "min": 10,
+      "max": 200,
+      "step": 10
+    }
   },
   "auto_save_interval_sec": {
     "description": "自动保存间隔（秒）",
     "hint": "情感数据定时落盘的间隔",
     "type": "int",
     "default": 300,
-    "slider": {"min": 60, "max": 1800, "step": 60}
+    "slider": {
+      "min": 60,
+      "max": 1800,
+      "step": 60
+    }
   },
   "enable_memory_recall": {
     "description": "惊喜回忆（遗忘曲线唤醒）",
@@ -233,16 +438,23 @@
     "hint": "记忆清晰度减半所需天数，越小遗忘越快",
     "type": "int",
     "default": 30,
-    "slider": {"min": 7, "max": 180, "step": 1}
+    "slider": {
+      "min": 7,
+      "max": 180,
+      "step": 1
+    }
   },
   "memory_recall_bonus": {
     "description": "唤醒回忆好感奖励",
     "hint": "成功唤醒一段模糊记忆时获得的好感度加成",
     "type": "float",
     "default": 0.3,
-    "slider": {"min": 0.0, "max": 2.0, "step": 0.1}
+    "slider": {
+      "min": 0.0,
+      "max": 2.0,
+      "step": 0.1
+    }
   },
-
   "_section_privacy": {
     "description": "═══ 隐私与安全 ═══",
     "type": "string",
@@ -254,7 +466,11 @@
     "hint": "0=完全保密（不注入上下文） 1=基础（注入好感/阶段） 2=详细（注入完整信息）",
     "type": "int",
     "default": 1,
-    "options": [0, 1, 2]
+    "options": [
+      0,
+      1,
+      2
+    ]
   },
   "session_based": {
     "description": "按会话隔离情感",
@@ -274,7 +490,6 @@
     "type": "text",
     "default": ""
   },
-
   "_section_penalty_reward": {
     "description": "═══ 惩罚奖励机制 ═══",
     "type": "string",
@@ -322,42 +537,66 @@
     "hint": "超过多少小时未互动视为被冷落",
     "type": "float",
     "default": 24,
-    "slider": {"min": 6, "max": 168, "step": 6}
+    "slider": {
+      "min": 6,
+      "max": 168,
+      "step": 6
+    }
   },
   "pr_comeback_threshold_hours": {
     "description": "回归奖励阈值（小时）",
     "hint": "冷落超过此时长后回归才给予回归奖励",
     "type": "float",
     "default": 48,
-    "slider": {"min": 12, "max": 336, "step": 12}
+    "slider": {
+      "min": 12,
+      "max": 336,
+      "step": 12
+    }
   },
   "pr_decay_half_life_hours": {
     "description": "惩罚奖励半衰期（小时）",
     "hint": "惩罚/奖励效果随时间衰减的半衰期，越短衰减越快",
     "type": "float",
     "default": 72,
-    "slider": {"min": 12, "max": 336, "step": 12}
+    "slider": {
+      "min": 12,
+      "max": 336,
+      "step": 12
+    }
   },
   "pr_momentum_reward_per_level": {
     "description": "每层正面势头奖励",
     "hint": "连续正面行为每增加一层，额外增加的好感度（v2.11 已放缓至 0.24）",
     "type": "float",
     "default": 0.24,
-    "slider": {"min": 0.1, "max": 2.0, "step": 0.1}
+    "slider": {
+      "min": 0.1,
+      "max": 2.0,
+      "step": 0.1
+    }
   },
   "pr_momentum_penalty_per_level": {
     "description": "每层负面势头惩罚",
     "hint": "连续负面行为每增加一层，额外扣除的好感度（负值，绝对值越大越严厉）",
     "type": "float",
     "default": -0.76,
-    "slider": {"min": -3.0, "max": -0.1, "step": 0.1}
+    "slider": {
+      "min": -3.0,
+      "max": -0.1,
+      "step": 0.1
+    }
   },
   "pr_weight": {
     "description": "惩罚奖励权重",
     "hint": "惩罚奖励结果融入情感变化的权重",
     "type": "float",
     "default": 0.6,
-    "slider": {"min": 0.0, "max": 1.0, "step": 0.1}
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.1
+    }
   },
   "enable_crisis_events": {
     "description": "关系危机事件（信任考验）",
@@ -370,42 +609,66 @@
     "hint": "好感度达到该值才可能触发信任考验",
     "type": "float",
     "default": 55.0,
-    "slider": {"min": 0, "max": 200, "step": 5}
+    "slider": {
+      "min": 0,
+      "max": 200,
+      "step": 5
+    }
   },
   "crisis_probability": {
     "description": "考验触发概率（每轮）",
     "hint": "满足条件时每轮对话触发信任考验的概率",
     "type": "float",
     "default": 0.12,
-    "slider": {"min": 0.0, "max": 1.0, "step": 0.02}
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.02
+    }
   },
   "crisis_cooldown_days": {
     "description": "考验冷却（天）",
     "hint": "两次信任考验之间的最短间隔天数",
     "type": "int",
     "default": 3,
-    "slider": {"min": 0, "max": 30, "step": 1}
+    "slider": {
+      "min": 0,
+      "max": 30,
+      "step": 1
+    }
   },
   "crisis_pass_reward": {
     "description": "考验通过奖励",
     "hint": "通过信任考验获得的好感度奖励",
     "type": "float",
     "default": 1.5,
-    "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
+    "slider": {
+      "min": 0.0,
+      "max": 5.0,
+      "step": 0.1
+    }
   },
   "crisis_fail_penalty": {
     "description": "考验失败惩罚",
     "hint": "未通过信任考验的好感度惩罚（负值）",
     "type": "float",
     "default": -2.5,
-    "slider": {"min": -10, "max": 0, "step": 0.1}
+    "slider": {
+      "min": -10,
+      "max": 0,
+      "step": 0.1
+    }
   },
   "crisis_timeout_hours": {
     "description": "考验超时（小时）",
     "hint": "考验开始后超过该时长无回应，视为冷淡失败",
     "type": "int",
     "default": 24,
-    "slider": {"min": 1, "max": 168, "step": 1}
+    "slider": {
+      "min": 1,
+      "max": 168,
+      "step": 1
+    }
   },
   "crisis_step_down": {
     "description": "失败阶段倒退",
@@ -413,61 +676,6 @@
     "type": "bool",
     "default": true
   },
-  "enable_crisis_events": {
-    "description": "关系危机事件（信任考验）",
-    "hint": "高好感阶段随机触发信任考验（秘密/误会/低谷/承诺），按用户回应判定通过（好感奖励）/失败（好感惩罚+阶段倒退）/超时冷淡",
-    "type": "bool",
-    "default": true
-  },
-  "crisis_threshold": {
-    "description": "考验触发好感阈值",
-    "hint": "好感度达到该值才可能触发信任考验",
-    "type": "float",
-    "default": 55.0,
-    "slider": {"min": 0, "max": 200, "step": 5}
-  },
-  "crisis_probability": {
-    "description": "考验触发概率（每轮）",
-    "hint": "满足条件时每轮对话触发信任考验的概率",
-    "type": "float",
-    "default": 0.12,
-    "slider": {"min": 0.0, "max": 1.0, "step": 0.02}
-  },
-  "crisis_cooldown_days": {
-    "description": "考验冷却（天）",
-    "hint": "两次信任考验之间的最短间隔天数",
-    "type": "int",
-    "default": 3,
-    "slider": {"min": 0, "max": 30, "step": 1}
-  },
-  "crisis_pass_reward": {
-    "description": "考验通过奖励",
-    "hint": "通过信任考验获得的好感度奖励",
-    "type": "float",
-    "default": 1.5,
-    "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
-  },
-  "crisis_fail_penalty": {
-    "description": "考验失败惩罚",
-    "hint": "未通过信任考验的好感度惩罚（负值）",
-    "type": "float",
-    "default": -2.5,
-    "slider": {"min": -10, "max": 0, "step": 0.1}
-  },
-  "crisis_timeout_hours": {
-    "description": "考验超时（小时）",
-    "hint": "考验开始后超过该时长无回应，视为冷淡失败",
-    "type": "int",
-    "default": 24,
-    "slider": {"min": 1, "max": 168, "step": 1}
-  },
-  "crisis_step_down": {
-    "description": "失败阶段倒退",
-    "hint": "考验失败或超时时，关系阶段倒退一级（仅正阶段）",
-    "type": "bool",
-    "default": true
-  },
-
   "_section_anniversary": {
     "description": "═══ 纪念日/节日系统 ═══",
     "type": "string",
@@ -485,28 +693,44 @@
     "hint": "用户自定义纪念日/生日/初次相识周年当天的好感度奖励（认识里程碑按天数和比例缩放）",
     "type": "float",
     "default": 2.5,
-    "slider": {"min": 0.0, "max": 10.0, "step": 0.1}
+    "slider": {
+      "min": 0.0,
+      "max": 10.0,
+      "step": 0.1
+    }
   },
   "anniv_int_bonus": {
     "description": "纪念日亲密奖励",
     "hint": "纪念日当天的亲密度奖励",
     "type": "float",
     "default": 1.5,
-    "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
+    "slider": {
+      "min": 0.0,
+      "max": 5.0,
+      "step": 0.1
+    }
   },
   "festival_fav_bonus": {
     "description": "节日好感奖励",
     "hint": "节日（公历+农历）当天的好感度奖励",
     "type": "float",
     "default": 1.8,
-    "slider": {"min": 0.0, "max": 10.0, "step": 0.1}
+    "slider": {
+      "min": 0.0,
+      "max": 10.0,
+      "step": 0.1
+    }
   },
   "festival_int_bonus": {
     "description": "节日亲密奖励",
     "hint": "节日当天的亲密度奖励",
     "type": "float",
     "default": 1.0,
-    "slider": {"min": 0.0, "max": 5.0, "step": 0.1}
+    "slider": {
+      "min": 0.0,
+      "max": 5.0,
+      "step": 0.1
+    }
   },
   "anniv_inject_context": {
     "description": "纪念日上下文注入",
@@ -525,14 +749,22 @@
     "hint": "纪念日/生日/初次相识前多少天内开始主动提及",
     "type": "int",
     "default": 7,
-    "slider": {"min": 1, "max": 30, "step": 1}
+    "slider": {
+      "min": 1,
+      "max": 30,
+      "step": 1
+    }
   },
   "countdown_probability": {
     "description": "倒计时提及概率",
     "hint": "进入倒计时窗口后，每轮对话角色主动提及的概率",
     "type": "float",
     "default": 0.15,
-    "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+    }
   },
   "enable_monthly_report": {
     "description": "月度回顾",
@@ -551,16 +783,23 @@
     "hint": "两次内心独白之间的最少间隔天数",
     "type": "int",
     "default": 7,
-    "slider": {"min": 1, "max": 30, "step": 1}
+    "slider": {
+      "min": 1,
+      "max": 30,
+      "step": 1
+    }
   },
   "report_window_days": {
     "description": "回顾窗口（天）",
     "hint": "/角色回顾 默认回顾最近多少天（也可在命令后直接指定天数）",
     "type": "int",
     "default": 14,
-    "slider": {"min": 1, "max": 90, "step": 1}
+    "slider": {
+      "min": 1,
+      "max": 90,
+      "step": 1
+    }
   },
-
   "_section_perception": {
     "description": "═══ 时间感知（仿 LLMPerception）═══",
     "type": "string",
@@ -608,14 +847,22 @@
     "hint": "两次时间跳跃叙事之间的最少间隔天数",
     "type": "int",
     "default": 3,
-    "slider": {"min": 1, "max": 30, "step": 1}
+    "slider": {
+      "min": 1,
+      "max": 30,
+      "step": 1
+    }
   },
   "time_jump_probability": {
     "description": "时间跳跃概率",
     "hint": "间隔满足后，每轮对话触发时间跳跃叙事的概率",
     "type": "float",
     "default": 0.1,
-    "slider": {"min": 0.0, "max": 1.0, "step": 0.05}
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+    }
   },
   "holiday_country": {
     "description": "节假日国家/地区",
@@ -623,7 +870,6 @@
     "type": "string",
     "default": "CN"
   },
-
   "_section_stats": {
     "description": "═══ 情感数据统计 ═══",
     "type": "string",
@@ -641,16 +887,23 @@
     "hint": "每用户保留多少天的历史快照（超出自动清理）",
     "type": "int",
     "default": 30,
-    "slider": {"min": 7, "max": 180, "step": 1}
+    "slider": {
+      "min": 7,
+      "max": 180,
+      "step": 1
+    }
   },
   "trend_default_days": {
     "description": "/趋势 默认天数",
     "hint": "不带参数时 /趋势 默认展示的天数",
     "type": "int",
     "default": 14,
-    "slider": {"min": 3, "max": 60, "step": 1}
+    "slider": {
+      "min": 3,
+      "max": 60,
+      "step": 1
+    }
   },
-
   "_section_relationship_roles": {
     "description": "═══ 关系角色解锁 ═══",
     "type": "string",
@@ -669,7 +922,6 @@
     "type": "bool",
     "default": true
   },
-
   "_section_image_output": {
     "description": "═══ 图片输出 ═══",
     "type": "string",
@@ -694,7 +946,6 @@
     "type": "bool",
     "default": false
   },
-
   "_section_personalization": {
     "description": "═══ 个性化训练 (Personalization Trainer) ═══",
     "type": "string",
@@ -741,7 +992,11 @@
     "description": "知识库单轮注入上限（token）",
     "type": "int",
     "default": 150,
-    "slider": {"min": 50, "max": 500, "step": 10}
+    "slider": {
+      "min": 50,
+      "max": 500,
+      "step": 10
+    }
   },
   "style_training_enabled": {
     "description": "启用语言风格训练",
@@ -753,13 +1008,21 @@
     "description": "风格采集期轮数",
     "type": "int",
     "default": 100,
-    "slider": {"min": 20, "max": 500, "step": 10}
+    "slider": {
+      "min": 20,
+      "max": 500,
+      "step": 10
+    }
   },
   "style_adoption_turns": {
     "description": "风格模仿期轮数",
     "type": "int",
     "default": 300,
-    "slider": {"min": 50, "max": 1000, "step": 10}
+    "slider": {
+      "min": 50,
+      "max": 1000,
+      "step": 10
+    }
   },
   "private_memory_enabled": {
     "description": "启用私人记忆",
@@ -772,19 +1035,31 @@
     "hint": "每轮对话角色主动提及私人记忆的概率（0~1）",
     "type": "float",
     "default": 0.08,
-    "slider": {"min": 0.0, "max": 0.5, "step": 0.01}
+    "slider": {
+      "min": 0.0,
+      "max": 0.5,
+      "step": 0.01
+    }
   },
   "private_memory_token_budget": {
     "description": "私人记忆单轮注入上限（token）",
     "type": "int",
     "default": 120,
-    "slider": {"min": 30, "max": 400, "step": 10}
+    "slider": {
+      "min": 30,
+      "max": 400,
+      "step": 10
+    }
   },
   "personalization_total_token_budget": {
     "description": "个性化注入总预算（token）",
     "hint": "人格/知识/记忆/风格四块注入的总token上限，超限时按 人格>知识>记忆>风格 优先级从低优先裁剪",
     "type": "int",
     "default": 450,
-    "slider": {"min": 100, "max": 1200, "step": 50}
+    "slider": {
+      "min": 100,
+      "max": 1200,
+      "step": 50
+    }
   }
 }

@@ -324,6 +324,10 @@ class SoulSyncPro(Star):
                 f"/{self._PLUGIN_ROUTE}/trainer/style", self._web_trainer_style, ["POST"],
                 "SoulSync: 语言风格操作",
             )
+            self.context.register_web_api(
+                f"/{self._PLUGIN_ROUTE}/rde/data", self._web_rde_data, ["GET"],
+                "SoulSync: RDE 关系深度演进数据",
+            )
             logger.info("SoulSync WebUI 路由注册成功")
         except Exception as e:
             logger.error(f"SoulSync WebUI 路由注册失败: {e}")
@@ -565,6 +569,30 @@ class SoulSyncPro(Star):
     # ═══════════════════════════════════════════════════════════════
     #  个性化训练 WebUI API
     # ═══════════════════════════════════════════════════════════════
+
+    async def _web_rde_data(self):
+        """GET /rde/data?user_id=xxx - RDE 关系深度演进数据"""
+        try:
+            key = (request.query.get("user_id") or "").strip()
+            if key:
+                data = self._build_rde_panel(key)
+                data["state_key"] = key
+                return json_response(data)
+            overview = []
+            for key in self.profiles.keys():
+                p = self.profiles[key]
+                overview.append({
+                    "state_key": key,
+                    "fav": round(p.favorability, 1),
+                    "stage_index": p.stage_index,
+                    "stage_label": self._get_stage_label(p),
+                    "crisis_active": self._get_rde_orchestrator(key).get_active_crisis(key)
+                    is not None,
+                    "history_count": len(self._get_rde_orchestrator(key).get_crisis_history(key)),
+                })
+            return json_response({"overview": overview})
+        except Exception as e:
+            return error_response(f"RDE 数据读取失败: {e}")
 
     async def _web_trainer_data(self):
         """GET /trainer/data?user_id=xxx - 个性化训练数据"""
@@ -2103,6 +2131,168 @@ class SoulSyncPro(Star):
         bp = self.behavior_profiles.get(self._state_key(user_id))
         lines = self._format_profile(profile, event, detail=True, behavior_profile=bp)
         path = self._try_render_image(event, f"{profile.user_name or user_id} 完整档案", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
+
+    # ── RDE 关系深度演进：命令 ──
+
+    def _rde_target(self, event) -> Tuple[str, str]:
+        """解析 RDE 查看命令的目标：(uid, state_key)；无参数时查看自己"""
+        parts = event.message_str.split()
+        if len(parts) >= 2:
+            return parts[1], self._state_key(parts[1])
+        uid = self._get_user_id(event)
+        return uid, self._state_key(uid)
+
+    def _build_rde_panel(self, key: str) -> dict:
+        """RDE 面板数据（命令 + WebUI 共用，可单测）"""
+        orch = self._get_rde_orchestrator(key)
+        profile = self.profiles.get(key)
+        fav = profile.favorability if profile else 0.0
+        stage_id = stage_id_from_index(
+            profile.stage_index if profile else 0,
+            self._get_negative_stage_label(fav) if fav < 0 else None,
+        )
+        stage_cfg = orch.get_stage_config(stage_id)
+        next_cfg = None
+        if stage_cfg and stage_cfg.positive:
+            next_cfg = orch.get_stage_config(stage_id_from_index(
+                (profile.stage_index if profile else 0) + 1, None
+            ))
+        stages = []
+        for s in orch.all_stages():
+            stages.append({
+                "stage_id": s.stage_id, "name": s.stage_name, "positive": s.positive,
+                "threshold": s.threshold, "relationship_state": s.relationship_state,
+                "dialogue_style": s.dialogue_style, "address": s.address_changes,
+                "interaction": s.interaction_features,
+                "description": orch.get_stage_description(s.stage_id),
+            })
+        active = orch.get_active_crisis(key)
+        raw_uid = str(key).rpartition("::")[0] or key
+        cid = str(key).rpartition("::")[2]
+        return {
+            "enabled": orch.enabled,
+            "stage_id": stage_id,
+            "stages": stages,
+            "current": {
+                "stage_id": stage_id,
+                "name": stage_cfg.stage_name if stage_cfg else "",
+                "address": orch.get_address(stage_id, {"user_name": ""}),
+                "description": orch.get_stage_description(stage_id),
+                "threshold": stage_cfg.threshold if stage_cfg else 0,
+                "next": {"stage_id": next_cfg.stage_id, "name": next_cfg.stage_name}
+                if next_cfg else None,
+                "fav": round(fav, 1),
+            },
+            "crisis": {
+                "active": active.to_dict() if active is not None else None,
+                "history": orch.get_crisis_history(key),
+                "cooldown": orch.get_cooldown(key),
+            },
+            "network": orch.get_network_status(key),
+            "custom_relations": self.character_manager.get_relations(raw_uid, cid) if cid else {},
+        }
+
+    @filter.command("RDE阶段")
+    async def cmd_rde_stage(self, event: AstrMessageEvent):
+        """查看 RDE 关系阶段详情。用法：/RDE阶段 [ID]（管理员可查看他人）"""
+        uid, key = self._rde_target(event)
+        try:
+            data = self._build_rde_panel(key)
+        except Exception as e:
+            yield event.plain_result(f"❌ RDE 数据读取失败：{e}")
+            return
+        cur = data["current"]
+        lines = [f"🌐 RDE 关系阶段 · {uid}", ""]
+        if not data["enabled"]:
+            lines.append("⚠️ RDE 系统未启用（enable_rde=false）")
+        lines.append(f"当前阶段：{cur['name']}（{cur['stage_id']}）")
+        lines.append(f"好感：{cur['fav']:+.1f} / 阶段阈值：{cur['threshold']}")
+        if cur["next"]:
+            lines.append(f"下一阶段：{cur['next']['name']}（{cur['next']['stage_id']}）")
+        lines.append(f"称谓：{cur['address']}")
+        lines.append(f"叙事：{cur['description']}")
+        cd = data["crisis"]["cooldown"]
+        act = data["crisis"]["active"]
+        lines.append("")
+        lines.append(f"危机：{'进行中（' + act['title'] + '）' if act else '无'}"
+                     f"｜冷却 {cd['rounds_remaining']} 轮｜冷落累计 {cd['cold_penalties']} 次")
+        path = self._try_render_image(event, f"{uid} 关系阶段", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
+
+    @filter.command("危机记录")
+    async def cmd_rde_crisis_log(self, event: AstrMessageEvent):
+        """查看 RDE 危机记录。用法：/危机记录 [ID]"""
+        uid, key = self._rde_target(event)
+        try:
+            data = self._build_rde_panel(key)
+        except Exception as e:
+            yield event.plain_result(f"❌ RDE 数据读取失败：{e}")
+            return
+        lines = [f"🌪️ RDE 危机记录 · {uid}", ""]
+        act = data["crisis"]["active"]
+        if act:
+            lines.append(f"🔴 进行中：{act['title']}（剩余 {act['rounds_left']} 轮回应期）")
+            lines.append("请在对话中回应事件（自然回复即可，选项见注入叙事）")
+            lines.append("")
+        hist = data["crisis"]["history"]
+        if not hist:
+            lines.append("暂无危机历史")
+        else:
+            for h in reversed(hist[-10:]):
+                lines.append(
+                    f"- {h.get('title', h.get('crisis_id', '?'))} "
+                    f"[{h.get('choice_id', '?')}] 好感{h.get('favorability_delta', 0):+.1f}"
+                )
+        cd = data["crisis"]["cooldown"]
+        lines.append("")
+        lines.append(f"冷却剩余：{cd['rounds_remaining']} 轮｜冷落惩罚累计：{cd['cold_penalties']} 次"
+                     f"｜总轮次：{cd['total_rounds']}")
+        path = self._try_render_image(event, f"{uid} 危机记录", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
+
+    @filter.command("角色关系网")
+    async def cmd_rde_network(self, event: AstrMessageEvent):
+        """查看 RDE 角色关系网。用法：/角色关系网 [ID]"""
+        uid, key = self._rde_target(event)
+        try:
+            data = self._build_rde_panel(key)
+        except Exception as e:
+            yield event.plain_result(f"❌ RDE 数据读取失败：{e}")
+            return
+        lines = [f"🕸️ RDE 角色关系网 · {uid}", ""]
+        net = data["network"]
+        lines.append(f"关系定义：{net['relation_count']} 条")
+        edges = net.get("edges", [])
+        if edges:
+            lines.append("")
+            lines.append("角色关系对：")
+            for e in edges[:20]:
+                lines.append(f"- {e.get('source') or '用户'} ↔ {e['target']}"
+                             f"（{e['relation_type']}，系数 {e['cross_coefficient']}）")
+        custom = data["custom_relations"]
+        if custom:
+            lines.append("")
+            lines.append("角色卡自定义关系：")
+            for t, cfg in custom.items():
+                lines.append(f"- 用户 ↔ {t}（{cfg.get('type', 'none')}"
+                             f"，系数 {cfg.get('cross_coefficient', '默认')}）")
+        stats = net.get("interaction_stats", {})
+        if stats:
+            lines.append("")
+            lines.append("互动统计：")
+            for role, st in list(stats.items())[:10]:
+                lines.append(f"- {role}：{st['count']} 次互动，累计好感 {st['fav_delta_total']:+.1f}")
+        path = self._try_render_image(event, f"{uid} 角色关系网", lines)
         if path:
             yield event.image_result(path)
         else:
