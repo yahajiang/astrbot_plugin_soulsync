@@ -1327,8 +1327,6 @@ class SoulSyncPro(Star):
         yield event.plain_result(f"⭐ 已星标记忆 {parts[1]}")
 
     @filter.command("个性化导出")
-
-    @filter.command("个性化导出")
     async def cmd_personalization_export(self, event: AstrMessageEvent):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
