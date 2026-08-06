@@ -119,7 +119,7 @@ HELP_TEXT = (
     "用法：\n"
     "/防注入 — 帮助\n"
     "/防注入 统计 — 今日统计与最近命中\n"
-    "/防注入 图片模式 — 统计输出切换为图片（需 Pillow）\n"
+    "/防注入 全局图片模式 — 统计与管理员通知输出切换为图片（需 Pillow）\n"
     "/防注入 模式 拦截|剥离|告警 — 切换处置模式\n"
     "/防注入 白名单 加|删 <用户ID> — 增删白名单\n"
     "/防注入 白名单 列表 — 查看白名单"
@@ -289,27 +289,59 @@ class InjGuard(Star):
         except ImportError:
             return
         try:
+            now = datetime.now()
             preview_len = self._notify_preview_len()
-            lines = [
-                "🛡 注入防护盾 · 拦截通知",
-                f"时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                f"用户：{event.get_sender_id()}",
-                "",
+            rows = [
+                {
+                    "time": now.strftime("%Y-%m-%d %H:%M:%S"),
+                    "user_id": str(event.get_sender_id()),
+                    "mode": mode,
+                    "matched": matched,
+                    "content": clean_preview_text(content),
+                }
+                for mode, matched, content in items[:5]
             ]
-            for idx, (mode, matched, content) in enumerate(items[:5], start=1):
-                label = NOTIFY_MODE_LABELS.get(mode, mode)
-                body = clean_preview_text(content)
-                body = body.replace("\n", " ⏎ ")
-                lines.append(f"① {label}｜{matched}")
-                lines.append(f"　{body[:preview_len]}")
-            if len(items) > 5:
-                lines.append(f"…另有 {len(items) - 5} 条")
-            body = "\n".join(lines)
+
+            chain = None
+            if self._is_image_mode() and self._renderer is not None:
+                try:
+                    import time as _time
+
+                    path = await asyncio.to_thread(
+                        self._renderer.render_notify_card,
+                        "注入防护盾 · 拦截通知",
+                        now.strftime("%Y-%m-%d %H:%M"),
+                        rows,
+                        f"notify_{int(_time.time())}.png",
+                    )
+                    if path:
+                        chain = MessageChain().message("").file_image(path)
+                except Exception as exc:
+                    logger.warning(f"[soulsync_shield] 通知卡片渲染失败，降级文本: {exc}")
+                    chain = None
+
+            if chain is None:
+                lines = [
+                    "🛡 注入防护盾 · 拦截通知",
+                    f"时间：{now.strftime('%Y-%m-%d %H:%M:%S')}",
+                    f"用户：{event.get_sender_id()}",
+                    "",
+                ]
+                for idx, (mode, matched, content) in enumerate(items[:5], start=1):
+                    label = NOTIFY_MODE_LABELS.get(mode, mode)
+                    body = clean_preview_text(content)
+                    body = body.replace("\n", " ⏎ ")
+                    lines.append(f"① {label}｜{matched}")
+                    lines.append(f"　{body[:preview_len]}")
+                if len(items) > 5:
+                    lines.append(f"…另有 {len(items) - 5} 条")
+                chain = MessageChain().message("\n".join(lines))
+
             platform = self._event_platform(event)
             for uid in targets:
                 try:
                     umo = f"{platform}:FriendMessage:{uid}"
-                    await self.context.send_message(umo, MessageChain().message(body))
+                    await self.context.send_message(umo, chain)
                 except Exception as exc:
                     logger.warning(f"[soulsync_shield] 通知管理员 {uid} 失败: {exc}")
         except Exception as exc:
@@ -489,7 +521,7 @@ class InjGuard(Star):
                 yield event.plain_result("\n".join(self._format_stats_lines()))
             return
 
-        if sub in ("图片模式", "图片"):
+        if sub in ("图片模式", "图片", "全局图片模式", "全局图片"):
             if self._renderer is None or not self._renderer.available:
                 if self._renderer is None or getattr(self._renderer, "reason", "") == "pillow":
                     yield event.plain_result(
@@ -507,8 +539,8 @@ class InjGuard(Star):
             save = getattr(self.config, "save_config", None)
             if callable(save):
                 save()
-            state = "开启 ✅（统计输出图片）" if not cur else "关闭 ❌（统计输出文本）"
-            yield event.plain_result(f"图片模式已{state}")
+            state = "开启 ✅（统计与管理员通知输出图片）" if not cur else "关闭 ❌（输出文本）"
+            yield event.plain_result(f"全局图片模式已{state}")
             return
 
         if sub in ("模式",):
