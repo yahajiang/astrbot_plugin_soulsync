@@ -482,12 +482,11 @@ class InjGuard(Star):
             return
 
         if sub in ("统计", "数据"):
-            lines = self._format_stats_lines()
-            path = self._try_render_card("注入防护统计", lines)
+            path = self._try_render_stats_card()
             if path:
                 yield event.image_result(path)
             else:
-                yield event.plain_result("\n".join(lines))
+                yield event.plain_result("\n".join(self._format_stats_lines()))
             return
 
         if sub in ("图片模式", "图片"):
@@ -590,15 +589,23 @@ class InjGuard(Star):
             return False
         return self._renderer is not None and self._renderer.available
 
-    def _try_render_card(self, title: str, lines: list[str]) -> str | None:
-        """图片模式开启且渲染可用时把文本行渲染为卡片图片；失败返回 None 降级文本。"""
+    def _try_render_stats_card(self) -> str | None:
+        """图片模式开启且渲染可用时把统计渲染为卡片图片；失败返回 None 降级文本。"""
         if not self._is_image_mode():
             return None
         try:
             import time
 
+            with self._lock:
+                counters = dict(self._counters)
+                recent = list(self._recent[-5:][::-1])
+                recent_count = len(self._recent)
+            mode = str(self.config.get("mode", "block"))
+            mode_label = MODE_LABELS.get(mode, mode)
             fname = f"card_{int(time.time())}.png"
-            return self._renderer.render_card(title, lines, fname)
+            return self._renderer.render_stats_card(
+                "注入防护统计", self._stats_date, counters, mode_label, recent_count, recent, fname
+            )
         except Exception as exc:
             logger.warning(f"[soulsync_shield] 图片渲染失败（降级文本）: {exc}")
             return None
