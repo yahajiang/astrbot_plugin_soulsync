@@ -48,6 +48,8 @@ from .relationship_roles import (
     SYSTEM_ROLES_BY_KEY,
 )
 from .image_renderer import ImageRenderer
+from .trainer.trainer_orchestrator import PersonalizationOrchestrator
+from .trainer.trainer_storage import TrainerStorage
 from .time_perception import (
     load_calendar_dependencies,
     build_time_info,
@@ -199,6 +201,8 @@ class SoulSyncPro(Star):
         self.character_manager = CharacterManager(self.data_dir)
         self.image_renderer = ImageRenderer(self.data_dir)
         self.image_mode: Dict[str, bool] = {}
+        self.trainer_storage = TrainerStorage(self.data_dir)
+        self.trainer_orchestrators: Dict[str, PersonalizationOrchestrator] = {}
 
         # ── 时间感知（仿 LLMPerception）──
         load_calendar_dependencies()
@@ -712,6 +716,70 @@ class SoulSyncPro(Star):
         self._save_config()
         state = "开启 ✅（所有信息命令输出图片）" if not cur else "关闭 ❌（按用户设置）"
         yield event.plain_result(f"全局图片模式已{state}")
+
+    # ═══════════════════════════════════════════════════════════════
+    #  个性化训练命令（Personalization Trainer v2.17）
+    # ═══════════════════════════════════════════════════════════════
+
+    @filter.command("人格微调")
+    async def cmd_persona(self, event: AstrMessageEvent):
+        if not self.config.get("enable_personalization", False):
+            yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
+            return
+        yield event.plain_result("🎭 人格微调\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("人格参数")
+    async def cmd_persona_params(self, event: AstrMessageEvent):
+        yield event.plain_result("🎭 人格参数面板\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("人格重置")
+    async def cmd_persona_reset(self, event: AstrMessageEvent):
+        yield event.plain_result("🎭 人格参数已重置为默认值\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("知识库")
+    async def cmd_knowledge(self, event: AstrMessageEvent):
+        if not self.config.get("enable_personalization", False):
+            yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
+            return
+        yield event.plain_result("📚 知识库\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("知识添加")
+    async def cmd_knowledge_add(self, event: AstrMessageEvent):
+        yield event.plain_result("📚 知识添加\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("知识删除")
+    async def cmd_knowledge_remove(self, event: AstrMessageEvent):
+        yield event.plain_result("📚 知识删除\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("风格训练")
+    async def cmd_style(self, event: AstrMessageEvent):
+        if not self.config.get("enable_personalization", False):
+            yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
+            return
+        yield event.plain_result("💬 语言风格训练\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("风格快照")
+    async def cmd_style_snapshot(self, event: AstrMessageEvent):
+        yield event.plain_result("💬 风格快照管理\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("记忆库")
+    async def cmd_memory(self, event: AstrMessageEvent):
+        if not self.config.get("enable_personalization", False):
+            yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
+            return
+        yield event.plain_result("🧠 私人记忆库\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("记忆添加")
+    async def cmd_memory_add(self, event: AstrMessageEvent):
+        yield event.plain_result("🧠 记忆添加\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("记忆删除")
+    async def cmd_memory_remove(self, event: AstrMessageEvent):
+        yield event.plain_result("🧠 记忆删除\n功能开发中，敬请期待 v2.17 正式版。")
+
+    @filter.command("个性化导出")
+    async def cmd_personalization_export(self, event: AstrMessageEvent):
+        yield event.plain_result("📤 个性化数据导出\n功能开发中，敬请期待 v2.17 正式版。")
 
     @filter.command("纪念日")
     async def cmd_anniversary(self, event: AstrMessageEvent):

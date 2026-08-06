@@ -4,3 +4,5 @@ __pycache__/
 venv/
 *.egg-info/
 .gitignore.bak
+data/personalization/
+README - 副本*

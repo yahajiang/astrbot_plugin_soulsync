@@ -693,5 +693,91 @@
     "hint": "管理员可用 /全局图片模式 切换；开启后所有信息展示命令均以图片输出",
     "type": "bool",
     "default": false
+  },
+
+  "_section_personalization": {
+    "description": "═══ 个性化训练 (Personalization Trainer) ═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "enable_personalization": {
+    "description": "启用个性化训练（总开关）",
+    "hint": "开启后角色可根据用户互动逐步调整人格、学习知识、模仿语言风格、记住私人记忆。关闭则所有行为与v2.16一致",
+    "type": "bool",
+    "default": false
+  },
+  "persona_implicit_training": {
+    "description": "隐式人格训练",
+    "hint": "开启后，角色会根据用户的正负面反馈词自动微调人格参数",
+    "type": "bool",
+    "default": true
+  },
+  "persona_explicit_panel": {
+    "description": "人格参数面板",
+    "hint": "开启后用户可通过 /人格微调 命令查看和调整20个人格参数",
+    "type": "bool",
+    "default": true
+  },
+  "persona_stability_enabled": {
+    "description": "人格稳定化",
+    "hint": "开启后，人格参数随训练轮数增加而趋于稳定，不易被后续对话改变",
+    "type": "bool",
+    "default": true
+  },
+  "knowledge_enabled": {
+    "description": "启用知识库",
+    "hint": "开启后，角色可记录用户分享的个人信息、兴趣、人物关系等知识",
+    "type": "bool",
+    "default": true
+  },
+  "knowledge_auto_capture": {
+    "description": "情景捕捉",
+    "hint": "开启后，角色自动从对话中捕捉用户提及的关键信息并写入知识库",
+    "type": "bool",
+    "default": true
+  },
+  "knowledge_max_tokens_per_turn": {
+    "description": "知识库单轮注入上限（token）",
+    "type": "int",
+    "default": 150,
+    "slider": {"min": 50, "max": 500, "step": 10}
+  },
+  "style_training_enabled": {
+    "description": "启用语言风格训练",
+    "hint": "开启后，角色会学习用户的语言特征并逐步融入表达方式",
+    "type": "bool",
+    "default": true
+  },
+  "style_collection_turns": {
+    "description": "风格采集期轮数",
+    "type": "int",
+    "default": 100,
+    "slider": {"min": 20, "max": 500, "step": 10}
+  },
+  "style_adoption_turns": {
+    "description": "风格模仿期轮数",
+    "type": "int",
+    "default": 300,
+    "slider": {"min": 50, "max": 1000, "step": 10}
+  },
+  "private_memory_enabled": {
+    "description": "启用私人记忆",
+    "hint": "开启后，用户可记录私人记忆，角色会在合适场景引用",
+    "type": "bool",
+    "default": true
+  },
+  "private_memory_proactive_chance": {
+    "description": "主动回忆概率",
+    "hint": "每轮对话角色主动提及私人记忆的概率（0~1）",
+    "type": "float",
+    "default": 0.08,
+    "slider": {"min": 0.0, "max": 0.5, "step": 0.01}
+  },
+  "private_memory_token_budget": {
+    "description": "私人记忆单轮注入上限（token）",
+    "type": "int",
+    "default": 120,
+    "slider": {"min": 30, "max": 400, "step": 10}
   }
 }
