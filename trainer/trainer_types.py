@@ -32,6 +32,7 @@ class PersonaParams:
     milestone_sensitivity: float = 1.0   # 0.5~2.0
     stability: float = 0.0               # 0~100
     total_training_turns: int = 0
+    locked: bool = False
 
     last_updated: str = ""
 

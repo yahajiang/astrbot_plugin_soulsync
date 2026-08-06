@@ -520,6 +520,16 @@ class SoulSyncPro(Star):
             return error_response(str(e))
 
     # ═══════════════════════════════════════════════════════════════
+    #  个性化训练辅助方法
+    # ═══════════════════════════════════════════════════════════════
+
+    def _get_orchestrator(self, user_id: str):
+        if user_id not in self.trainer_orchestrators:
+            from .trainer.trainer_orchestrator import PersonalizationOrchestrator
+            self.trainer_orchestrators[user_id] = PersonalizationOrchestrator(user_id, self.trainer_storage)
+        return self.trainer_orchestrators[user_id]
+
+    # ═══════════════════════════════════════════════════════════════
     #  用户命令
     # ═══════════════════════════════════════════════════════════════
 
@@ -726,15 +736,111 @@ class SoulSyncPro(Star):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
             return
-        yield event.plain_result("🎭 人格微调\n功能开发中，敬请期待 v2.17 正式版。")
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        params = orch.get_persona()
+        from .trainer.persona.persona_injector import PersonaInjector
+        ctx = PersonaInjector().generate(params)
+        lines = ["🎭 人格微调面板", "━" * 22,
+                  f"训练阶段：{['探索期','成长期','定型期','锁定态'][min(3, int(params.stability/30))]}",
+                  f"稳定度：{params.stability:.0f}% · 累计训练：{params.total_training_turns}轮",
+                  f"锁定状态：{'🔒 已锁定' if params.locked else '🔓 未锁定'}", "",
+                  "▸ 情感倾向",
+                  f"  快乐基线 {params.joy_baseline:+.0f} · 悲伤敏感 {params.sadness_sensitivity:.1f}x",
+                  f"  愤怒门槛 {params.anger_threshold:.1f}x · 信任基线 {params.trust_baseline:+.0f}",
+                  f"  期待增长 {params.expectation_growth:.1f}x", "",
+                  "▸ 行为模式",
+                  f"  话题主动性：{params.proactive_topic} · 吃醋敏感：{params.jealousy_threshold}",
+                  f"  分歧处理：{params.conflict_style} · 安慰风格：{params.support_style}", "",
+                  "▸ 表达风格",
+                  f"  吐槽频率：{params.tequila_rate:.0f}% · 撒娇频率：{params.sajiao_rate:.0f}%",
+                  f"  情感直白度：{params.emotional_express:.0f}% · 幽默风格：{params.humor_tone}",
+                  f"  回复长度偏好：{params.length_preference}", "",
+                  "▸ 记忆偏好",
+                  f"  记仇系数：{params.grudge_coefficient:.1f}x · 浪漫回忆权重：{params.romantic_memory_weight:.1f}x",
+                  f"  遗忘速度：{params.forget_speed:.1f}x · 里程碑重视度：{params.milestone_sensitivity:.1f}x", "",
+                  "💡 /人格参数 <名称> <值> 调整参数 · /人格重置 重置为默认",
+                  "💡 /人格锁定 · /人格解锁"]
+        yield event.plain_result("\n".join(lines))
 
     @filter.command("人格参数")
     async def cmd_persona_params(self, event: AstrMessageEvent):
-        yield event.plain_result("🎭 人格参数面板\n功能开发中，敬请期待 v2.17 正式版。")
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        params = orch.get_persona()
+        from .trainer.persona.persona_params import PARAM_META
+        parts = event.message_str.split()
+        if len(parts) >= 3:
+            name, val = parts[1], parts[2]
+            meta = PARAM_META.get(name)
+            if not meta:
+                yield event.plain_result(f"❌ 未知参数：{name}，可用参数：{'、'.join(PARAM_META.keys())}")
+                return
+            if params.locked:
+                yield event.plain_result("🔒 人格已锁定，无法修改参数")
+                return
+            try:
+                if meta["type"] == "float":
+                    v = float(val)
+                    if "min" in meta: v = max(meta["min"], v)
+                    if "max" in meta: v = min(meta["max"], v)
+                    setattr(params, name, round(v, 2))
+                elif meta["type"] == "int":
+                    v = int(val)
+                    if "min" in meta: v = max(meta["min"], v)
+                    if "max" in meta: v = min(meta["max"], v)
+                    setattr(params, name, v)
+                elif meta["type"] == "str":
+                    options = meta.get("options", [])
+                    if val not in options and options:
+                        yield event.plain_result(f"❌ {name} 可选值：{'/'.join(options)}")
+                        return
+                    setattr(params, name, val)
+                orch.save_all()
+                yield event.plain_result(f"✅ 已设置 {meta['label']} = {val}")
+            except ValueError:
+                yield event.plain_result("❌ 参数值格式错误")
+            return
+        lines = ["🎭 人格参数列表", "━" * 22]
+        for name, meta in PARAM_META.items():
+            cur = getattr(params, name, "?")
+            val_range = ""
+            if "min" in meta and "max" in meta:
+                val_range = f" [{meta['min']}~{meta['max']}]"
+            elif "options" in meta:
+                val_range = f" {'/'.join(meta['options'])}"
+            lines.append(f"  {meta['label']}: {cur}{val_range}")
+        lines.append("")
+        lines.append("💡 /人格参数 <名称> <值> 调整参数")
+        yield event.plain_result("\n".join(lines))
 
     @filter.command("人格重置")
     async def cmd_persona_reset(self, event: AstrMessageEvent):
-        yield event.plain_result("🎭 人格参数已重置为默认值\n功能开发中，敬请期待 v2.17 正式版。")
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        from .trainer.persona.persona_modifier import PersonaModifier
+        modifier = PersonaModifier(self.trainer_storage, uid)
+        modifier.reset()
+        orch._persona_params = None
+        yield event.plain_result("✅ 人格参数已重置为默认值")
+
+    @filter.command("人格锁定")
+    async def cmd_persona_lock(self, event: AstrMessageEvent):
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        params = orch.get_persona()
+        if params.locked:
+            params.locked = False
+            orch.save_all()
+            yield event.plain_result("🔓 人格已解锁")
+        else:
+            params.locked = True
+            orch.save_all()
+            yield event.plain_result("🔒 人格已锁定，参数不再变化")
 
     @filter.command("知识库")
     async def cmd_knowledge(self, event: AstrMessageEvent):

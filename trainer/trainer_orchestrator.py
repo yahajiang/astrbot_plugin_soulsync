@@ -1,16 +1,20 @@
-"""SoulSync - 个性化训练 Orchestrator 骨架（四模块调度器）"""
+"""SoulSync - 个性化训练 Orchestrator（四模块调度器）"""
 
 from __future__ import annotations
 
+import time
 from typing import Any, Dict, Optional
 
 from .trainer_types import PersonaParams, KnowledgeBase, StyleState, PrivateMemoryStore
+from .trainer_storage import TrainerStorage
+from .persona.persona_modifier import PersonaModifier
+from .persona.persona_trainer import PersonaTrainer
+from .persona.persona_stability import PersonaStability
+from .persona.persona_injector import PersonaInjector
 
 
 class PersonalizationOrchestrator:
-    """四模块调度器：每轮对话时处理各模块，生成 LLM 注入块"""
-
-    def __init__(self, user_id: str, storage):
+    def __init__(self, user_id: str, storage: TrainerStorage):
         self.user_id = user_id
         self.storage = storage
         self._cached_results: Dict[str, Any] = {}
@@ -18,12 +22,14 @@ class PersonalizationOrchestrator:
         self._knowledge: Optional[KnowledgeBase] = None
         self._style: Optional[StyleState] = None
         self._memory: Optional[PrivateMemoryStore] = None
+        self._modifier = PersonaModifier(storage, user_id)
+        self._trainer = PersonaTrainer(self._modifier)
+        self._stability = PersonaStability()
+        self._injector = PersonaInjector()
 
-    # ── 懒加载四子模块 ──
     def get_persona(self) -> PersonaParams:
         if self._persona_params is None:
-            data = self.storage.load(self.user_id, "persona.json")
-            self._persona_params = PersonaParams.from_dict(data) if data else PersonaParams()
+            self._persona_params = self._modifier.get()
         return self._persona_params
 
     def get_knowledge(self) -> KnowledgeBase:
@@ -44,25 +50,27 @@ class PersonalizationOrchestrator:
             self._memory = PrivateMemoryStore.from_dict(data) if data else PrivateMemoryStore()
         return self._memory
 
-    # ── 每轮对话处理 ──
     def on_each_turn(self, message: str, context: dict) -> None:
-        """每轮对话时调用"""
-        pass
+        params = self.get_persona()
+        self._stability.decay_params(params)
+        self._trainer.check_feedback(message, params)
+        self._stability.update_stability(params)
+        self._cached_results["persona"] = params
 
-    # ── 生成 LLM 注入块 ──
     def get_full_injection(self) -> str:
-        """生成完整 LLM 注入上下文"""
-        return ""
+        parts = []
+        if self._persona_params:
+            persona = self._injector.generate(self._persona_params)
+            if persona:
+                parts.append(persona)
+        return "\n\n".join(parts)
 
-    # ── 记忆写入回调 ──
     def on_memory_write(self, event: dict) -> None:
-        """长期记忆写入时回调"""
         pass
 
-    # ── 持久化 ──
     def save_all(self):
         if self._persona_params:
-            self.storage.save(self.user_id, "persona.json", self._persona_params.to_dict())
+            self._modifier.save(self._persona_params)
         if self._knowledge:
             self.storage.save(self.user_id, "knowledge.json", self._knowledge.to_dict())
         if self._style:
