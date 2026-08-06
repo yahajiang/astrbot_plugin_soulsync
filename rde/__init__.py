@@ -7,6 +7,13 @@ from .narrative.stage_definitions import (
 from .narrative.stage_injector import StageInjector
 from .narrative.address_system import AddressSystem
 from .narrative.transition_handler import TransitionHandler, TransitionEvent
+from .crisis import (
+    CrisisEvent,
+    CRISIS_EVENTS,
+    CRISIS_TYPES,
+    CRISIS_TYPE_LABELS,
+    ResolutionResult,
+)
 from .rde_orchestrator import RDEOrchestrator
 
 __all__ = [
@@ -18,5 +25,10 @@ __all__ = [
     "AddressSystem",
     "TransitionHandler",
     "TransitionEvent",
+    "CrisisEvent",
+    "CRISIS_EVENTS",
+    "CRISIS_TYPES",
+    "CRISIS_TYPE_LABELS",
+    "ResolutionResult",
     "RDEOrchestrator",
 ]

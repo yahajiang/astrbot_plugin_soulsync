@@ -39,7 +39,7 @@ def ok(name):
 
 def fresh():
     import shutil
-    d = DATA / UID
+    d = DATA / "personalization" / UID
     if d.exists():
         shutil.rmtree(d)
     return PersonalizationOrchestrator(UID, TrainerStorage(str(DATA)))
