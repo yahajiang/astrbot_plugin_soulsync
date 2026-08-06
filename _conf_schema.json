@@ -1007,6 +1007,52 @@
     "type": "bool",
     "default": true
   },
+  "tpd_skip_enabled": {
+    "description": "时间跳跃系统开关",
+    "hint": "时间跳跃叙事：告别/回归/被动离开检测，跳跃期间冻结冷落惩罚",
+    "type": "bool",
+    "default": true
+  },
+  "tpd_skip_max_days": {
+    "description": "单次最大跳跃天数",
+    "hint": "单次时间跳跃的天数上限（超过按此值截断）",
+    "type": "int",
+    "default": 365,
+    "slider": {
+      "min": 7,
+      "max": 365,
+      "step": 1
+    }
+  },
+  "tpd_skip_freeze_penalty": {
+    "description": "跳跃期间冻结冷落惩罚",
+    "hint": "约定离开期间不累积每日冷落惩罚，回归时重新激活",
+    "type": "bool",
+    "default": true
+  },
+  "tpd_skip_emotion_drift": {
+    "description": "跳跃期间情感漂移",
+    "hint": "约定 +5 期待；长跳（≥14 天）按 forget_speed 自然衰减信任/喜悦",
+    "type": "bool",
+    "default": true
+  },
+  "tpd_passive_gap_threshold_hours": {
+    "description": "被动离开检测阈值（小时）",
+    "hint": "无告别的离开超过此时长才触发空白期反应（分级叙事）",
+    "type": "int",
+    "default": 6,
+    "slider": {
+      "min": 1,
+      "max": 72,
+      "step": 1
+    }
+  },
+  "tpd_return_narrative_enabled": {
+    "description": "回归叙事开关",
+    "hint": "跳跃回归时生成重逢叙事（含纪念日迟到庆祝）",
+    "type": "bool",
+    "default": true
+  },
   "_section_stats": {
     "description": "═══ 情感数据统计 ═══",
     "type": "string",

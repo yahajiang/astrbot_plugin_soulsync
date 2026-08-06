@@ -39,7 +39,21 @@ from .countdown_narrator import (
     stage_of,
 )
 from .countdown_injector import build_countdown_info
-from .tpd_orchestrator import TPDOrchestrator, ENV_CONFIG_DEFAULTS
+from .skip_parser import SkipCommand, VAGUE_SKIP_DAYS, parse_skip_command
+from .skip_executor import (
+    DRIFT_PER_30_DAYS,
+    MAX_SKIP_DAYS,
+    PROMISE_ANTICIPATION,
+    SkipExecutor,
+)
+from .gap_detector import THRESHOLD_HOURS_DEFAULT, GapInfo, detect_passive_gap
+from .farewell_narrator import generate_farewell_context
+from .return_narrator import generate_return_context, generate_return_early_context
+from .tpd_orchestrator import (
+    ENV_CONFIG_DEFAULTS,
+    TIMESKIP_CONFIG_DEFAULTS,
+    TPDOrchestrator,
+)
 
 __all__ = [
     "MOON_PHASES",
@@ -67,6 +81,20 @@ __all__ = [
     "stage_hint",
     "stage_of",
     "build_countdown_info",
+    "SkipCommand",
+    "VAGUE_SKIP_DAYS",
+    "parse_skip_command",
+    "DRIFT_PER_30_DAYS",
+    "MAX_SKIP_DAYS",
+    "PROMISE_ANTICIPATION",
+    "SkipExecutor",
+    "THRESHOLD_HOURS_DEFAULT",
+    "GapInfo",
+    "detect_passive_gap",
+    "generate_farewell_context",
+    "generate_return_context",
+    "generate_return_early_context",
     "TPDOrchestrator",
     "ENV_CONFIG_DEFAULTS",
+    "TIMESKIP_CONFIG_DEFAULTS",
 ]

@@ -4,20 +4,27 @@
 - environment : 季节天气联动（Phase A 完成）
 - countdown   : 倒计时事件（Phase B 接入）
 - timeskip    : 时间跳跃叙事（Phase C 接入）
-
-Phase A 只完成 environment 链路；countdown/timeskip 留有占位入口。
 """
 
 from __future__ import annotations
 
 import datetime
+import time
 from typing import Dict, Optional
 
 from .countdown_calculator import CountdownCalculator
 from .countdown_injector import build_countdown_info
 from .countdown_narrator import stage_of as stage_name_of
 from .env_injector import build_environment_info
+from .farewell_narrator import generate_farewell_context
+from .gap_detector import detect_passive_gap
 from .mood_mapper import mood_deltas, temperature_band
+from .return_narrator import (
+    generate_return_context,
+    generate_return_early_context,
+)
+from .skip_executor import SkipExecutor
+from .skip_parser import parse_skip_command
 from .weather_provider import WeatherProvider
 
 # 环境子系统配置默认值（Phase A 注册的 11 键）
@@ -34,6 +41,19 @@ ENV_CONFIG_DEFAULTS: Dict = {
     "tpd_moonphase_mood_strength": 0.1,
     "tpd_aqi_enabled": False,
 }
+
+# 时间跳跃子系统配置默认值（Phase C 注册的 6 键）
+TIMESKIP_CONFIG_DEFAULTS: Dict = {
+    "tpd_skip_enabled": True,
+    "tpd_skip_max_days": 365,
+    "tpd_skip_freeze_penalty": True,
+    "tpd_skip_emotion_drift": True,
+    "tpd_passive_gap_threshold_hours": 6,
+    "tpd_return_narrative_enabled": True,
+}
+
+# 告别/回归叙事独占本轮的 action
+_EXCLUSIVE_ACTIONS = ("farewell", "return_early", "return")
 
 
 def _cfg(config: Optional[dict], key: str, default):
@@ -54,6 +74,7 @@ class TPDOrchestrator:
         self.sources = sources or {}
         self.weather_provider = WeatherProvider(data_dir, self.config)
         self.countdown_calculator = CountdownCalculator(data_dir, self.sources)
+        self.skip_executor = SkipExecutor(data_dir)
         self._environment: Optional[dict] = None
         self._environment_deltas: Optional[Dict[str, float]] = None
         self._environment_info: str = ""
@@ -112,6 +133,24 @@ class TPDOrchestrator:
             )
         result["countdown"] = self.process_countdown(uid, text, ctx)
         result["timeskip"] = self.process_timeskip(uid, text, ctx)
+        ts = result["timeskip"]
+        if ts:
+            action = ts.get("action", "")
+            if action in _EXCLUSIVE_ACTIONS:
+                # 告别/回归叙事独占本轮（doc 6.3）
+                result["inject_text"] = ts["inject_text"]
+            elif action == "gap":
+                gap_text = ts["inject_text"]
+                result["inject_text"] = (
+                    (result["inject_text"] + "\n" + gap_text).strip()
+                    if result["inject_text"] else gap_text
+                )
+            td = ts.get("emotion_deltas") or {}
+            if td:
+                merged = dict(result.get("mood_deltas") or {})
+                for k, v in td.items():
+                    merged[k] = merged.get(k, 0.0) + v
+                result["mood_deltas"] = merged
         return result
 
     # ── 子系统：倒计时（Phase B） ────────────────────────
@@ -148,10 +187,82 @@ class TPDOrchestrator:
         return {"event": event.as_dict(), "inject_text": inject,
                 "stage": stage_name_of(event.days_left)[0]}
 
-    # ── 子系统占位（Phase C 实现） ───────────────────────
+    # ── 子系统：时间跳跃（Phase C） ─────────────────────
     def process_timeskip(self, uid: str, text: str = "", ctx: Optional[dict] = None) -> Optional[dict]:
-        """时间跳跃处理（Phase C 接入）"""
-        return None
+        """时间跳跃处理（Phase C，doc 6.3）：
+
+        优先级：跳跃指令（告别/提前回归）→ 待回归 → 被动离开检测。
+        每轮更新 last_active_ts（供被动离开检测）。tpd_skip_enabled=False 时全空。
+        """
+        if not _cfg(self.config, "tpd_enabled", False):
+            return None
+        if not _cfg(self.config, "tpd_skip_enabled", True):
+            return None
+        now = time.time()
+        state = self.skip_executor.get_state(uid)
+        prev_offset = state["offset_days"]
+        cmd = parse_skip_command(text) if text else None
+        max_days = _cfg(self.config, "tpd_skip_max_days", 365)
+        freeze = _cfg(self.config, "tpd_skip_freeze_penalty", True)
+        drift = _cfg(self.config, "tpd_skip_emotion_drift", True)
+        ann_mgr = self.sources.get("anniversaries")
+        if not (isinstance(ann_mgr, object) and hasattr(ann_mgr, "get_countdown_sources")):
+            ann_mgr = None
+
+        result = None
+        if cmd is not None:
+            if cmd.kind == "return_early":
+                self.skip_executor.execute_skip(uid, cmd, now, max_days, freeze, drift, ann_mgr)
+                self.skip_executor.consume_return(uid)
+                if _cfg(self.config, "tpd_return_narrative_enabled", True):
+                    inject = generate_return_early_context(prev_offset)
+                else:
+                    inject = ""
+                result = {"action": "return_early", "skip_days": 0,
+                          "inject_text": inject, "emotion_deltas": {},
+                          "memory_event": f"用户提前回归（原跳跃{prev_offset}天）"}
+            else:
+                res = self.skip_executor.execute_skip(uid, cmd, now, max_days, freeze, drift, ann_mgr)
+                inject = generate_farewell_context(cmd, res["target_date"],
+                                                   res["late_celebrations"])
+                result = {"action": "farewell", "skip_days": res["skip_days"],
+                          "target_date": res["target_date"], "inject_text": inject,
+                          "emotion_deltas": res["emotion_deltas"],
+                          "frozen_until": res["frozen_until"],
+                          "late_celebrations": res["late_celebrations"],
+                          "memory_event": f"时间跳跃{res['skip_days']}天（{cmd.reason or '告别'}）"}
+        elif state["pending_return"]:
+            ret = self.skip_executor.consume_return(uid)
+            if _cfg(self.config, "tpd_return_narrative_enabled", True):
+                inject = generate_return_context(ret["last_days"], ret["last_target"],
+                                                 ret["late_celebrations"])
+            else:
+                inject = ""
+            result = {"action": "return", "skip_days": ret["last_days"],
+                      "inject_text": inject, "emotion_deltas": {},
+                      "late_celebrations": ret["late_celebrations"],
+                      "memory_event": f"跳跃回归（{ret['last_days']}天）"}
+        else:
+            th = _cfg(self.config, "tpd_passive_gap_threshold_hours", 6)
+            stage = ctx.get("stage") if ctx else None
+            gap = detect_passive_gap(now, state["last_active_ts"], th, stage)
+            if gap is not None:
+                result = {"action": "gap", "gap_hours": gap.gap_hours,
+                          "level": gap.level, "label": gap.label,
+                          "inject_text": gap.inject_text, "emotion_deltas": {}}
+
+        # 每轮更新活跃时间戳（被动离开检测依据）
+        state["last_active_ts"] = now
+        self.skip_executor.save_uid(uid)
+
+        # 时间跳跃日志写入长期记忆（C.7；memory 源缺失时静默跳过）
+        mem = self.sources.get("memory")
+        if result and result.get("memory_event") and mem is not None and hasattr(mem, "add_event"):
+            try:
+                mem.add_event(uid, {"description": result["memory_event"], "message": ""})
+            except Exception:
+                pass
+        return result
 
     # ── WebUI 面板数据（Phase E 使用） ─────────────────────
     def environment_panel_data(self) -> dict:
@@ -174,4 +285,11 @@ class TPDOrchestrator:
         return {
             "enabled": _cfg(self.config, "tpd_countdown_enabled", True),
             "events": [e.as_dict() for e in events[:10]],
+        }
+
+    def skip_panel_data(self, uid: str) -> dict:
+        """跳跃面板：当前偏移/冻结/跳跃历史"""
+        return {
+            "enabled": _cfg(self.config, "tpd_skip_enabled", True),
+            "status": self.skip_executor.get_skip_status(uid),
         }

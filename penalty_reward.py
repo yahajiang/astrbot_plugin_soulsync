@@ -92,6 +92,9 @@ class BehaviorProfile:
     cold_days: int = 0                            # 累计冷落天数（每日结算递增）
     penalty_last_date: str = ""                   # 上次结算惩罚的日期（防同日重复）
 
+    # 冷落惩罚冻结（v2.19 TPD 时间跳跃：约定离开期间不累积冷落惩罚）
+    penalty_frozen_until: float = 0.0             # 冻结截止时间戳（time.time()）；0 表示未冻结
+
     # 已达成的里程碑
     achieved_milestones: List[str] = field(default_factory=list)
 
@@ -278,6 +281,9 @@ class PenaltyRewardEngine:
         penalty_last_date 防同日重复结算；无互动日期记录的老档案不追溯。
         """
         if not self.enable_cold_penalty:
+            return 0.0, 0.0, None
+        # 时间跳跃冻结（v2.19 TPD）：约定离开期间不累积冷落惩罚
+        if bp.penalty_frozen_until and time.time() < bp.penalty_frozen_until:
             return 0.0, 0.0, None
         if not bp.last_active_date:
             bp.penalty_last_date = today
