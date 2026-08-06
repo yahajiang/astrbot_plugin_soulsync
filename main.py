@@ -1247,7 +1247,11 @@ class SoulSyncPro(Star):
             lines.append(f"  {meta['label']}: {cur}{val_range}")
         lines.append("")
         lines.append("💡 /人格参数 <名称> <值> 调整参数")
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "🎭 人格参数列表", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("人格重置")
     async def cmd_persona_reset(self, event: AstrMessageEvent):
@@ -1416,7 +1420,11 @@ class SoulSyncPro(Star):
         lines.append("")
         lines.append("💡 /风格快照 保存 [名称] · /风格快照 恢复 <名称>")
         import time
-        yield event.plain_result("\n".join(lines))
+        path = self._try_render_image(event, "💬 风格快照管理", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("风格锁定")
     async def cmd_style_lock(self, event: AstrMessageEvent):
