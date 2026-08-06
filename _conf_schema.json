@@ -870,6 +870,98 @@
     "type": "string",
     "default": "CN"
   },
+  "_section_tpd": {
+    "description": "═══ 时间感知深化（TPD）═══",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "tpd_enabled": {
+    "description": "TPD 总开关",
+    "hint": "时间感知深化系统总开关，开启后按各子系统开关分别生效",
+    "type": "bool",
+    "default": false
+  },
+  "tpd_weather_enabled": {
+    "description": "天气联动开关",
+    "hint": "季节天气联动：获取天气/温度/节气/月相，影响角色心情倾向与话题",
+    "type": "bool",
+    "default": true
+  },
+  "tpd_weather_api_provider": {
+    "description": "天气 API 提供商",
+    "hint": "hefeng(和风) / openweather / none(不配置时用本地节气推算) / 留空自动使用本地推算",
+    "type": "string",
+    "default": ""
+  },
+  "tpd_weather_api_key": {
+    "description": "天气 API 密钥",
+    "hint": "对应提供商的 API Key，留空则完全走本地推算（无需网络）",
+    "type": "string",
+    "default": ""
+  },
+  "tpd_weather_api_city": {
+    "description": "天气 API 默认城市",
+    "hint": "天气查询城市，如：北京 / Shanghai（和风需 LocationID 或城市拼音）",
+    "type": "string",
+    "default": ""
+  },
+  "tpd_weather_cache_minutes": {
+    "description": "天气缓存时间（分钟）",
+    "hint": "缓存时间内天气不重复请求 API，减少调用次数",
+    "type": "int",
+    "default": 60,
+    "slider": {
+      "min": 5,
+      "max": 1440,
+      "step": 5
+    }
+  },
+  "tpd_weather_mood_strength": {
+    "description": "天气心情影响强度",
+    "hint": "天气对 8 维情感基础倾向的影响强度（0~1，默认 0.3；最大 1.0，防止角色性格失真）",
+    "type": "float",
+    "default": 0.3,
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+    }
+  },
+  "tpd_season_mood_strength": {
+    "description": "季节心情影响强度",
+    "hint": "季节（节气判定）对 8 维情感基础倾向的影响强度",
+    "type": "float",
+    "default": 0.2,
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+    }
+  },
+  "tpd_moonphase_enabled": {
+    "description": "月相影响开关",
+    "hint": "月相（8 阶段，纯数学计算）对情感倾向的细微影响",
+    "type": "bool",
+    "default": true
+  },
+  "tpd_moonphase_mood_strength": {
+    "description": "月相心情影响强度",
+    "hint": "月相对 8 维情感基础倾向的影响强度",
+    "type": "float",
+    "default": 0.1,
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+    }
+  },
+  "tpd_aqi_enabled": {
+    "description": "空气质量影响开关",
+    "hint": "空气质量（AQI）进入环境信息（需 API 提供，本地推算无 AQI；默认关闭）",
+    "type": "bool",
+    "default": false
+  },
   "_section_stats": {
     "description": "═══ 情感数据统计 ═══",
     "type": "string",
