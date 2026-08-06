@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v2.16 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v2.19 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -26,7 +26,18 @@ from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star
 from astrbot.api.web import error_response, json_response, request
-from astrbot.core.agent.message import TextPart
+
+try:
+    from astrbot.core.agent.message import TextPart
+except ImportError:
+    try:
+        from astrbot.api.message import TextPart
+    except ImportError:
+        class TextPart:
+            def __init__(self, text="", **kw):
+                self.text = text
+            def mark_as_temp(self):
+                return self
 
 from .emotion_engine import (
     EmotionEngine, EmotionProfile, STAGES, NEGATIVE_STAGES,
