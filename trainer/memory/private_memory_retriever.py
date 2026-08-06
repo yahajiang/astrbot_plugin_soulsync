@@ -1,4 +1,5 @@
-"""SoulSync - 私人记忆：检索引擎"""
+"""SoulSync - 私人记忆：检索引擎（排序/预算裁剪/格式化）"""
+import time
 from ..trainer_types import PrivateMemoryStore
 
 
@@ -6,28 +7,51 @@ class PrivateMemoryRetriever:
     def retrieve(self, store: PrivateMemoryStore, context: dict = None, max_items: int = 5, budget: int = 120) -> list:
         if not store:
             return []
-        results = []
-        seen = set()
-        for mem_id in store.starred:
-            mem = self._find_by_id(store, mem_id)
-            if mem:
-                results.append(mem)
-                seen.add(mem_id)
-        for lst in [store.text, store.emotional, store.promises, store.images]:
-            for mem in lst:
-                if mem.id not in seen and not mem.sensitive:
-                    results.append(mem)
-                    seen.add(mem.id)
-                    if len(results) >= max_items:
-                        break
-        return results[:max_items]
+        all_mems = []
+        for lst in [store.text, store.images, store.promises, store.emotional]:
+            all_mems.extend(lst)
+
+        scored = []
+        now = time.time()
+        today = time.strftime("%Y-%m-%d")
+
+        for mem in all_mems:
+            if mem.sensitive and not (context and context.get("exact_match")):
+                continue
+            score = 0
+            if mem.id in store.starred:
+                score += 1000
+            if mem.date == today:
+                score += 500
+            if context:
+                kw = context.get("keywords", "").lower()
+                if kw and kw in mem.content.lower():
+                    score += 200
+                if kw and any(kw in t.lower() for t in mem.tags):
+                    score += 100
+            score += mem.importance * 10
+            score -= mem.access_count * 2
+            if mem.last_accessed > 0:
+                days_since = (now - mem.last_accessed) / 86400
+                score += max(0, 30 - days_since)
+            scored.append((score, mem))
+
+        scored.sort(key=lambda x: -x[0])
+        results = [mem for _, mem in scored[:max_items]]
+        for mem in results:
+            mem.access_count += 1
+            mem.last_accessed = now
+        return results
 
     def format_for_llm(self, memories: list) -> str:
         if not memories:
             return ""
         lines = ["[私人记忆·相关片段]"]
         for mem in memories[:3]:
-            lines.append(f"  {mem.date} {mem.content}")
+            star = "⭐ " if getattr(mem, 'id', '') in getattr(mem, '_starred_ids', []) else ""
+            tag_str = f" [{', '.join(mem.tags[:3])}]" if mem.tags else ""
+            mood_str = f" ({mem.mood})" if mem.mood else ""
+            lines.append(f"  {star}{mem.date}: {mem.content[:60]}{mood_str}{tag_str}")
         return "\n".join(lines)
 
     @staticmethod

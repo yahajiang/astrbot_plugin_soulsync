@@ -17,6 +17,9 @@ from .knowledge.knowledge_injector import KnowledgeInjector
 from .style.style_analyzer import StyleAnalyzer
 from .style.style_trainer import StyleTrainer
 from .style.style_injector import StyleInjector
+from .memory.private_memory_manager import PrivateMemoryManager
+from .memory.private_memory_retriever import PrivateMemoryRetriever
+from .memory.private_memory_auditor import MemoryAuditor
 
 
 class PersonalizationOrchestrator:
@@ -38,6 +41,9 @@ class PersonalizationOrchestrator:
         self._style_analyzer = StyleAnalyzer()
         self._style_trainer = StyleTrainer(storage, user_id)
         self._style_injector = StyleInjector()
+        self._memory_mgr = PrivateMemoryManager(storage, user_id)
+        self._memory_retriever = PrivateMemoryRetriever()
+        self._memory_auditor = MemoryAuditor(storage, user_id)
 
     def get_persona(self) -> PersonaParams:
         if self._persona_params is None:
@@ -80,6 +86,11 @@ class PersonalizationOrchestrator:
             incr = self._style_analyzer.analyze_increment(message, style_state.profile)
             self._style_trainer.update_profile(style_state, incr)
         self._cached_results["style"] = style_state
+        mem_store = self.get_private_memory()
+        if mem_store:
+            context_keywords = message[:50] if message else ""
+            memories = self._memory_retriever.retrieve(mem_store, {"keywords": context_keywords}, max_items=3)
+            self._cached_results["memories"] = memories
 
     def get_full_injection(self) -> str:
         parts = []
@@ -95,6 +106,11 @@ class PersonalizationOrchestrator:
             style = self._style_injector.generate(self._style)
             if style:
                 parts.append(style)
+        memories = self._cached_results.get("memories")
+        if memories:
+            mem_text = self._memory_retriever.format_for_llm(memories)
+            if mem_text:
+                parts.append(mem_text)
         return "\n\n".join(parts)
 
     def on_memory_write(self, event: dict) -> None:

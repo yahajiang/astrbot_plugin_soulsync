@@ -992,15 +992,82 @@ class SoulSyncPro(Star):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
             return
-        yield event.plain_result("🧠 私人记忆库\n功能开发中，敬请期待 v2.17 正式版。")
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        store = orch.get_private_memory()
+        all_mems = orch._memory_mgr.all_memories(store)
+        if not all_mems:
+            yield event.plain_result("🧠 私人记忆库为空\n用 /记忆添加 <类型> <内容> 添加\n类型：text/image/promise/emotional")
+            return
+        type_labels = {"text": "文字", "image": "图片", "promise": "约定", "emotional": "情感"}
+        lines = ["🧠 私人记忆库", "━" * 22]
+        mems_by_type = {"text": [], "image": [], "promise": [], "emotional": []}
+        for m in all_mems:
+            mems_by_type.setdefault(m.type, []).append(m)
+        for t, label in type_labels.items():
+            items = mems_by_type.get(t, [])
+            star_count = sum(1 for m in items if m.id in store.starred)
+            cap = {"text": 500, "image": 200, "promise": 50, "emotional": 100}
+            lines.append(f"\n▸ {label} ({len(items)}/{cap.get(t, 500)}条{', ⭐' + str(star_count) if star_count else ''})")
+            for m in items[:3]:
+                star = "⭐ " if m.id in store.starred else ""
+                lines.append(f"  {star}{m.date}: {m.content[:50]}")
+            if len(items) > 3:
+                lines.append(f"  ... 还有{len(items) - 3}条")
+        lines.append("")
+        lines.append("💡 /记忆添加 <类型> <内容> · /记忆删除 <id> · /记忆星标 <id>")
+        yield event.plain_result("\n".join(lines))
 
     @filter.command("记忆添加")
     async def cmd_memory_add(self, event: AstrMessageEvent):
-        yield event.plain_result("🧠 记忆添加\n功能开发中，敬请期待 v2.17 正式版。")
+        parts = event.message_str.split(maxsplit=2)
+        if len(parts) < 3:
+            yield event.plain_result("用法：/记忆添加 <类型> <内容>\n类型：text/image/promise/emotional")
+            return
+        mem_type, content = parts[1], parts[2]
+        valid_types = ["text", "image", "promise", "emotional"]
+        if mem_type not in valid_types:
+            yield event.plain_result(f"❌ 类型必须为：{'/'.join(valid_types)}")
+            return
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        try:
+            mem = orch._memory_mgr.add(mem_type, content)
+            yield event.plain_result(f"✅ 已添加{mem_type}记忆：{content[:40]} (id: {mem.id})")
+        except ValueError as e:
+            yield event.plain_result(f"❌ {e}")
 
     @filter.command("记忆删除")
     async def cmd_memory_remove(self, event: AstrMessageEvent):
-        yield event.plain_result("🧠 记忆删除\n功能开发中，敬请期待 v2.17 正式版。")
+        parts = event.message_str.split()
+        if len(parts) < 2:
+            yield event.plain_result("用法：/记忆删除 <id>")
+            return
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        if orch._memory_mgr.remove(parts[1]):
+            orch._memory = None
+            yield event.plain_result(f"✅ 已删除记忆 {parts[1]}")
+        else:
+            yield event.plain_result(f"❌ 未找到记忆 {parts[1]}")
+
+    @filter.command("记忆星标")
+    async def cmd_memory_star(self, event: AstrMessageEvent):
+        parts = event.message_str.split()
+        if len(parts) < 2:
+            yield event.plain_result("用法：/记忆星标 <id>")
+            return
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        orch._memory_mgr.star(parts[1])
+        orch._memory = None
+        yield event.plain_result(f"⭐ 已星标记忆 {parts[1]}")
+
+    @filter.command("个性化导出")
 
     @filter.command("个性化导出")
     async def cmd_personalization_export(self, event: AstrMessageEvent):
