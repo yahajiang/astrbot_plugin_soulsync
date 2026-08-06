@@ -1,5 +1,12 @@
-"""SoulSync - 语言风格：LLM上下文注入"""
+"""SoulSync - 语言风格：LLM上下文注入（阶段差异化）"""
 from ..trainer_types import LanguageProfile, StyleState
+
+
+PHASE_DESC = {
+    "collection": "正在默默学习你的表达习惯，暂时保持原有风格",
+    "adoption": "逐渐融入你的语言特征，融合度{fusion_ratio:.0f}%，保留角色底色",
+    "fused": "已形成混合风格，融合度100%，角色表达自然贴合你的习惯",
+}
 
 
 class StyleInjector:
@@ -7,12 +14,12 @@ class StyleInjector:
         if not state or not state.profile:
             return ""
         p = state.profile
-        lines = ["[语言风格·用户习惯]"]
-        if state.phase == "collection":
-            lines.append("（正在学习用户的表达习惯，暂不改变角色语言风格）")
-        elif state.phase == "adoption":
-            lines.append(f"（融合度 {state.fusion_ratio:.0f}%，逐步融入用户语言特征）")
-        elif state.phase == "fused":
-            lines.append("（已形成混合风格，角色表达与用户习惯自然融合）")
-        lines.append(f"平均句长 {p.avg_length:.0f}字 · 正式度 {p.formality_score:.0%} · 直白度 {p.directness_score:.0%}")
+        phase_desc = PHASE_DESC.get(state.phase, "").format(fusion_ratio=state.fusion_ratio * 100)
+        lock_tag = " · 🔒 已锁定" if state.locked else ""
+        lines = [
+            "[语言风格·用户习惯]",
+            f"阶段：{state.phase} 融合度{state.fusion_ratio:.0%}{lock_tag}",
+            f"（{phase_desc}）",
+            f"平均句长{p.avg_length:.0f}字 · 正式度{p.formality_score:.0%} · 直白度{p.directness_score:.0%}",
+        ]
         return "\n".join(lines)

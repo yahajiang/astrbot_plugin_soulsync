@@ -918,11 +918,74 @@ class SoulSyncPro(Star):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
             return
-        yield event.plain_result("💬 语言风格训练\n功能开发中，敬请期待 v2.17 正式版。")
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        state = orch.get_style()
+        p = state.profile
+        if not p:
+            yield event.plain_result("💬 语言风格训练\n暂无数据，发送消息后自动采集。")
+            return
+        phase_labels = {"collection": "采集期", "adoption": "模仿期", "fused": "融合期"}
+        lock_tag = "🔒 已锁定" if state.locked else "🔓 未锁定"
+        lines = [
+            "💬 语言风格训练", "━" * 22,
+            f"状态：{phase_labels.get(state.phase, state.phase)} · 融合度 {state.fusion_ratio:.0%} · {lock_tag}",
+            f"总对话轮数：{p.total_turns} 轮",
+            "",
+            "▸ 语言特征",
+            f"  平均句长：{p.avg_length:.0f} 字",
+            f"  正式度：{p.formality_score:.0%} · 直白度：{p.directness_score:.0%}",
+            f"  英文混用率：{p.english_mix_rate:.1%}",
+            "",
+            "💡 /风格快照 管理快照 · /风格锁定 切换锁定",
+        ]
+        yield event.plain_result("\n".join(lines))
 
     @filter.command("风格快照")
     async def cmd_style_snapshot(self, event: AstrMessageEvent):
-        yield event.plain_result("💬 风格快照管理\n功能开发中，敬请期待 v2.17 正式版。")
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        state = orch.get_style()
+        from .trainer.style.style_snapshot import StyleSnapshotManager
+        snap_mgr = StyleSnapshotManager(self.trainer_storage, uid)
+        parts = event.message_str.split()
+        if len(parts) >= 2:
+            if parts[1] == "保存":
+                name = parts[2] if len(parts) >= 3 else ""
+                snap_mgr.save_snapshot(state, name)
+                orch._style = None
+                yield event.plain_result(f"✅ 已保存风格快照「{name or '未命名'}」")
+                return
+            elif parts[1] == "恢复" and len(parts) >= 3:
+                if snap_mgr.restore_snapshot(state, parts[2]):
+                    orch._style = None
+                    yield event.plain_result(f"✅ 已恢复快照「{parts[2]}」")
+                else:
+                    yield event.plain_result(f"❌ 未找到快照「{parts[2]}」")
+                return
+        lines = ["💬 风格快照管理", "━" * 22]
+        if not state.snapshots:
+            lines.append("暂无快照。")
+        else:
+            for i, snap in enumerate(state.snapshots, 1):
+                ts = time.strftime("%m-%d %H:%M", time.localtime(snap.created_ts)) if hasattr(snap, 'created_ts') else ""
+                lines.append(f"  {i}. {snap.name} {ts}")
+        lines.append("")
+        lines.append("💡 /风格快照 保存 [名称] · /风格快照 恢复 <名称>")
+        import time
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("风格锁定")
+    async def cmd_style_lock(self, event: AstrMessageEvent):
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        state = orch.get_style()
+        state.locked = not state.locked
+        orch.save_all()
+        yield event.plain_result("🔒 风格已锁定" if state.locked else "🔓 风格已解锁")
 
     @filter.command("记忆库")
     async def cmd_memory(self, event: AstrMessageEvent):

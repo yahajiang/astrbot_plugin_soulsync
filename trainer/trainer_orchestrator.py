@@ -14,6 +14,9 @@ from .persona.persona_injector import PersonaInjector
 from .knowledge.knowledge_manager import KnowledgeManager, ConflictResult
 from .knowledge.knowledge_capture import KnowledgeCapture
 from .knowledge.knowledge_injector import KnowledgeInjector
+from .style.style_analyzer import StyleAnalyzer
+from .style.style_trainer import StyleTrainer
+from .style.style_injector import StyleInjector
 
 
 class PersonalizationOrchestrator:
@@ -32,6 +35,9 @@ class PersonalizationOrchestrator:
         self._knowledge_mgr = KnowledgeManager(storage, user_id)
         self._knowledge_capture = KnowledgeCapture(self._knowledge_mgr)
         self._knowledge_injector = KnowledgeInjector()
+        self._style_analyzer = StyleAnalyzer()
+        self._style_trainer = StyleTrainer(storage, user_id)
+        self._style_injector = StyleInjector()
 
     def get_persona(self) -> PersonaParams:
         if self._persona_params is None:
@@ -69,6 +75,11 @@ class PersonalizationOrchestrator:
         elif trigger.get("repeat_suggested"):
             context["knowledge_repeat"] = trigger["message"]
         self._cached_results["knowledge"] = kb
+        style_state = self.get_style()
+        if not style_state.locked:
+            incr = self._style_analyzer.analyze_increment(message, style_state.profile)
+            self._style_trainer.update_profile(style_state, incr)
+        self._cached_results["style"] = style_state
 
     def get_full_injection(self) -> str:
         parts = []
@@ -80,6 +91,10 @@ class PersonalizationOrchestrator:
             knowledge = self._knowledge_injector.generate(self._knowledge)
             if knowledge:
                 parts.append(knowledge)
+        if self._style:
+            style = self._style_injector.generate(self._style)
+            if style:
+                parts.append(style)
         return "\n\n".join(parts)
 
     def on_memory_write(self, event: dict) -> None:
