@@ -215,6 +215,13 @@ class SoulSyncPro(Star):
         self.anniversary_manager = AnniversaryManager(self.data_dir)
         self.stats_tracker = StatsTracker(self.data_dir, max_days=self.stats_history_days)
         self.relationship_manager = RelationshipRoleManager(self.data_dir)
+
+        # ── TPD 时间感知深化系统 ──
+        from astrbot_plugin_soulsync.tpd import TPDOrchestrator
+        self.tpd_orchestrator = TPDOrchestrator(
+            config, str(self.data_dir),
+            sources={"anniversaries": self.anniversary_manager, "memory": self.long_memory},
+        )
         self.character_manager = CharacterManager(self.data_dir)
         self.image_renderer = ImageRenderer(self.data_dir)
         self.image_mode: Dict[str, bool] = {}
@@ -478,6 +485,9 @@ class SoulSyncPro(Star):
                 )
             except Exception:
                 pass
+
+            # ── TPD 时间感知深化参数（通过 config dict 自动热同步）──
+            # TPDOrchestrator 直接读取 self.config，无需额外赋值
 
             # ── 纪念日/节日参数 ──
             self.anniv_fav_bonus = float(self.config.get("anniv_fav_bonus", 2.5))
@@ -2864,6 +2874,12 @@ class SoulSyncPro(Star):
                 int_delta = dyn_micro_int
                 emotion_deltas = {"trust": 0.1, "anticipation": 0.1}
 
+            # ── TPD 时间感知深化（统一处理：环境+倒计时+时间跳跃）──
+            tpd_result = self._process_tpd_turn(uid, text, profile)
+            # 合并 TPD 心情增量到 emotion_deltas
+            for dim, val in (tpd_result.get("mood_deltas") or {}).items():
+                emotion_deltas[dim] = emotion_deltas.get(dim, 0.0) + val
+
             # ── 第一步半：纪念日/节日检查（当天奖励 + 上下文提示）──
             anniv_events = []
             if self.config.get("enable_anniversary_system", True):
@@ -2874,27 +2890,13 @@ class SoulSyncPro(Star):
                 fav_delta += anniv_bonus_fav
                 int_delta += anniv_bonus_int
 
-            # ── 第一步半a：倒计时事件（角色主动提及即将到来的纪念日，制造期待）──
+            # ── 第一步半a：倒计时事件（TPD 统一处理）──
             countdown_ctx = ""
             if self.config.get("enable_countdown_events", True):
                 try:
-                    from datetime import date as _cdate
-                    today_c = _cdate.today()
-                    if behavior_profile.countdown_last_date != today_c.isoformat():
-                        cd = self.anniversary_manager.get_next_countdown(
-                            uid, today_c,
-                            self.config.get("countdown_window_days", 7),
-                        )
-                        if cd and random.random() < float(self.config.get("countdown_probability", 0.15)):
-                            behavior_profile.countdown_last_date = today_c.isoformat()
-                            n = cd["days_left"]
-                            unit = "明天" if n == 1 else f"{n} 天后"
-                            countdown_ctx = (
-                                f"📅 距离「{cd['name']}」还有 {n} 天（{unit}）。"
-                                "这是你们之间特别的日子，你一直默默记着，心里在暗暗期待、"
-                                "盘算着那天要做什么。请在回复中自然流露这份期待，"
-                                "让对方感受到你的在意。"
-                            )
+                    cd = tpd_result.get("countdown")
+                    if cd and cd.get("inject_text"):
+                        countdown_ctx = cd["inject_text"]
                 except Exception:
                     pass
 
@@ -2946,9 +2948,15 @@ class SoulSyncPro(Star):
                 except Exception:
                     pass
 
-            # ── 第一步半a4：时间跳跃叙事（回忆关键时刻，跨越时间线）──
+            # ── 第一步半a4：时间跳跃叙事（TPD 时间跳跃 + 传统回忆）──
             timejump_ctx = ""
-            if self.config.get("enable_time_jump", True) and not monthly_ctx and not role_ctx:
+            # TPD 时间跳跃：告别/回归/被动离开叙事
+            if tpd_result and tpd_result.get("timeskip"):
+                ts = tpd_result["timeskip"]
+                if ts.get("inject_text"):
+                    timejump_ctx = ts["inject_text"]
+            # 传统回忆跳跃：关键时刻回忆（与 TPD 时间跳跃互补）
+            if not timejump_ctx and self.config.get("enable_time_jump", True) and not monthly_ctx and not role_ctx:
                 try:
                     now_t = time.time()
                     t_interval = float(self.config.get("time_jump_interval_days", 3)) * 86400.0
@@ -3273,8 +3281,39 @@ class SoulSyncPro(Star):
                             f"<stage_role>{role_text}\n{ROLE_GUARD}</stage_role>"
                         )
 
-            # ── 时间/节假日/农历感知（仿 LLMPerception：prompt 前缀注入）──
-            perception = self._build_perception_block(uid, anniv_events)
+            # ── 时间/节假日/农历感知（TPD 环境 + 传统感知融合）──
+            tpd_perception = tpd_result.get("perception", "")
+            if tpd_perception:
+                # TPD 提供天气/节气/月相感知；追加传统时间/节假日/农历
+                legacy_parts = []
+                try:
+                    import datetime as _dt
+                    now = _dt.datetime.now(self.timezone)
+                    if self.config.get("enable_time_perception", True):
+                        legacy_parts.append(build_time_info(now))
+                    if self.config.get("enable_holiday_perception", True):
+                        festival_names = []
+                        today = _dt.date.today()
+                        for evt in self.anniversary_manager.get_today_events(uid, today):
+                            if evt["kind"] == "festival" and evt.get("name"):
+                                festival_names.append(evt["name"])
+                        hinfo = build_holiday_info(
+                            now, festival_names or None,
+                            self.config.get("holiday_country", "CN"),
+                        )
+                        if hinfo:
+                            legacy_parts.append(hinfo)
+                    if self.config.get("enable_lunar_perception", True):
+                        linfo = build_lunar_info(now)
+                        if linfo:
+                            legacy_parts.append(linfo)
+                except Exception:
+                    pass
+                perception = tpd_perception
+                if legacy_parts:
+                    perception = perception + " · " + " · ".join(legacy_parts)
+            else:
+                perception = self._build_perception_block(uid, anniv_events)
             if perception and req.prompt:
                 req.prompt = f"[{perception}]\n{req.prompt}"
 
@@ -3825,6 +3864,35 @@ class SoulSyncPro(Star):
             logger.warning(f"SoulSync 纪念日检查异常: {e}")
             return 0.0, 0.0, []
 
+    def _process_tpd_turn(self, uid: str, text: str, profile) -> dict:
+        """TPD 统一处理：环境感知 + 倒计时 + 时间跳跃，返回注入数据。
+
+        返回 {inject_text, perception, mood_deltas, countdown, timeskip}。
+        """
+        result = {"inject_text": "", "perception": "", "mood_deltas": {},
+                  "countdown": None, "timeskip": None}
+        try:
+            ctx = {"stage": profile.stage_index} if profile else {}
+            tpd = self.tpd_orchestrator.process_turn(uid, text, ctx)
+            if not tpd:
+                return result
+
+            result["mood_deltas"] = tpd.get("mood_deltas") or {}
+            result["countdown"] = tpd.get("countdown")
+            result["timeskip"] = tpd.get("timeskip")
+
+            # 注入文本：拆分环境感知（→prompt）与叙事（→extra_user_content_parts）
+            inject = tpd.get("inject_text") or ""
+            if inject.startswith("[环境]"):
+                brk = inject.index("]")
+                result["perception"] = inject[:brk + 1]
+                result["inject_text"] = inject[brk + 1:].strip()
+            else:
+                result["inject_text"] = inject
+        except Exception as e:
+            logger.debug(f"SoulSync TPD 处理失败 [{uid}]: {e}")
+        return result
+
     def _build_perception_block(self, uid: str, anniv_events: List[str]) -> str:
         """构建时间/节假日/农历/特别日子感知信息块（仿 LLMPerception）"""
         try:
@@ -4159,6 +4227,15 @@ class SoulSyncPro(Star):
         today = _date.today().isoformat()
         yesterday = (_date.today() - _td(days=1)).isoformat()
         settled = 0
+
+        # D.5: TPD 跳跃冻结同步 — 从 skip_state 读取 frozen_until 写入 BehaviorProfile
+        if self.config.get("tpd_enabled", False):
+            try:
+                for uid, bp in self.behavior_profiles.items():
+                    skip_st = self.tpd_orchestrator.skip_executor.get_state(uid)
+                    bp.penalty_frozen_until = skip_st.get("frozen_until", 0.0)
+            except Exception:
+                pass
 
         for uid, bp in list(self.behavior_profiles.items()):
             profile = self.profiles.get(uid)
