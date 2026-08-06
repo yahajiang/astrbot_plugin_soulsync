@@ -336,6 +336,10 @@ class SoulSyncPro(Star):
                 f"/{self._PLUGIN_ROUTE}/rde/data", self._web_rde_data, ["GET"],
                 "SoulSync: RDE 关系深度演进数据",
             )
+            self.context.register_web_api(
+                f"/{self._PLUGIN_ROUTE}/tpd/data", self._web_tpd_data, ["GET"],
+                "SoulSync: TPD 时间感知深化数据",
+            )
             logger.info("SoulSync WebUI 路由注册成功")
         except Exception as e:
             logger.error(f"SoulSync WebUI 路由注册失败: {e}")
@@ -604,6 +608,19 @@ class SoulSyncPro(Star):
             return json_response({"overview": overview})
         except Exception as e:
             return error_response(f"RDE 数据读取失败: {e}")
+
+    async def _web_tpd_data(self):
+        """GET /tpd/data?user_id=xxx - TPD 时间感知深化数据"""
+        try:
+            uid = (request.query.get("user_id") or "").strip()
+            env_panel = self.tpd_orchestrator.environment_panel_data()
+            result = {"environment": env_panel}
+            if uid:
+                result["countdown"] = self.tpd_orchestrator.countdown_panel_data(uid)
+                result["skip"] = self.tpd_orchestrator.skip_panel_data(uid)
+            return json_response(result)
+        except Exception as e:
+            return error_response(f"TPD 数据读取失败: {e}")
 
     async def _web_trainer_data(self):
         """GET /trainer/data?user_id=xxx - 个性化训练数据"""
@@ -2664,7 +2681,201 @@ class SoulSyncPro(Star):
         if path:
             yield event.image_result(path)
         else:
-            yield event.plain_result(REPORT_MARK + "\n".join(lines))
+                yield event.plain_result(REPORT_MARK + "\n".join(lines))
+
+    # ══════════════════════════════════════════════════════════════
+    # TPD 时间感知深化系统命令（Phase E）
+    # ══════════════════════════════════════════════════════════════
+
+    @filter.command("天气")
+    async def cmd_tpd_weather(self, event: AstrMessageEvent):
+        """查看当前环境感知（天气/季节/节气/月相/心情倾向）"""
+        panel = self.tpd_orchestrator.environment_panel_data()
+        if not panel.get("enabled"):
+            yield event.plain_result("TPD 时间感知系统未开启（配置 tpd_enabled）")
+            return
+        env = panel.get("environment")
+        if not env:
+            yield event.plain_result("🌤️ 暂无环境数据（天气获取中…）")
+            return
+        lines = ["🌤️ 环境感知", "━" * 20]
+        if env.get("weather"):
+            emoji = env.get("weather_emoji", "")
+            lines.append(f"天气: {emoji}{env['weather']}")
+        if env.get("temperature") is not None:
+            band = env.get("temp_band", "")
+            lines.append(f"温度: {env['temperature']}℃" + (f"（{band}）" if band else ""))
+        if env.get("season"):
+            lines.append(f"季节: {env['season']}（{env.get('season_desc', '')}）")
+        if env.get("solar_term"):
+            term_str = f"节气: {env['solar_term']}"
+            if env.get("solar_term_today"):
+                term_str += "（今日）"
+            lines.append(term_str)
+        if env.get("moon_phase"):
+            lines.append(f"月相: {env.get('moon_emoji', '')}{env['moon_phase']}")
+        lines.append(f"数据来源: {env.get('source', '未知')}")
+        # 心情倾向
+        deltas = panel.get("mood_deltas") or {}
+        from astrbot_plugin_soulsync.tpd.mood_mapper import DIM_LABELS, EMOTION_DIMS
+        mood_parts = []
+        for dim in EMOTION_DIMS:
+            v = deltas.get(dim, 0.0)
+            if abs(v) >= 0.05:
+                arrow = "↑" if v > 0 else "↓"
+                mood_parts.append(f"{DIM_LABELS.get(dim, dim)}{arrow}{abs(v):g}")
+        if mood_parts:
+            lines.append("心情倾向: " + " ".join(mood_parts[:4]))
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("倒计时")
+    async def cmd_tpd_countdown(self, event: AstrMessageEvent):
+        """查看即将到来的倒计时事件"""
+        uid = self._state_key(self._get_user_id(event))
+        panel = self.tpd_orchestrator.countdown_panel_data(uid)
+        if not panel.get("enabled"):
+            yield event.plain_result("倒计时系统未开启（配置 tpd_countdown_enabled）")
+            return
+        events = panel.get("events", [])
+        if not events:
+            yield event.plain_result("📅 暂无即将到来的倒计时事件")
+            return
+        lines = ["📅 倒计时事件", "━" * 20]
+        for e in events[:10]:
+            kind_icons = {"milestone": "🏆", "first_meet": "💕", "birthday": "🎂",
+                          "anniversary": "📅", "festival": "🎉", "crisis": "⚡"}
+            icon = kind_icons.get(e.get("kind", ""), "📌")
+            name = e.get("name", "")
+            days = e.get("days_left", 0)
+            when = "今天" if days == 0 else (f"明天" if days == 1 else f"{days}天后")
+            lines.append(f"{icon} {name} · {when}（得分 {e.get('score', 0):.2f}）")
+        if len(events) > 10:
+            lines.append(f"… 还有 {len(events) - 10} 个事件")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("跳跃")
+    async def cmd_tpd_skip(self, event: AstrMessageEvent):
+        """查看时间跳跃状态，或触发跳跃。用法：/跳跃 [N天后见]"""
+        uid = self._state_key(self._get_user_id(event))
+        parts = event.message_str.split(maxsplit=1)
+        panel = self.tpd_orchestrator.skip_panel_data(uid)
+        status = panel.get("status", {})
+        if len(parts) >= 2:
+            # 触发跳跃
+            text = parts[1]
+            from astrbot_plugin_soulsync.tpd.skip_parser import parse_skip_command
+            cmd = parse_skip_command(text)
+            if cmd is None:
+                yield event.plain_result(
+                    "❌ 无法识别跳跃指令。\n"
+                    "示例：/跳跃 三天后见、/跳跃 明天见、/跳跃 过几天再来"
+                )
+                return
+            profile = self._get_or_create_profile(event)
+            result = self._process_tpd_turn(uid, text, profile)
+            ts = result.get("timeskip")
+            if ts and ts.get("inject_text"):
+                yield event.plain_result(ts["inject_text"])
+            else:
+                yield event.plain_result("✅ 跳跃指令已处理")
+            return
+        # 查看状态
+        lines = ["⏰ 时间跳跃状态", "━" * 20]
+        offset = status.get("offset_days", 0)
+        pending = status.get("pending_return", False)
+        frozen = status.get("frozen_until", 0.0)
+        if offset > 0:
+            lines.append(f"时间偏移: +{offset} 天")
+        if pending:
+            lines.append("状态: 待回归 ⏳")
+        else:
+            lines.append("状态: 正常 ✅")
+        if frozen > time.time():
+            remaining = int((frozen - time.time()) / 86400)
+            lines.append(f"冷落惩罚冻结: 剩余 {remaining} 天 ❄️")
+        skip_log = status.get("skip_log", [])
+        if skip_log:
+            lines.append(f"跳跃历史: {len(skip_log)} 条")
+            last = skip_log[-1]
+            lines.append(f"  最近: {last.get('cmd', '')} → {last.get('target_date', '')}（{last.get('days', 0)}天）")
+        if not offset and not pending and not skip_log:
+            lines.append("暂无跳跃记录")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("强制跳跃")
+    async def cmd_tpd_force_skip(self, event: AstrMessageEvent):
+        """管理员：强制指定用户时间跳跃。用法：/强制跳跃 <用户ID> <N天>"""
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 权限不足，仅管理员可用")
+            return
+        parts = event.message_str.split()
+        if len(parts) < 3:
+            yield event.plain_result("用法：/强制跳跃 <用户ID> <天数>\n例如：/强制跳跃 123456 7")
+            return
+        target_uid = parts[1]
+        try:
+            days = int(parts[2])
+        except ValueError:
+            yield event.plain_result("❌ 天数必须为整数")
+            return
+        if days <= 0 or days > 365:
+            yield event.plain_result("❌ 天数范围: 1-365")
+            return
+        from astrbot_plugin_soulsync.tpd.skip_parser import SkipCommand
+        cmd = SkipCommand(skip_days=days, reason=f"管理员强制跳跃{days}天")
+        now = time.time()
+        self.tpd_orchestrator.skip_executor.execute_skip(
+            target_uid, cmd, now=now,
+            freeze_penalty=self.config.get("tpd_skip_freeze_penalty", True),
+            emotion_drift=self.config.get("tpd_skip_emotion_drift", True),
+        )
+        yield event.plain_result(f"✅ 已强制跳跃 {target_uid} {days} 天")
+
+    @filter.command("重置跳跃")
+    async def cmd_tpd_reset_skip(self, event: AstrMessageEvent):
+        """管理员：重置指定用户的跳跃状态。用法：/重置跳跃 [用户ID]"""
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 权限不足，仅管理员可用")
+            return
+        parts = event.message_str.split()
+        target_uid = parts[1] if len(parts) >= 2 else self._state_key(self._get_user_id(event))
+        state = self.tpd_orchestrator.skip_executor.get_state(target_uid)
+        state["offset_days"] = 0
+        state["pending_return"] = False
+        state["frozen_until"] = 0.0
+        state["late_celebrations"] = []
+        self.tpd_orchestrator.skip_executor.save_uid(target_uid)
+        yield event.plain_result(f"✅ 已重置 {target_uid} 的跳跃状态")
+
+    @filter.command("天气调试")
+    async def cmd_tpd_weather_debug(self, event: AstrMessageEvent):
+        """管理员：查看天气获取调试信息"""
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 权限不足，仅管理员可用")
+            return
+        import datetime as _dt
+        now = _dt.datetime.now(self.timezone)
+        panel = self.tpd_orchestrator.environment_panel_data()
+        env = panel.get("environment") or {}
+        lines = ["🔍 天气调试信息", "━" * 20]
+        lines.append(f"时间: {now.strftime('%Y-%m-%d %H:%M')}")
+        lines.append(f"时区: {self.timezone}")
+        lines.append(f"TPD 开关: {self.config.get('tpd_enabled', False)}")
+        lines.append(f"天气开关: {self.config.get('tpd_weather_enabled', True)}")
+        lines.append(f"API 提供商: {self.config.get('tpd_weather_api_provider', '(空)')}")
+        lines.append(f"API 城市: {self.config.get('tpd_weather_api_city', '(空)')}")
+        if env:
+            lines.append(f"当前天气: {env.get('weather', '?')} {env.get('weather_emoji', '')}")
+            lines.append(f"温度: {env.get('temperature', '?')}℃")
+            lines.append(f"来源: {env.get('source', '?')}")
+            lines.append(f"获取时间: {env.get('fetched_at', '?')}")
+        else:
+            lines.append("天气数据: 未获取")
+        cache_file = self.tpd_orchestrator.weather_provider.cache_file
+        lines.append(f"缓存文件: {cache_file}")
+        if cache_file.exists():
+            lines.append(f"缓存大小: {cache_file.stat().st_size} 字节")
+        yield event.plain_result("\n".join(lines))
 
     @filter.command("角色列表")
     async def cmd_character_list(self, event: AstrMessageEvent):

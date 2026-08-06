@@ -181,6 +181,7 @@ textarea.fld{min-height:56px;resize:vertical}
             <button class="act-btn" id="bRole">🎭 关系角色</button>
             <button class="act-btn hot" id="bRde">🌐 RDE 关系演进<div class="d">阶段叙事 / 危机记录 / 角色关系网</div></button>
             <button class="act-btn hot" id="bTra">🎯 个性化训练<div class="d">人格/知识/风格/记忆 四模块面板</div></button>
+            <button class="act-btn hot" id="bTpd">🌤️ 时间感知<div class="d">环境/倒计时/跳跃 三系统面板</div></button>
             <button class="act-btn" id="bAdm">🔧 管理员工具<div class="d">设置好感/亲密/重置</div></button>
           </div>
         </div>
@@ -212,6 +213,11 @@ textarea.fld{min-height:56px;resize:vertical}
 </div></div></div>
 <div class="ov" id="oRde"><div class="modal"><div class="modal-hd"><h3>🌐 RDE 关系深度演进</h3><div style="display:flex;gap:8px;align-items:center"><select class="fld" id="rdeUser" style="min-width:150px"><option value="">— 选择用户 —</option></select><button class="btn" id="rdeCan">关闭</button></div></div><div class="modal-bd">
   <div id="rdeBody"><div class="empty">请先选择用户查看 RDE 数据</div></div>
+</div></div></div>
+<div class="ov" id="oTpd"><div class="modal"><div class="modal-hd"><h3>🌤️ 时间感知深化（TPD）</h3><div style="display:flex;gap:8px;align-items:center"><select class="fld" id="tpdUser" style="min-width:150px"><option value="">— 选择用户 —</option></select><button class="btn" id="tpdCan">关闭</button></div></div><div class="modal-bd">
+  <div class="cs"><div class="cs-t">🌍 环境感知</div><div id="tpdEnv"><div class="empty">加载中…</div></div></div>
+  <div class="cs"><div class="cs-t">📅 倒计时事件</div><div id="tpdCd"><div class="empty">请先选择用户</div></div></div>
+  <div class="cs"><div class="cs-t">⏰ 时间跳跃</div><div id="tpdSkip"><div class="empty">请先选择用户</div></div></div>
 </div></div></div>
 
 <script type="module">
@@ -716,6 +722,77 @@ function rdeRender(d){
   <div style="margin-top:4px">${st.map(s=>`<div class="lb-r"><span><b>${esc(s.name)}</b> <span style="color:var(--dim);font-size:11px">${esc(s.stage_id)}</span></span><span style="color:var(--dim);font-size:11px">阈值 ${s.threshold} · ${esc(s.relationship_state||'')}</span></div>`).join('')}</div></div>`;
   return `<div style="display:flex;flex-direction:column;gap:10px">${h}${ch}${nh}${sh}</div>`;
 }
+$('bTpd').onclick=tpdPanel;
+$('tpdCan').onclick=()=>$('oTpd').classList.remove('on');
+async function tpdPanel(){
+  const ov=$('oTpd');ov.classList.add('on');
+  const prev=$('tpdUser').value;
+  $('tpdUser').innerHTML='<option value="">— 选择用户 —</option>'+[...P].sort((a,b)=>b.favorability-a.favorability).map(p=>`<option value="${esc(p.state_key)}">${esc(p.user_name||p.state_key)}</option>`).join('');
+  $('tpdUser').value=prev;
+  $('tpdUser').onchange=tpdLoad;
+  await tpdLoad();
+}
+async function tpdLoad(){
+  const uid=$('tpdUser').value;
+  $('tpdEnv').innerHTML='<div class="empty">⏳ 加载中…</div>';
+  $('tpdCd').innerHTML='<div class="empty">请先选择用户</div>';
+  $('tpdSkip').innerHTML='<div class="empty">请先选择用户</div>';
+  try{
+    const r=await B.apiGet('tpd/data',{user_id:uid||''});
+    // 环境感知
+    const env=r.environment||{};
+    const ed=env.environment;
+    if(ed){
+      let eh=`<div style="font-size:13px">`;
+      if(ed.weather)eh+=`<div>${esc(ed.weather_emoji||'')} 天气: <b>${esc(ed.weather)}</b></div>`;
+      if(ed.temperature!=null)eh+=`<div>🌡️ 温度: <b>${ed.temperature}℃</b>${ed.temp_band?'（'+esc(ed.temp_band)+'）':''}</div>`;
+      if(ed.season)eh+=`<div>🌿 季节: <b>${esc(ed.season)}</b> ${esc(ed.season_desc||'')}</div>`;
+      if(ed.solar_term)eh+=`<div>📅 节气: <b>${esc(ed.solar_term)}</b>${ed.solar_term_today?'（今日）':''}</div>`;
+      if(ed.moon_phase)eh+=`<div>🌙 月相: <b>${esc(ed.moon_emoji||'')}${esc(ed.moon_phase)}</b></div>`;
+      eh+=`<div style="font-size:11px;color:var(--dim);margin-top:4px">来源: ${esc(ed.source||'?')}</div>`;
+      const md=env.mood_deltas||{};
+      const dims=Object.entries(md).filter(([,v])=>Math.abs(v)>=0.05).slice(0,4);
+      if(dims.length)eh+=`<div style="margin-top:4px">心情: ${dims.map(([k,v])=>`${esc(k)}${v>0?'↑':'↓'}${Math.abs(v).toFixed(1)}`).join(' · ')}</div>`;
+      eh+=`</div>`;
+      $('tpdEnv').innerHTML=eh;
+    }else{
+      $('tpdEnv').innerHTML='<div class="empty">暂无环境数据（tpd_enabled='+(env.enabled?'开':'关')+'）</div>';
+    }
+    // 倒计时
+    if(uid){
+      const cd=r.countdown||{};
+      const evts=cd.events||[];
+      if(evts.length){
+        const icons={milestone:'🏆',first_meet:'💕',birthday:'🎂',anniversary:'📅',festival:'🎉',crisis:'⚡'};
+        let ch=`<div style="font-size:13px">${evts.slice(0,8).map(e=>`<div class="lb-r"><span>${icons[e.kind]||'📌'} ${esc(e.name)}</span><span style="color:var(--dim);font-size:11px">${e.days_left==0?'今天':e.days_left>0?e.days_left+'天后':'已过去'+(-e.days_left)+'天'} · 得分 ${e.score.toFixed(2)}</span></div>`).join('')}</div>`;
+        if(evts.length>8)ch+=`<div style="font-size:11px;color:var(--dim)">… 还有 ${evts.length-8} 个事件</div>`;
+        $('tpdCd').innerHTML=ch;
+      }else{
+        $('tpdCd').innerHTML='<div class="empty">暂无倒计时事件</div>';
+      }
+      // 跳跃
+      const sk=r.skip||{};
+      const st=sk.status||{};
+      let sh=`<div style="font-size:13px">`;
+      sh+=`<div>偏移: <b>${st.offset_days||0}</b> 天 · 状态: ${st.pending_return?'⏳ 待回归':'✅ 正常'}</div>`;
+      if(st.frozen_until>Date.now()/1000){
+        const rem=Math.ceil((st.frozen_until-Date.now()/1000)/86400);
+        sh+=`<div>❄️ 冷落惩罚冻结: 剩余 ${rem} 天</div>`;
+      }
+      const logs=st.skip_log||[];
+      if(logs.length){
+        sh+=`<div style="margin-top:4px;font-size:11px;color:var(--dim)">跳跃历史 (${logs.length} 条)：</div>`;
+        logs.slice(-3).reverse().forEach(l=>{
+          sh+=`<div class="lb-r"><span>${esc(l.cmd||'')}</span><span style="color:var(--dim);font-size:11px">→ ${esc(l.target_date||'')} (${l.days}天)</span></div>`;
+        });
+      }
+      sh+=`</div>`;
+      $('tpdSkip').innerHTML=sh;
+    }
+  }catch(e){
+    $('tpdEnv').innerHTML=`<div class="empty">⚠️ ${esc(e.message||e)}</div>`;
+  }
+}
 function fillAdmUsers(){
   const sel=$('aUser');const cur=sel.value;
   sel.innerHTML='<option value="">— 选择或手动输入下方 ID —</option>'+[...P].sort((a,b)=>b.favorability-a.favorability).map(p=>`<option value="${esc(p.user_id)}">${esc(p.user_name||p.user_id)} · ${stg(p)}</option>`).join('');
@@ -747,7 +824,7 @@ for(const b of document.querySelectorAll('#oAdm button[data-d]'))b.onclick=()=>{
   if(!p){tst('aTst','⚠️ 该用户无档案，无法增减',true);return}
   adm('set_favorability',id,p.favorability+d);
 };
-for(const id of['oCfg','oDet','oLB','oFest','oRole','oAdm']){$(id).onclick=e=>{if(e.target===$(id))$(id).classList.remove('on')}}
+for(const id of['oCfg','oDet','oLB','oFest','oRole','oAdm','oRde','oTpd']){$(id).onclick=e=>{if(e.target===$(id))$(id).classList.remove('on')}}
 
 // ── Minimal Modern 滚动条滑块：原生滚动 + 自定义滑块（静止0.4/悬停0.7/拖动1.0 透明度、150ms淡入、200ms宽度渐变、停止1s淡出）──
 function mmScroll(el,fixed){
