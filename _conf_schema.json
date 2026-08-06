@@ -54,7 +54,7 @@
   "crisis_min_stage": {
     "description": "危机最低触发阶段",
     "hint": "低于该 RDE 阶段（s3 起）不触发危机",
-    "type": "str",
+    "type": "string",
     "default": "s3"
   },
   "crisis_min_cold_penalties": {
