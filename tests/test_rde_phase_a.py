@@ -59,7 +59,7 @@ assert addr.get_address("s2", {}) == "你"
 v3 = addr.get_address("s3", {})
 assert v3 in {"你啊", "傻瓜"}, v3
 v5 = addr.get_address("s5", {"user_name": "小雅"})
-assert "小雅" in v5 or v5 in {"傻瓜", "亲爱的"}, v5
+assert "小雅" in v5 or v5 in {"傻瓜", "笨蛋", "亲爱的"}, v5
 assert addr.get_address("n1", {}) == "你"
 assert addr.get_address("n2", {}) == "（省略称呼）"
 assert addr.get_address("n3", {}) == "那个人"

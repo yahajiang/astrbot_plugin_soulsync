@@ -43,6 +43,7 @@ class RDEOrchestrator:
         self.address = AddressSystem(enabled=self.enabled)
         self.transition = TransitionHandler(enabled=self.enabled)
         self._recent_transitions: Dict[str, dict] = {}
+        self._last_stage: Dict[str, str] = {}
 
         # ── 危机系统（Phase B）──
         self.crisis_store = CrisisStateStore()
@@ -102,6 +103,94 @@ class RDEOrchestrator:
 
     def get_address(self, stage_id: str, context: Optional[dict] = None) -> str:
         return self.address.get_address(stage_id, context)
+
+    # ── 每轮完整处理流程（Phase D）─────────────────────────
+
+    def process_message(self, user_id: str, context: dict) -> dict:
+        """每轮对话完整处理流程（Step 1-6），供 main.py 每轮调用。
+
+        context 键：
+          round: int            本轮对话序号
+          stage_id: str         当前 RDE 阶段（s1-s12 / n1-n4，由 stage_index 映射）
+          favorability: float   当前好感度
+          fav_delta: float      本轮好感变化（跨角色传导的源增量）
+          cold_penalty_add: int 本轮冷落惩罚增量（默认 0）
+          special_date: bool    本轮是否节日/纪念日
+          mention_other: bool   本轮用户是否提及他人
+          user_name / char_name / friend_name: str  叙事占位符
+          current_role: str     当前关系角色 key（社交事件用）
+          source_role: str      好感变化源角色名（跨角色传导用，通常=current_role）
+          favorabilities: dict  各角色好感（社交事件用）
+
+        返回 dict：
+          stage_id: str 处理后的阶段
+          context_text: str 拼接后的注入文本（为空则无需注入）
+          stage_ctx / crisis_ctx / perception_ctx: str 三段注入
+          crisis_triggered: Optional[CrisisEvent] 新触发的危机
+          crisis_resolved: Optional[ResolutionResult] 自动解决的危机
+          transition: Optional[TransitionEvent] 阶段跃迁事件
+          impacts: List[Impact] 跨角色影响（延迟队列）
+          settled: List[PendingTransfer] 本轮到账的传导
+          social_event: Optional[SocialEvent] 触发的关系网社交事件
+        """
+        ctx = dict(context)
+        ctx["user_id"] = user_id
+        round_no = int(ctx.get("round", 0))
+        stage_id = str(ctx.get("stage_id", "s1"))
+        fav_delta = float(ctx.get("fav_delta", 0) or 0)
+
+        crisis_triggered = None
+        crisis_resolved = None
+
+        # Step 2 危机检测：先处理超期未决（自动解决），再推进轮次并尝试触发新危机
+        st = self.crisis_store.get(user_id)
+        if st.active is not None and st.active.rounds_left <= 0:
+            crisis_resolved = self.auto_resolve(user_id, ctx)
+        # check_crisis_trigger 内部每轮 tick（递减期限/累计轮次）；
+        # 有未决危机时只推进不触发（内置前置检查）
+        crisis_triggered = self.check_crisis_trigger(user_id, ctx)
+
+        # Step 3 多角色交叉影响：源角色好感变化传导（延迟一轮到账）
+        impacts: List[Impact] = []
+        settled: List[PendingTransfer] = []
+        source_role = str(ctx.get("source_role", "") or "")
+        if fav_delta and source_role:
+            impacts = self.calculate_cross_impact(source_role, fav_delta, round_no, user_id)
+        settled = self.settle_transfers(user_id, round_no)
+
+        # Step 4 阶段跃迁事件（主系统已应用新阶段，此处判定叙事）
+        transition = None
+        last_stage = self._last_stage.get(user_id)
+        if last_stage is not None and last_stage != stage_id:
+            transition = self.check_transition(last_stage, stage_id)
+        self._last_stage[user_id] = stage_id
+
+        # Step 5 上下文生成（阶段叙事 + 危机叙事 + 关系网感知）
+        stage_ctx = self.generate_stage_context(
+            stage_id, {"user_name": ctx.get("user_name")}
+        )
+        crisis_ctx = self.generate_crisis_context(user_id)
+        perc_ctx = dict(ctx)
+        perc_ctx["recent_settled"] = settled
+        perception_ctx = self.generate_perception_context(user_id, perc_ctx)
+        social_event = self.check_social_event(user_id, ctx)
+
+        parts = [p for p in (stage_ctx, crisis_ctx, perception_ctx) if p]
+        context_text = "\n\n".join(parts)
+
+        return {
+            "stage_id": stage_id,
+            "context_text": context_text,
+            "stage_ctx": stage_ctx,
+            "crisis_ctx": crisis_ctx,
+            "perception_ctx": perception_ctx,
+            "crisis_triggered": crisis_triggered,
+            "crisis_resolved": crisis_resolved,
+            "transition": transition,
+            "impacts": impacts,
+            "settled": settled,
+            "social_event": social_event,
+        }
 
     # ── 工具 ────────────────────────────────────────────────
 
