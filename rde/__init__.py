@@ -14,6 +14,16 @@ from .crisis import (
     CRISIS_TYPE_LABELS,
     ResolutionResult,
 )
+from .network import (
+    RelationDef,
+    RelationshipMatrix,
+    RELATION_EDGES,
+    RELATION_TYPES,
+    NetworkSystem,
+    Impact,
+    SocialEvent,
+    PendingTransfer,
+)
 from .rde_orchestrator import RDEOrchestrator
 
 __all__ = [
@@ -30,5 +40,13 @@ __all__ = [
     "CRISIS_TYPES",
     "CRISIS_TYPE_LABELS",
     "ResolutionResult",
+    "RelationDef",
+    "RelationshipMatrix",
+    "RELATION_EDGES",
+    "RELATION_TYPES",
+    "NetworkSystem",
+    "Impact",
+    "SocialEvent",
+    "PendingTransfer",
     "RDEOrchestrator",
 ]
