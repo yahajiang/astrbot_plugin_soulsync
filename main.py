@@ -847,15 +847,71 @@ class SoulSyncPro(Star):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
             return
-        yield event.plain_result("📚 知识库\n功能开发中，敬请期待 v2.17 正式版。")
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        kb = orch.get_knowledge()
+        if not kb.items:
+            yield event.plain_result("📚 知识库为空\n用 /知识添加 <分类> <关键词> <内容> 添加知识\n分类：profile/interests/people/promises/experiences/values")
+            return
+        from .trainer.knowledge.knowledge_injector import CATEGORY_LABELS
+        lines = ["📚 知识库", "━" * 22]
+        by_cat = {}
+        for item in kb.items:
+            by_cat.setdefault(item.category, []).append(item)
+        for cat in ["profile", "interests", "people", "promises", "experiences", "values"]:
+            items = by_cat.get(cat, [])
+            if items:
+                label = CATEGORY_LABELS.get(cat, cat)
+                lines.append(f"\n▸ {label} ({len(items)}条)")
+                for item in items[:5]:
+                    src = {"user_direct": "📝", "auto_capture": "🤖", "batch_import": "📥"}.get(item.source, "📄")
+                    lines.append(f"  {src} {item.key}: {item.value[:40]}")
+        lines.append("")
+        lines.append("💡 /知识添加 <分类> <关键词> <内容> · /知识删除 <id>")
+        yield event.plain_result("\n".join(lines))
 
     @filter.command("知识添加")
     async def cmd_knowledge_add(self, event: AstrMessageEvent):
-        yield event.plain_result("📚 知识添加\n功能开发中，敬请期待 v2.17 正式版。")
+        parts = event.message_str.split(maxsplit=3)
+        if len(parts) < 4:
+            yield event.plain_result("用法：/知识添加 <分类> <关键词> <内容>\n分类：profile/interests/people/promises/experiences/values")
+            return
+        cat, key, val = parts[1], parts[2], parts[3]
+        valid_cats = ["profile", "interests", "people", "promises", "experiences", "values"]
+        if cat not in valid_cats:
+            yield event.plain_result(f"❌ 分类必须为：{'/'.join(valid_cats)}")
+            return
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        from .trainer.knowledge.knowledge_manager import KnowledgeManager
+        mgr = KnowledgeManager(self.trainer_storage, uid)
+        conflict = mgr.check_conflict(cat, key, val)
+        if conflict.has_conflict:
+            existing = "、".join(f"{e.key}={e.value}" for e in conflict.existing)
+            yield event.plain_result(f"⚠️ 检测到冲突：已有「{existing}」，是否覆盖？\n用 /知识删除 {conflict.existing[0].id} 删除旧条目后再添加")
+            return
+        item = mgr.add(cat, key, val)
+        orch._knowledge = None
+        yield event.plain_result(f"✅ 已添加知识 [{cat}] {key}: {val} (id: {item.id})")
 
     @filter.command("知识删除")
     async def cmd_knowledge_remove(self, event: AstrMessageEvent):
-        yield event.plain_result("📚 知识删除\n功能开发中，敬请期待 v2.17 正式版。")
+        parts = event.message_str.split()
+        if len(parts) < 2:
+            yield event.plain_result("用法：/知识删除 <id>")
+            return
+        uid = self._get_user_id(event)
+        uid = str(uid).rpartition("::")[0] or uid
+        orch = self._get_orchestrator(uid)
+        from .trainer.knowledge.knowledge_manager import KnowledgeManager
+        mgr = KnowledgeManager(self.trainer_storage, uid)
+        if mgr.remove(parts[1]):
+            orch._knowledge = None
+            yield event.plain_result(f"✅ 已删除知识 {parts[1]}")
+        else:
+            yield event.plain_result(f"❌ 未找到知识 {parts[1]}")
 
     @filter.command("风格训练")
     async def cmd_style(self, event: AstrMessageEvent):

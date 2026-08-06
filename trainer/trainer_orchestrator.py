@@ -11,6 +11,9 @@ from .persona.persona_modifier import PersonaModifier
 from .persona.persona_trainer import PersonaTrainer
 from .persona.persona_stability import PersonaStability
 from .persona.persona_injector import PersonaInjector
+from .knowledge.knowledge_manager import KnowledgeManager, ConflictResult
+from .knowledge.knowledge_capture import KnowledgeCapture
+from .knowledge.knowledge_injector import KnowledgeInjector
 
 
 class PersonalizationOrchestrator:
@@ -26,6 +29,9 @@ class PersonalizationOrchestrator:
         self._trainer = PersonaTrainer(self._modifier)
         self._stability = PersonaStability()
         self._injector = PersonaInjector()
+        self._knowledge_mgr = KnowledgeManager(storage, user_id)
+        self._knowledge_capture = KnowledgeCapture(self._knowledge_mgr)
+        self._knowledge_injector = KnowledgeInjector()
 
     def get_persona(self) -> PersonaParams:
         if self._persona_params is None:
@@ -56,6 +62,13 @@ class PersonalizationOrchestrator:
         self._trainer.check_feedback(message, params)
         self._stability.update_stability(params)
         self._cached_results["persona"] = params
+        kb = self.get_knowledge()
+        trigger = self._knowledge_capture.check_trigger_full(message, kb)
+        if trigger["triggered"] and not trigger.get("conflict"):
+            self._knowledge_mgr.add(trigger["category"], trigger["word"], trigger["content"], "auto_capture")
+        elif trigger.get("repeat_suggested"):
+            context["knowledge_repeat"] = trigger["message"]
+        self._cached_results["knowledge"] = kb
 
     def get_full_injection(self) -> str:
         parts = []
@@ -63,6 +76,10 @@ class PersonalizationOrchestrator:
             persona = self._injector.generate(self._persona_params)
             if persona:
                 parts.append(persona)
+        if self._knowledge:
+            knowledge = self._knowledge_injector.generate(self._knowledge)
+            if knowledge:
+                parts.append(knowledge)
         return "\n\n".join(parts)
 
     def on_memory_write(self, event: dict) -> None:

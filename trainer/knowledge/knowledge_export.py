@@ -1,11 +1,10 @@
 """SoulSync - 知识库：导出/导入"""
 import json
 from ..trainer_types import KnowledgeBase
-from ..trainer_storage import TrainerStorage
 
 
 class KnowledgeExport:
-    def __init__(self, storage: TrainerStorage, user_id: str):
+    def __init__(self, storage, user_id: str):
         self.storage = storage
         self.user_id = user_id
 
