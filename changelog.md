@@ -5,10 +5,11 @@
 - **倒计时事件**：事件源扫描（认识周年/生日/自定义纪念日/节日含农历）+ 优先级排序（权重×1/距离×关注度）+ T-7~T+7 六阶段叙事模板 + 24h 去重 + 状态持久化
 - **时间跳跃叙事**：中文指令解析（直接/模糊/告知/指定日期/提前回归）+ 虚拟时钟（offset_days 永久偏移）+ 冷落惩罚冻结（penalty_frozen_until）+ 情感漂移（约定+5期待，长跳≥14天 trust-0.4/joy-0.2/30天）+ 迟到庆祝扫描 + 被动离开 6 级分级检测 + 告别/回归叙事生成
 - **三系统联动**：`TPDOrchestrator.process_turn` 统一调度，接入 `main.py` `on_llm_request`（环境感知→prompt前缀 / 倒计时+跳跃→extra_user_content_parts / mood_deltas→emotion_deltas）；冷落惩罚循环同步 frozen_until
-- **命令**：`/天气` `/倒计时` `/跳跃`（用户）+ `/强制跳跃` `/重置跳跃` `/天气调试`（管理员）
+- **命令**：`/天气` `/倒计时` `/跳跃`（用户）+ `/强制跳跃` `/重置跳跃` `/天气调试`（管理员），全部支持全局图片模式，Agent 命令映射防吞指令
 - **WebUI**：控制台新增「🌤️ 时间感知」面板（环境感知/倒计时/跳跃三区块），新增 `/tpd/data` API
 - **配置**：新增 22 项 TPD 配置（总开关 / 天气 6 / 倒计时 5 / 跳跃 6 / 环境 4），schema 共 149 键
 - **测试**：`test_tpd_comprehensive.py` 22 组 + `test_tpd_integration.py` 10 组 + `test_tpd_commands.py` 10 组 + `test_timeskip.py` 13 组 + `test_countdown.py` 9 组 + `test_environment.py` 10 组 = TPD 74 组断言全部通过；性能基准 1.14ms/轮（目标 <30ms）
+- **修复**：metadata.yaml 版本号 2.17→2.19；`main.py` 4 处绝对导入改为相对导入修复 AstrBot 插件加载失败；`TextPart` 防御性导入兼容 AstrBot v4.26+；`address_system.py` 称谓池统一 `{name}` 模板修复 flaky 测试
 
 ### v2.18 关系深度演进（上一版本）
 - **十二阶段叙事（RDE）**：`rde/` 子系统，正向 s1~s12（阈值 15/35/55/75/95/115/135/152/168/180/185/200）+ 负向 n1~n4（冷淡→敌对），每阶段独立称谓/口吻/互动倾向/叙事注入；称谓演进 你 → 你啊/傻瓜 → 昵称 → 宝贝 → 亲爱的 → 我的宝贝 → 爱人 → 唯一的你（`address_system.py` 负向疏远化 n2 省略/n3 那个人/n4 不愿提及）；跃迁/退行叙事 + 缓冲防抖
