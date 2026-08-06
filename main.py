@@ -228,7 +228,7 @@ class SoulSyncPro(Star):
         self.relationship_manager = RelationshipRoleManager(self.data_dir)
 
         # ── TPD 时间感知深化系统 ──
-        from astrbot_plugin_soulsync.tpd import TPDOrchestrator
+        from .tpd import TPDOrchestrator
         self.tpd_orchestrator = TPDOrchestrator(
             config, str(self.data_dir),
             sources={"anniversaries": self.anniversary_manager, "memory": self.long_memory},
@@ -2728,7 +2728,7 @@ class SoulSyncPro(Star):
         lines.append(f"数据来源: {env.get('source', '未知')}")
         # 心情倾向
         deltas = panel.get("mood_deltas") or {}
-        from astrbot_plugin_soulsync.tpd.mood_mapper import DIM_LABELS, EMOTION_DIMS
+        from .tpd.mood_mapper import DIM_LABELS, EMOTION_DIMS
         mood_parts = []
         for dim in EMOTION_DIMS:
             v = deltas.get(dim, 0.0)
@@ -2774,7 +2774,7 @@ class SoulSyncPro(Star):
         if len(parts) >= 2:
             # 触发跳跃
             text = parts[1]
-            from astrbot_plugin_soulsync.tpd.skip_parser import parse_skip_command
+            from .tpd.skip_parser import parse_skip_command
             cmd = parse_skip_command(text)
             if cmd is None:
                 yield event.plain_result(
@@ -2832,7 +2832,7 @@ class SoulSyncPro(Star):
         if days <= 0 or days > 365:
             yield event.plain_result("❌ 天数范围: 1-365")
             return
-        from astrbot_plugin_soulsync.tpd.skip_parser import SkipCommand
+        from .tpd.skip_parser import SkipCommand
         cmd = SkipCommand(skip_days=days, reason=f"管理员强制跳跃{days}天")
         now = time.time()
         self.tpd_orchestrator.skip_executor.execute_skip(
