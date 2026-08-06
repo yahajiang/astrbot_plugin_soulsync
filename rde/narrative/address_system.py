@@ -30,10 +30,10 @@ _NEGATIVE_ADDRESS = {
 }
 
 _NICKNAME_LEVELS: Dict[int, List[str]] = {
-    2: ["{name}", "傻瓜", "笨蛋"],
-    3: ["宝贝", "{name}", "亲爱的"],
-    4: ["宝贝", "亲爱的", "我的{name}"],
-    5: ["亲爱的", "我的宝贝", "我的{name}", "{name}"],
+    2: ["{name}", "傻瓜{name}", "笨蛋{name}"],
+    3: ["宝贝{name}", "{name}", "亲爱的{name}"],
+    4: ["宝贝{name}", "亲爱的{name}", "我的{name}"],
+    5: ["亲爱的{name}", "我的宝贝{name}", "我的{name}", "{name}"],
 }
 
 
