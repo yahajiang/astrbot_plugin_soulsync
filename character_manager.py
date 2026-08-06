@@ -68,8 +68,13 @@ class CharacterManager:
 
     # ── 自定义角色 ──
     def create(self, uid: str, name: str, emoji: str = "🎭",
-               persona: str = "", system: str = "") -> Tuple[str, str]:
-        """创建自定义角色，返回 (cid, 提示文本)"""
+               persona: str = "", system: str = "",
+               relations: Optional[dict] = None) -> Tuple[str, str]:
+        """创建自定义角色，返回 (cid, 提示文本)
+
+        relations: 角色卡关系网定义（RDE 多角色关系网扩展字段）
+        {"角色名": {"type": "...", "cross_coefficient": 0.1, "description": "..."}}
+        """
         name = (name or "").strip()[:20]
         if not name:
             return "", "❌ 角色名不能为空"
@@ -81,10 +86,18 @@ class CharacterManager:
             "name": name, "emoji": (emoji or "🎭").strip()[:4] or "🎭",
             "persona": (persona or "").strip()[:200],
             "system": (system or "").strip()[:400],
+            "relations": relations if isinstance(relations, dict) else {},
             "created_ts": time.time(),
         }
         self.set_active(uid, cid)
         return cid, f"✅ 已创建角色「{emoji or '🎭'} {name}」并切换过去"
+
+    def get_relations(self, uid: str, cid: Optional[str] = None) -> dict:
+        """读取角色卡关系网定义（无则空 dict）"""
+        cid = cid if cid is not None else self.active_cid(uid)
+        info = self._custom.get(uid, {}).get(cid) or {}
+        rel = info.get("relations")
+        return rel if isinstance(rel, dict) else {}
 
     def remove(self, uid: str, cid: str) -> Tuple[bool, str]:
         bucket = self._custom.get(uid, {})

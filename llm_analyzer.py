@@ -63,6 +63,7 @@ class LLMAnalyzer:
         recent_messages: str,
         role_context: str = "",
         personalization_context: str = "",
+        rde_context: str = "",
     ) -> str:
         prompt = EMOTION_ANALYSIS_PROMPT.format(
             favorability=round(favorability, 1),
@@ -83,6 +84,8 @@ class LLMAnalyzer:
         )
         if personalization_context:
             prompt += "\n\n[个性化上下文]\n" + personalization_context
+        if rde_context:
+            prompt += "\n\n[RDE 关系叙事]\n" + rde_context
         return prompt
 
     @staticmethod

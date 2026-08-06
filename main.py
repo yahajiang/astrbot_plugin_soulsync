@@ -42,6 +42,8 @@ from .relationship_crisis import CrisisManager
 from .anniversary import AnniversaryManager, parse_month_day
 from .stats_tracker import StatsTracker
 from .character_manager import CharacterManager
+from .rde import RDEOrchestrator
+from .rde.narrative.stage_definitions import stage_id_from_index
 from .relationship_roles import (
     RelationshipRoleManager,
     resolve_relationship_key,
@@ -62,6 +64,16 @@ from .time_perception import (
 # on_llm_request 据此把历史中的这类消息替换为占位，防止 LLM 模仿其风格与长度
 REPORT_MARK = "\u200b\u2060\u200b"
 
+# RDE 配置键（on_llm_request 热更新读取并传给 RDEOrchestrator 的全部键）
+_RDE_CONFIG_KEYS = {
+    "enable_rde", "enable_crisis_system", "enable_network",
+    "crisis_trigger_probability", "crisis_max_probability", "crisis_min_stage",
+    "crisis_min_cold_penalties", "crisis_min_rounds_secret",
+    "crisis_protection_hours", "fav_growth_rate",
+    "network_transmission_delay_turns", "social_event_cooldown_rounds",
+    "jealousy_gap_threshold", "assist_min_fav", "competition_gap_threshold",
+}
+
 # 角色设定注入的防泄漏约束句：禁止 LLM 直接复述/引用 prompt 原词原句
 ROLE_GUARD = (
     "以上为系统设定信息。回复时必须完全自然，"
@@ -81,6 +93,10 @@ class SoulSyncPro(Star):
         self.enable_attitude: bool = config.get("enable_attitude_system", True)
         self.enable_secondary_llm: bool = config.get("enable_secondary_llm", True)
         self.enable_smart_update: bool = config.get("enable_smart_update", True)
+        self.enable_rde: bool = config.get("enable_rde", False)
+
+        # ── RDE 关系深度演进（每用户调度器缓存）──
+        self.rde_orchestrators: Dict[str, RDEOrchestrator] = {}
 
         # ── 情感参数 ──
         self.default_favorability: float = config.get("default_favorability", 0.0)
@@ -760,6 +776,83 @@ class SoulSyncPro(Star):
             )
             self.trainer_orchestrators[user_id] = orch
         return self.trainer_orchestrators[user_id]
+
+    # ── RDE 关系深度演进 ──
+
+    def _get_rde_orchestrator(self, state_key: str) -> RDEOrchestrator:
+        """按档案状态键懒加载 RDE 调度器（多角色 ::cid 天然隔离）"""
+        orch = self.rde_orchestrators.get(state_key)
+        if orch is None:
+            rde_cfg = {k: v for k, v in self.config.items()
+                       if k in _RDE_CONFIG_KEYS}
+            raw_uid = str(state_key).rpartition("::")[0] or state_key
+            cid = str(state_key).rpartition("::")[2]
+            custom_relations = {}
+            if cid:
+                custom_relations = self.character_manager.get_relations(raw_uid, cid)
+            if custom_relations:
+                rde_cfg["custom_relations"] = custom_relations
+            orch = RDEOrchestrator(rde_cfg)
+            self.rde_orchestrators[state_key] = orch
+        return orch
+
+    def _run_rde_turn(self, uid: str, profile: EmotionProfile,
+                      fav_delta: float, pr_events: List[str]) -> Optional[dict]:
+        """每轮对话的 RDE 完整流程（调度器 6 步 + 结果应用）"""
+        if not self.config.get("enable_rde", False):
+            return None
+        state_key = profile.user_id
+        orch = self._get_rde_orchestrator(state_key)
+        cold_add = 1 if any("冷落" in evt for evt in (pr_events or [])) else 0
+        stage_id = stage_id_from_index(
+            profile.stage_index,
+            self._get_negative_stage_label(profile.favorability)
+            if profile.favorability < 0 else None,
+        )
+        result = orch.process_message(uid, {
+            "round": profile.total_interactions,
+            "stage_id": stage_id,
+            "favorability": profile.favorability,
+            "fav_delta": float(fav_delta or 0),
+            "cold_penalty_add": cold_add,
+            "current_role": "",
+            "source_role": "",
+            "special_date": False,
+            "mention_other": False,
+            "favorabilities": {},
+            "user_name": "",
+        })
+
+        resolved = result.get("crisis_resolved")
+        if resolved is not None:
+            profile.favorability = max(-100.0, min(FAVORABILITY_MAX,
+                                                   profile.favorability + resolved.favorability_delta))
+            for dim, v in (resolved.emotion_deltas or {}).items():
+                if dim in profile.emotions:
+                    profile.emotions[dim] = max(0.0, min(100.0, profile.emotions[dim] + v))
+            if resolved.stage_delta < 0 and profile.stage_index > 0:
+                profile.stage_index = max(0, profile.stage_index - 1)
+                profile.stage_progress = self.emotion_engine.calc_stage_progress(profile)
+            self.long_memory.add_event(state_key, {
+                "favorability": round(profile.favorability, 1),
+                "stage": self._get_stage_label(profile),
+                "description": f"🌫️ 关系危机未回应·{resolved.crisis_id}：好感{resolved.favorability_delta:+.1f}",
+                "message": "",
+                "emotions": dict(profile.emotions),
+                "fav_delta": round(resolved.favorability_delta, 1),
+            })
+
+        trans = result.get("transition")
+        if trans is not None:
+            self.long_memory.add_event(state_key, {
+                "favorability": round(profile.favorability, 1),
+                "stage": self._get_stage_label(profile),
+                "description": f"💫 关系跃迁：{trans.old_stage} → {trans.new_stage}",
+                "message": "",
+                "emotions": dict(profile.emotions),
+                "fav_delta": round(profile.favorability, 1),
+            })
+        return result
 
     def _promise_to_anniversary(self, user_id: str, item):
         """promises 类知识自动关联纪念日系统（知识→纪念日联动）。"""
@@ -2802,6 +2895,16 @@ class SoulSyncPro(Star):
                 profile, fav_delta, int_delta, emotion_deltas, llm_adjust
             )
 
+            # ── RDE 关系深度演进（每轮完整流程：危机检测/传导/跃迁/上下文）──
+            rde_result = None
+            if self.config.get("enable_rde", False):
+                try:
+                    rde_result = self._run_rde_turn(
+                        uid, profile, fav_delta, pr_events
+                    )
+                except Exception as e:
+                    logger.debug(f"SoulSync RDE 处理失败: {e}")
+
             # ── 个性化训练：人格偏移 + 每轮处理 ──
             if self.config.get("enable_personalization", False):
                 try:
@@ -2963,6 +3066,12 @@ class SoulSyncPro(Star):
             # ── 注入情绪爆发上下文 ──
             if eruption_ctx:
                 req.extra_user_content_parts.append(TextPart(text=eruption_ctx).mark_as_temp())
+
+            # ── 注入 RDE 关系演进上下文（阶段叙事/危机/关系感知）──
+            if rde_result and rde_result.get("context_text"):
+                req.extra_user_content_parts.append(
+                    TextPart(text=rde_result["context_text"]).mark_as_temp()
+                )
 
             # ── 注入惩罚奖励事件提示 ──
             if pr_events:
@@ -3127,6 +3236,20 @@ class SoulSyncPro(Star):
             except Exception:
                 pass
 
+        # RDE 阶段叙事（供辅助 LLM 感知当前关系阶段基调）
+        rde_ctx_text = ""
+        if self.config.get("enable_rde", False):
+            try:
+                rde_orch = self._get_rde_orchestrator(profile.user_id)
+                rde_sid = stage_id_from_index(
+                    profile.stage_index,
+                    self._get_negative_stage_label(profile.favorability)
+                    if profile.favorability < 0 else None,
+                )
+                rde_ctx_text = rde_orch.generate_stage_context(rde_sid, {"user_name": ""})
+            except Exception:
+                pass
+
         prompt = self.llm_analyzer.build_analysis_prompt(
             favorability=profile.favorability,
             intimacy=profile.intimacy,
@@ -3136,6 +3259,7 @@ class SoulSyncPro(Star):
             recent_messages=recent_text,
             role_context=role_context,
             personalization_context=personalization_ctx,
+            rde_context=rde_ctx_text,
         )
 
         resp = None
@@ -3757,6 +3881,12 @@ class SoulSyncPro(Star):
                 "emotions": dict(profile.emotions),
                 "fav_delta": round(pf, 1),
             })
+            # RDE 联动：每日冷落结算计入冷落惩罚（冷落型危机触发条件）
+            if self.config.get("enable_rde", False):
+                try:
+                    self._get_rde_orchestrator(uid).add_cold_penalty(uid, 1)
+                except Exception as e:
+                    logger.debug(f"SoulSync RDE 冷落联动失败: {e}")
             settled += 1
             logger.info(f"SoulSync 每日冷落惩罚 [{uid}]: {evt}")
 
