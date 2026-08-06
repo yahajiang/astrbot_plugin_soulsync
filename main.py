@@ -2,10 +2,11 @@
 
 三层防御：
 1. Persona 加固：在每次 LLM 请求的 system_prompt 末尾注入防注入保护段（<InjectionGuard> 标记去重）。
-2. 输入检测：对当前用户消息做关键词/启发式正则/混淆解码检测（SoulSync 内置关系角色表达豁免）。
+2. 输入检测：对当前用户消息做关键词/启发式正则/混淆解码检测（SoulSync 内置关系角色表达豁免；
+   引用消息块 <Quoted Message> 先剥离再检测，转发攻击文本不算指令）。
 3. 处置策略：block（替换 prompt 拦截，LLM 不执行原指令）/ sanitize（剥离恶意片段）/ warn（仅告警）。
 
-管理指令 /injguard（管理员）：查看统计、切换模式、维护白名单。
+管理指令 /防注入（管理员，全中文）：统计、切换模式、维护白名单、图片模式。
 命中统计与最近记录持久化到 AstrBot data 目录（带条数上限）。
 """
 
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -40,6 +42,11 @@ from .guard_text import (
     GUARD_MARK_START,
 )
 
+try:
+    from .image_renderer import ImageRenderer
+except ImportError:  # pragma: no cover
+    ImageRenderer = None  # type: ignore[assignment]
+
 PLUGIN_NAME = "astrbot_plugin_soulsync_shield"
 STATS_FILE = "soulsync_shield_stats.json"
 LEGACY_PLUGIN_NAME = "astrbot_plugin_inj_guard"
@@ -47,12 +54,72 @@ LEGACY_STATS_FILE = "inj_guard_stats.json"
 
 MODES = ("block", "sanitize", "warn")
 MODE_LABELS = {"block": "拦截", "sanitize": "剥离", "warn": "告警"}
+NOTIFY_MODE_LABELS = {
+    "blocked": "拦截",
+    "context_blocked": "拦截·上下文",
+    "sanitized": "剥离",
+    "warned": "告警",
+}
+
+# AstrBot 在上下文消息前追加的时间/天气元数据行（仅展示层剔除，不影响检测）
+_META_TIME_RE = re.compile(r"^\[发送时间:.*?\]\s*", re.MULTILINE)
+
+_MEDIA_TYPES = ("image", "record", "video", "file", "face")
+
+
+def segment_to_text(segment) -> str:
+    """把单个消息段（dict / AstrBot MessageSegment 对象 / 字符串）转为文本。"""
+    if segment is None:
+        return ""
+    if isinstance(segment, str):
+        return segment
+    if isinstance(segment, dict):
+        seg_type = str(segment.get("type", ""))
+        if seg_type in _MEDIA_TYPES:
+            return f"[{seg_type}]"
+        text = segment.get("text") or segment.get("content") or ""
+        return str(text)
+    if hasattr(segment, "type"):
+        seg_type = str(getattr(segment, "type", ""))
+        if seg_type in _MEDIA_TYPES:
+            return f"[{seg_type}]"
+        data = getattr(segment, "data", None) or {}
+        if isinstance(data, dict):
+            return str(data.get("text", ""))
+        text = getattr(segment, "text", None)
+        if text is not None:
+            return str(text)
+        return str(segment)
+    return str(segment)
+
+
+def content_to_text(content) -> str:
+    """把上下文消息内容统一转为纯文本（字符串 / 消息段列表 / dict / 对象）。"""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(t for t in (segment_to_text(s) for s in content) if t)
+    if isinstance(content, dict):
+        text = content.get("text") or content.get("content") or ""
+        return str(text)
+    return str(content)
+
+
+def clean_preview_text(content) -> str:
+    """通知/日志展示用：文本化 + 剔除时间元数据行 + 去除空行。"""
+    text = content_to_text(content)
+    text = _META_TIME_RE.sub("", text)
+    return "\n".join(ln.strip() for ln in text.splitlines() if ln.strip())
+
 
 HELP_TEXT = (
     "🛡 心旅知音 · 注入防护盾\n"
     "用法：\n"
     "/防注入 — 帮助\n"
     "/防注入 统计 — 今日统计与最近命中\n"
+    "/防注入 图片模式 — 统计输出切换为图片（需 Pillow）\n"
     "/防注入 模式 拦截|剥离|告警 — 切换处置模式\n"
     "/防注入 白名单 加|删 <用户ID> — 增删白名单\n"
     "/防注入 白名单 列表 — 查看白名单"
@@ -68,6 +135,7 @@ class InjGuard(Star):
         self._stats_date = datetime.now().strftime("%Y-%m-%d")
         self._counters = {"blocked": 0, "sanitized": 0, "warned": 0}
         self._recent: list[dict] = []
+        self._renderer = None
 
     # ─────────────────────── 初始化与持久化 ───────────────────────
 
@@ -83,6 +151,13 @@ class InjGuard(Star):
         except Exception as exc:
             logger.warning(f"[soulsync_shield] 无法定位数据目录，统计仅保留在内存: {exc}")
             self._stats_path = Path(__file__).resolve().with_name(STATS_FILE)
+            data_dir = self._stats_path.parent
+        if ImageRenderer is not None:
+            try:
+                self._renderer = ImageRenderer(data_dir)
+            except Exception as exc:
+                logger.warning(f"[soulsync_shield] 图片渲染器初始化失败，保持文本输出: {exc}")
+                self._renderer = None
         await asyncio.to_thread(self._load_stats)
 
     def _migrate_legacy_stats(self, data_dir: Path) -> None:
@@ -121,7 +196,7 @@ class InjGuard(Star):
         except (TypeError, ValueError):
             return 500
 
-    def _record_hit(self, event: AstrMessageEvent, matched: str, mode: str, preview: str) -> None:
+    def _record_hit(self, event: AstrMessageEvent, matched: str, mode: str, preview) -> None:
         today = datetime.now().strftime("%Y-%m-%d")
         with self._lock:
             if today != self._stats_date:
@@ -133,7 +208,7 @@ class InjGuard(Star):
                 "user_id": str(event.get_sender_id()),
                 "matched": matched,
                 "mode": mode,
-                "preview": preview[:120],
+                "preview": clean_preview_text(preview)[:120],
             })
             self._recent = self._recent[-self._recent_limit():]
         if self._stats_path is not None:
@@ -215,9 +290,18 @@ class InjGuard(Star):
             return
         try:
             preview_len = self._notify_preview_len()
-            lines = [f"🛡 注入防护盾 · 拦截通知", f"时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", f"用户：{event.get_sender_id()}"]
+            lines = [
+                "🛡 注入防护盾 · 拦截通知",
+                f"时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"用户：{event.get_sender_id()}",
+                "",
+            ]
             for idx, (mode, matched, content) in enumerate(items[:5], start=1):
-                lines.append(f"{idx}. [{mode}] {matched}\n{content[:preview_len]}")
+                label = NOTIFY_MODE_LABELS.get(mode, mode)
+                body = clean_preview_text(content)
+                body = body.replace("\n", " ⏎ ")
+                lines.append(f"① {label}｜{matched}")
+                lines.append(f"　{body[:preview_len]}")
             if len(items) > 5:
                 lines.append(f"…另有 {len(items) - 5} 条")
             body = "\n".join(lines)
@@ -346,24 +430,25 @@ class InjGuard(Star):
         removed = 0
         notified: list[tuple[str, str, str]] = []
         for idx, result, scan_text in hits:
-            content = str(contexts[idx].get("content", ""))
+            content = contexts[idx].get("content", "")
+            display = content_to_text(content)
             if mode == "warn":
-                self._record_hit(event, f"context: {result.matched}", "warned", content)
+                self._record_hit(event, f"context: {result.matched}", "warned", display)
             elif mode == "sanitize":
                 cleaned = sanitize(scan_text, result)
                 if cleaned.strip():
                     contexts[idx]["content"] = cleaned
-                    self._record_hit(event, f"context: {result.matched}", "sanitized", content)
+                    self._record_hit(event, f"context: {result.matched}", "sanitized", display)
                 else:
                     contexts.pop(idx - removed)
                     removed += 1
-                    self._record_hit(event, f"context: {result.matched}", "blocked", content)
-                    notified.append(("context_blocked", result.matched, content))
+                    self._record_hit(event, f"context: {result.matched}", "blocked", display)
+                    notified.append(("context_blocked", result.matched, display))
             else:
                 contexts.pop(idx - removed)
                 removed += 1
-                self._record_hit(event, f"context: {result.matched}", "blocked", content)
-                notified.append(("context_blocked", result.matched, content))
+                self._record_hit(event, f"context: {result.matched}", "blocked", display)
+                notified.append(("context_blocked", result.matched, display))
         if notified:
             self._schedule_admin_notify(event, notified)
         if removed:
@@ -397,7 +482,25 @@ class InjGuard(Star):
             return
 
         if sub in ("统计", "数据"):
-            yield event.plain_result(self._format_stats())
+            lines = self._format_stats_lines()
+            path = self._try_render_card("注入防护统计", lines)
+            if path:
+                yield event.image_result(path)
+            else:
+                yield event.plain_result("\n".join(lines))
+            return
+
+        if sub in ("图片模式", "图片"):
+            if self._renderer is None or not self._renderer.available:
+                yield event.plain_result("⚠️ 图片渲染不可用（未安装 Pillow 或缺少中文字体），保持文本输出。")
+                return
+            cur = bool(self.config.get("image_mode", False))
+            self.config.update({"image_mode": not cur})
+            save = getattr(self.config, "save_config", None)
+            if callable(save):
+                save()
+            state = "开启 ✅（统计输出图片）" if not cur else "关闭 ❌（统计输出文本）"
+            yield event.plain_result(f"图片模式已{state}")
             return
 
         if sub in ("模式",):
@@ -461,14 +564,14 @@ class InjGuard(Star):
         if callable(save):
             save()
 
-    def _format_stats(self) -> str:
+    def _format_stats_lines(self) -> list[str]:
         with self._lock:
             counters = dict(self._counters)
             recent = list(self._recent[-5:][::-1])
         lines = [
             f"🛡 注入防护统计（{self._stats_date}）",
             f"拦截: {counters.get('blocked', 0)} | 剥离: {counters.get('sanitized', 0)} | 告警: {counters.get('warned', 0)}",
-            f"模式: {self.config.get('mode', 'block')} | 最近记录: {len(self._recent)} 条",
+            f"模式: {MODE_LABELS.get(str(self.config.get('mode', 'block')), self.config.get('mode', 'block'))} | 最近记录: {len(self._recent)} 条",
         ]
         if recent:
             lines.append("\n最近命中：")
@@ -477,4 +580,25 @@ class InjGuard(Star):
                     f"- {item['time']} [{item['mode']}] {item['matched']} "
                     f"(user={item['user_id']}): {item['preview'][:40]}"
                 )
-        return "\n".join(lines)
+        return lines
+
+    def _format_stats(self) -> str:
+        return "\n".join(self._format_stats_lines())
+
+    def _is_image_mode(self) -> bool:
+        if not bool(self.config.get("image_mode", False)):
+            return False
+        return self._renderer is not None and self._renderer.available
+
+    def _try_render_card(self, title: str, lines: list[str]) -> str | None:
+        """图片模式开启且渲染可用时把文本行渲染为卡片图片；失败返回 None 降级文本。"""
+        if not self._is_image_mode():
+            return None
+        try:
+            import time
+
+            fname = f"card_{int(time.time())}.png"
+            return self._renderer.render_card(title, lines, fname)
+        except Exception as exc:
+            logger.warning(f"[soulsync_shield] 图片渲染失败（降级文本）: {exc}")
+            return None
