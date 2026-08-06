@@ -97,6 +97,18 @@ textarea.fld{min-height:56px;resize:vertical}
 .sl{display:flex;align-items:center;gap:6px}
 .sl input[type=range]{flex:1}
 .sl .sv{font-weight:700;font-size:12px;min-width:32px;text-align:right}
+.tu-wrap{position:relative}
+.tu-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:220px;overflow:auto;background:rgba(255,255,255,.95);border:1px solid var(--glass-line);border-radius:14px;box-shadow:var(--shadow-l);z-index:5;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .2s var(--spring),transform .2s var(--spring),visibility 0s linear .2s}
+.tu-drop.on{opacity:1;visibility:visible;transform:translateY(0);transition:opacity .2s var(--spring),transform .2s var(--spring)}
+.tu-drop .tu-i{padding:7px 10px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s}
+.tu-drop .tu-i:hover{background:rgba(166,124,47,.12)}
+.tu-drop .tu-i .tu-q{font-weight:700}
+.tu-drop .tu-i .tu-t{color:var(--dim);font-size:11px;margin-left:auto}
+.tu-drop .tu-empty{padding:10px;font-size:12px;color:var(--dim);text-align:center}
+.tab{transition:all .3s var(--spring)}
+.tab.on{background:var(--gold);color:#FFF8E8;border-color:var(--gold-l);box-shadow:0 2px 10px rgba(166,124,47,.35)}
+.tb-swap{animation:tSwap .28s var(--spring)}
+@keyframes tSwap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .det-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .det-c{background:rgba(255,255,255,.5);border:1px solid var(--glass-line);border-radius:14px;padding:10px}
 .det-c .l{font-size:11px;color:var(--dim)}.det-c .v{font-size:18px;font-weight:800;margin-top:2px}
@@ -186,7 +198,7 @@ textarea.fld{min-height:56px;resize:vertical}
 <div class="ov" id="oFest"><div class="modal modal-sm"><div class="modal-hd"><h3>📅 节日与纪念日</h3><button class="btn" id="fCan">关闭</button></div><div class="modal-bd"><div id="fBody"></div></div></div></div>
 <div class="ov" id="oRole"><div class="modal"><div class="modal-hd"><h3>🎭 关系角色</h3><button class="btn" id="rCan">关闭</button></div><div class="modal-bd"><div id="rBody"></div><div class="tst" id="rTst"></div></div></div></div>
 <div class="ov" id="oTra"><div class="modal"><div class="modal-hd"><h3>🎯 个性化训练</h3><div><button class="btn" id="tCan">关闭</button></div></div><div class="modal-bd">
-  <div class="cs"><div class="cs-t">👤 选择用户</div><div class="cr"><div><div class="cn">档案用户</div></div><div><input class="fld" list="tUserList" id="tUser" placeholder="选择或输入用户ID"><datalist id="tUserList"></datalist></div></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn sm" id="tP1">🎭 人格</button><button class="btn sm" id="tP2">📚 知识</button><button class="btn sm" id="tP3">💬 风格</button><button class="btn sm" id="tP4">🧠 记忆</button></div></div>
+  <div class="cs"><div class="cs-t">👤 选择用户</div><div class="cr"><div><div class="cn">档案用户</div></div><div class="tu-wrap"><input class="fld" id="tUser" placeholder="输入QQ号/ID 搜索…" autocomplete="off"><div class="tu-drop" id="tUserDrop"></div></div></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn sm tab" data-t="1" id="tP1">🎭 人格</button><button class="btn sm tab" data-t="2" id="tP2">📚 知识</button><button class="btn sm tab" data-t="3" id="tP3">💬 风格</button><button class="btn sm tab" data-t="4" id="tP4">🧠 记忆</button></div></div>
   <div id="tBody"></div><div class="tst" id="tTst"></div>
 </div></div></div>
 <div class="ov" id="oAdm"><div class="modal modal-sm"><div class="modal-hd"><h3>🔧 管理员</h3><button class="btn" id="aCan">关闭</button></div><div class="modal-bd">
@@ -745,7 +757,7 @@ const B = window.AstrBotPluginPage;
 await B.ready();
 const $t = id => document.getElementById(id);
 const escT = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML };
-let TD = null, TP = 1;
+let TD = null, TP = 1, TU_USERS = [];
 const TKMETA = { profile: ['个人档案','📇'], interests: ['兴趣','🎨'], people: ['人物','👥'], promises: ['约定','🤝'], experiences: ['经历','📖'], values: ['价值观','🧭'] };
 const TMLABEL = { text: '文字', image: '图片', promise: '约定', emotional: '情感' };
 const TPARAM_DESC = {
@@ -759,19 +771,49 @@ function tMsg(m, e) { const el = $t('tTst'); if (el) { el.textContent = m || '';
 async function tLoadUsers() {
   try {
     const r = await B.apiGet('trainer/data');
-    const dl = $t('tUserList');
-    dl.innerHTML = (r.users || []).map(u => `<option value="${escT(u)}">`).join('');
+    TU_USERS = (r.users || []).map(u => String(u)).sort();
+    tRenderDrop();
   } catch (e) {}
+}
+function tRenderDrop(filter) {
+  const dl = $t('tUserDrop');
+  if (!dl) return;
+  const q = (filter || '').trim().toLowerCase();
+  const list = q ? TU_USERS.filter(u => u.toLowerCase().includes(q)) : TU_USERS;
+  if (!list.length) {
+    dl.innerHTML = '<div class="tu-empty">' + (q ? '未找到匹配用户' : '暂无用户，请先与插件对话') + '</div>';
+  } else {
+    dl.innerHTML = list.map(u => `<div class="tu-i" data-uid="${escT(u)}"><span class="tu-q">${escT(u)}</span><span class="tu-t">点击选择</span></div>`).join('');
+    for (const el of dl.querySelectorAll('.tu-i')) {
+      el.onclick = () => { tPickUser(el.dataset.uid); };
+    }
+  }
+}
+function tOpenDrop() { const dl = $t('tUserDrop'); if (dl) { tRenderDrop($t('tUser').value); dl.classList.add('on') } }
+function tCloseDrop() { const dl = $t('tUserDrop'); if (dl) dl.classList.remove('on') }
+function tPickUser(uid) {
+  $t('tUser').value = uid;
+  tCloseDrop();
+  tLoad();
 }
 async function tLoad() {
   const uid = ($t('tUser').value || '').trim();
-  $t('tBody').innerHTML = '<div class="empty"><div class="ic">⏳</div>加载中...</div>';
-  if (!uid) { $t('tBody').innerHTML = '<div class="empty"><div class="ic">🎯</div>请先选择用户<br><span style="font-size:12px">输入与插件交互过的用户ID</span></div>'; return }
+  const body = $t('tBody');
+  body.innerHTML = '<div class="empty"><div class="ic">⏳</div>加载中...</div>';
+  if (!uid) { body.innerHTML = '<div class="empty"><div class="ic">🎯</div>请先选择用户<br><span style="font-size:12px">输入与插件交互过的用户ID，或从下拉快速选择</span></div>'; return }
   try {
     const r = await B.apiGet('trainer/data', { user_id: uid });
     TD = r;
-    TP === 1 ? tPanelPersona() : TP === 2 ? tPanelKnowledge() : TP === 3 ? tPanelStyle() : tPanelMemory();
-  } catch (e) { $t('tBody').innerHTML = `<div class="empty"><div class="ic">⚠️</div>${escT(e.message || e)}</div>` }
+    tRenderTab();
+  } catch (e) { body.innerHTML = `<div class="empty"><div class="ic">⚠️</div>${escT(e.message || e)}</div>` }
+}
+function tRenderTab() {
+  const body = $t('tBody');
+  for (const b of document.querySelectorAll('#oTra .tab')) b.classList.toggle('on', +b.dataset.t === TP);
+  TP === 1 ? tPanelPersona() : TP === 2 ? tPanelKnowledge() : TP === 3 ? tPanelStyle() : tPanelMemory();
+  body.classList.remove('tb-swap');
+  void body.offsetWidth;
+  body.classList.add('tb-swap');
 }
 function tPanelPersona() {
   const p = TD.persona || {}, meta = TD.persona_meta || {};
@@ -884,14 +926,28 @@ async function tPost(endpoint, body) {
   try { tMsg('⏳ 处理中...'); const r = await B.apiPost(endpoint, body); tMsg((r.data&&r.data.message)||r.message||'✅ 成功') }
   catch (e) { tMsg('❌ ' + (e.message||String(e)), true) }
 }
-$t('bTra').onclick = async () => { tMsg(''); await tLoadUsers(); $t('oTra').classList.add('on'); if (!$t('tUser').value) tLoad(); };
+$t('bTra').onclick = async () => { tMsg(''); await tLoadUsers(); $t('oTra').classList.add('on'); tOpenDrop(); if (!$t('tUser').value) tLoad(); };
 $t('tCan').onclick = () => $t('oTra').classList.remove('on');
 $t('oTra').onclick = e => { if (e.target === $t('oTra')) $t('oTra').classList.remove('on') };
-$t('tUser').onchange = tLoad;
-$t('tP1').onclick = () => { TP = 1; TD && tLoad() };
-$t('tP2').onclick = () => { TP = 2; TD && tLoad() };
-$t('tP3').onclick = () => { TP = 3; TD && tLoad() };
-$t('tP4').onclick = () => { TP = 4; TD && tLoad() };
+$t('tUser').oninput = () => tRenderDrop($t('tUser').value);
+$t('tUser').onfocus = tOpenDrop;
+$t('tUser').onkeydown = e => {
+  if (e.key === 'Enter' && $t('tUserDrop').classList.contains('on')) {
+    const first = $t('tUserDrop').querySelector('.tu-i');
+    if (first) tPickUser(first.dataset.uid);
+  } else if (e.key === 'Escape') tCloseDrop();
+};
+$t('tUserDrop').onclick = e => { if (e.target === $t('tUserDrop')) tCloseDrop() };
+document.addEventListener('click', e => { if (!e.target.closest('.tu-wrap')) tCloseDrop() });
+function tSwitchTab(n) {
+  TP = n;
+  for (const b of document.querySelectorAll('#oTra .tab')) b.classList.toggle('on', +b.dataset.t === n);
+  if (TD) tRenderTab(); else tLoad();
+}
+$t('tP1').onclick = () => tSwitchTab(1);
+$t('tP2').onclick = () => tSwitchTab(2);
+$t('tP3').onclick = () => tSwitchTab(3);
+$t('tP4').onclick = () => tSwitchTab(4);
 </script>
 </body>
 </html>
