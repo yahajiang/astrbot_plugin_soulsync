@@ -284,6 +284,30 @@ class SoulSyncPro(Star):
                 f"/{self._PLUGIN_ROUTE}/admin", self._web_admin, ["POST"],
                 "SoulSync: 管理操作",
             )
+            self.context.register_web_api(
+                f"/{self._PLUGIN_ROUTE}/trainer/data", self._web_trainer_data, ["GET"],
+                "SoulSync: 个性化训练数据",
+            )
+            self.context.register_web_api(
+                f"/{self._PLUGIN_ROUTE}/trainer/config", self._web_trainer_config, ["POST"],
+                "SoulSync: 个性化训练配置",
+            )
+            self.context.register_web_api(
+                f"/{self._PLUGIN_ROUTE}/trainer/persona", self._web_trainer_persona, ["POST"],
+                "SoulSync: 人格参数操作",
+            )
+            self.context.register_web_api(
+                f"/{self._PLUGIN_ROUTE}/trainer/knowledge", self._web_trainer_knowledge, ["POST"],
+                "SoulSync: 知识库操作",
+            )
+            self.context.register_web_api(
+                f"/{self._PLUGIN_ROUTE}/trainer/memory", self._web_trainer_memory, ["POST"],
+                "SoulSync: 私人记忆操作",
+            )
+            self.context.register_web_api(
+                f"/{self._PLUGIN_ROUTE}/trainer/style", self._web_trainer_style, ["POST"],
+                "SoulSync: 语言风格操作",
+            )
             logger.info("SoulSync WebUI 路由注册成功")
         except Exception as e:
             logger.error(f"SoulSync WebUI 路由注册失败: {e}")
@@ -519,6 +543,207 @@ class SoulSyncPro(Star):
                 return json_response({"ok": True, "message": f"已清空 {uid} 的长期记忆"})
 
             return error_response(f"未知操作: {act}")
+        except Exception as e:
+            return error_response(str(e))
+
+    # ═══════════════════════════════════════════════════════════════
+    #  个性化训练 WebUI API
+    # ═══════════════════════════════════════════════════════════════
+
+    async def _web_trainer_data(self):
+        """GET /trainer/data?user_id=xxx - 个性化训练数据"""
+        try:
+            uid = (request.query.get("user_id") or "").strip()
+            if uid:
+                orch = self._get_orchestrator(uid)
+                persona = orch.get_persona()
+                kb = orch.get_knowledge()
+                style = orch.get_style()
+                mem = orch.get_private_memory()
+                from .trainer.persona.persona_params import PARAM_META
+                return json_response({
+                    "user_id": uid,
+                    "persona": persona.to_dict(),
+                    "persona_meta": PARAM_META,
+                    "knowledge": kb.to_dict(),
+                    "style": style.to_dict(),
+                    "memory": mem.to_dict(),
+                    "audit": orch._memory_auditor.get_logs(50),
+                })
+            users = set()
+            base = Path(self.data_dir) / "personalization"
+            if base.exists():
+                for d in base.iterdir():
+                    if d.is_dir() and any(d.rglob("*.json")):
+                        users.add(d.name)
+            return json_response({"users": sorted(users)})
+        except Exception as e:
+            return error_response(str(e))
+
+    async def _web_trainer_config(self):
+        """POST /trainer/config - 个性化配置保存"""
+        try:
+            body = await request.json(default={})
+            if not isinstance(body, dict):
+                return error_response("请求体必须是 JSON 对象")
+            raw = body.get("config", body)
+            for k, v in raw.items():
+                if k.startswith("enable_personalization") or k.startswith("persona_") or k.startswith("knowledge_") or k.startswith("style_") or k.startswith("private_memory_") or k == "personalization_total_token_budget":
+                    self.config[k] = v
+            fn = getattr(self.config, "save_config", None)
+            if callable(fn):
+                fn()
+            return json_response({"ok": True, "message": "个性化配置已保存"})
+        except Exception as e:
+            return error_response(str(e))
+
+    async def _web_trainer_persona(self):
+        """POST /trainer/persona - 人格参数操作 {action, param, value}"""
+        try:
+            body = await request.json(default={})
+            uid = str(body.get("user_id", "")).rpartition("::")[0] or body.get("user_id", "")
+            if not uid:
+                return error_response("缺少 user_id")
+            action = body.get("action", "set")
+            orch = self._get_orchestrator(uid)
+            params = orch.get_persona()
+            from .trainer.persona.persona_params import PARAM_META
+            if action == "set":
+                pname = body.get("param", "")
+                meta = PARAM_META.get(pname)
+                if not meta:
+                    return error_response(f"未知参数: {pname}")
+                if params.locked and pname != "locked":
+                    return error_response("人格已锁定，无法修改参数")
+                raw = body.get("value")
+                try:
+                    if meta["type"] == "float":
+                        params.__setattr__(pname, float(raw))
+                    elif meta["type"] == "int":
+                        params.__setattr__(pname, int(raw))
+                    else:
+                        params.__setattr__(pname, str(raw))
+                except (TypeError, ValueError) as e:
+                    return error_response(f"参数值无效: {e}")
+                params.total_training_turns += 1
+                orch.save_all()
+                return json_response({"ok": True, "message": f"已更新 {pname}"})
+            elif action == "reset":
+                orch._modifier.reset()
+                orch._persona_params = None
+                return json_response({"ok": True, "message": "人格已重置"})
+            elif action == "lock":
+                orch._modifier.lock(params)
+                return json_response({"ok": True, "message": "人格已锁定"})
+            elif action == "unlock":
+                orch._modifier.unlock(params)
+                return json_response({"ok": True, "message": "人格已解锁"})
+            return error_response(f"未知操作: {action}")
+        except Exception as e:
+            return error_response(str(e))
+
+    async def _web_trainer_knowledge(self):
+        """POST /trainer/knowledge - 知识库操作 {action, ...}"""
+        try:
+            body = await request.json(default={})
+            uid = str(body.get("user_id", "")).rpartition("::")[0] or body.get("user_id", "")
+            if not uid:
+                return error_response("缺少 user_id")
+            action = body.get("action", "add")
+            orch = self._get_orchestrator(uid)
+            if action == "add":
+                category = str(body.get("category", "profile"))
+                key = str(body.get("key", ""))
+                value = str(body.get("value", ""))
+                if not key or not value:
+                    return error_response("key 和 value 不能为空")
+                item = orch.add_knowledge(category, key, value, "webui")
+                return json_response({"ok": True, "message": f"已添加知识 {item.id}"})
+            elif action == "remove":
+                kid = str(body.get("id", ""))
+                if orch._knowledge_mgr.remove(kid):
+                    orch._knowledge = None
+                    return json_response({"ok": True, "message": f"已删除知识 {kid}"})
+                return error_response(f"未找到知识 {kid}")
+            return error_response(f"未知操作: {action}")
+        except Exception as e:
+            return error_response(str(e))
+
+    async def _web_trainer_memory(self):
+        """POST /trainer/memory - 私人记忆操作 {action, ...}"""
+        try:
+            body = await request.json(default={})
+            uid = str(body.get("user_id", "")).rpartition("::")[0] or body.get("user_id", "")
+            if not uid:
+                return error_response("缺少 user_id")
+            action = body.get("action", "add")
+            orch = self._get_orchestrator(uid)
+            if action == "add":
+                mem_type = str(body.get("type", "text"))
+                content = str(body.get("content", ""))
+                if not content:
+                    return error_response("内容不能为空")
+                try:
+                    mem = orch.add_memory(
+                        mem_type, content,
+                        importance=float(body.get("importance", 5)),
+                        mood=str(body.get("mood", "")),
+                    )
+                    return json_response({"ok": True, "message": f"已添加记忆 {mem.id}"})
+                except ValueError as e:
+                    return error_response(str(e))
+            elif action == "remove":
+                mid = str(body.get("id", ""))
+                if orch._memory_mgr.remove(mid):
+                    orch._memory = None
+                    return json_response({"ok": True, "message": f"已删除记忆 {mid}"})
+                return error_response(f"未找到记忆 {mid}")
+            elif action == "star":
+                mid = str(body.get("id", ""))
+                if body.get("starred", True):
+                    orch._memory_mgr.star(mid)
+                else:
+                    orch._memory_mgr.unstar(mid)
+                orch._memory = None
+                return json_response({"ok": True, "message": "已更新星标"})
+            return error_response(f"未知操作: {action}")
+        except Exception as e:
+            return error_response(str(e))
+
+    async def _web_trainer_style(self):
+        """POST /trainer/style - 语言风格操作 {action, ...}"""
+        try:
+            body = await request.json(default={})
+            uid = str(body.get("user_id", "")).rpartition("::")[0] or body.get("user_id", "")
+            if not uid:
+                return error_response("缺少 user_id")
+            action = body.get("action", "lock")
+            orch = self._get_orchestrator(uid)
+            state = orch.get_style()
+            if action == "lock":
+                state.locked = True
+                orch.save_all()
+                return json_response({"ok": True, "message": "风格已锁定"})
+            elif action == "unlock":
+                state.locked = False
+                orch.save_all()
+                return json_response({"ok": True, "message": "风格已解锁"})
+            elif action == "snapshot":
+                name = str(body.get("name", "")).strip()
+                from .trainer.style.style_snapshot import StyleSnapshotManager
+                mgr = StyleSnapshotManager(self.trainer_storage, uid)
+                mgr.save_snapshot(state, name or "")
+                orch._style = None
+                return json_response({"ok": True, "message": f"快照已保存：{name or '自动命名'}"})
+            elif action == "restore":
+                name = str(body.get("name", ""))
+                from .trainer.style.style_snapshot import StyleSnapshotManager
+                mgr = StyleSnapshotManager(self.trainer_storage, uid)
+                if mgr.restore_snapshot(state, name):
+                    orch._style = None
+                    return json_response({"ok": True, "message": f"已恢复快照：{name}"})
+                return error_response(f"未找到快照：{name}")
+            return error_response(f"未知操作: {action}")
         except Exception as e:
             return error_response(str(e))
 

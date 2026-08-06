@@ -167,6 +167,7 @@ textarea.fld{min-height:56px;resize:vertical}
             <button class="act-btn" id="bNeg">💀 负好感排行</button>
             <button class="act-btn" id="bFest">📅 节日与纪念日</button>
             <button class="act-btn" id="bRole">🎭 关系角色</button>
+            <button class="act-btn hot" id="bTra">🎯 个性化训练<div class="d">人格/知识/风格/记忆 四模块面板</div></button>
             <button class="act-btn" id="bAdm">🔧 管理员工具<div class="d">设置好感/亲密/重置</div></button>
           </div>
         </div>
@@ -184,6 +185,10 @@ textarea.fld{min-height:56px;resize:vertical}
 <div class="ov" id="oLB"><div class="modal modal-sm"><div class="modal-hd"><h3 id="lTitle">🏆 排行榜</h3><button class="btn" id="lCan">关闭</button></div><div class="modal-bd"><div id="lBody"></div></div></div></div>
 <div class="ov" id="oFest"><div class="modal modal-sm"><div class="modal-hd"><h3>📅 节日与纪念日</h3><button class="btn" id="fCan">关闭</button></div><div class="modal-bd"><div id="fBody"></div></div></div></div>
 <div class="ov" id="oRole"><div class="modal"><div class="modal-hd"><h3>🎭 关系角色</h3><button class="btn" id="rCan">关闭</button></div><div class="modal-bd"><div id="rBody"></div><div class="tst" id="rTst"></div></div></div></div>
+<div class="ov" id="oTra"><div class="modal"><div class="modal-hd"><h3>🎯 个性化训练</h3><div><button class="btn" id="tCan">关闭</button></div></div><div class="modal-bd">
+  <div class="cs"><div class="cs-t">👤 选择用户</div><div class="cr"><div><div class="cn">档案用户</div></div><div><input class="fld" list="tUserList" id="tUser" placeholder="选择或输入用户ID"><datalist id="tUserList"></datalist></div></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn sm" id="tP1">🎭 人格</button><button class="btn sm" id="tP2">📚 知识</button><button class="btn sm" id="tP3">💬 风格</button><button class="btn sm" id="tP4">🧠 记忆</button></div></div>
+  <div id="tBody"></div><div class="tst" id="tTst"></div>
+</div></div></div>
 <div class="ov" id="oAdm"><div class="modal modal-sm"><div class="modal-hd"><h3>🔧 管理员</h3><button class="btn" id="aCan">关闭</button></div><div class="modal-bd">
   <div class="cs"><div class="cs-t">👤 选择用户</div><div class="cr"><div><div class="cn">档案用户</div></div><div><select class="fld" id="aUser"><option value="">— 选择或手动输入下方 ID —</option></select></div></div><div style="font-size:11px;color:var(--dim);margin-top:2px" id="aPrev"></div></div>
   <div class="cs"><div class="cs-t">📝 设置好感度</div><div class="cr"><div><div class="cn">用户 ID</div></div><div><input class="fld" id="aFId"></div></div><div class="cr"><div><div class="cn">好感 (-100~200)</div></div><div><input class="fld" type="number" id="aFV"></div></div><button class="btn pri" id="aFB" style="margin-top:6px">设置</button></div>
@@ -732,6 +737,161 @@ mmScroll(document.body,true);
 for(const m of document.querySelectorAll('.modal-bd'))mmScroll(m,false);
 
 await load();
+</script>
+
+<script type="module">
+// ── 个性化训练面板（人格/知识/风格/记忆）──
+const B = window.AstrBotPluginPage;
+await B.ready();
+const $t = id => document.getElementById(id);
+const escT = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML };
+let TD = null, TP = 1;
+const TKMETA = { profile: ['个人档案','📇'], interests: ['兴趣','🎨'], people: ['人物','👥'], promises: ['约定','🤝'], experiences: ['经历','📖'], values: ['价值观','🧭'] };
+const TMLABEL = { text: '文字', image: '图片', promise: '约定', emotional: '情感' };
+const TPARAM_DESC = {
+  joy_baseline:'喜悦维度日常偏移',sadness_sensitivity:'悲伤放大系数',anger_threshold:'愤怒触发门槛',trust_baseline:'信任维度日常偏移',
+  expectation_growth:'期待增长速率',proactive_topic:'主动话题频率',jealousy_threshold:'吃醋触发门槛',conflict_style:'分歧处理模式',
+  support_style:'安慰表达方式',tequila_rate:'吐槽频率%',sajiao_rate:'撒娇频率%',emotional_express:'情感直白程度',humor_tone:'幽默风格',
+  length_preference:'回复长度倾向',grudge_coefficient:'记仇系数',romantic_memory_weight:'浪漫记忆权重',forget_speed:'遗忘速率',
+  milestone_sensitivity:'里程碑重视度',stability:'训练稳定度%',total_training_turns:'累计训练轮数'
+};
+function tMsg(m, e) { const el = $t('tTst'); if (el) { el.textContent = m || ''; el.classList.toggle('error', !!e) } }
+async function tLoadUsers() {
+  try {
+    const r = await B.apiGet('trainer/data');
+    const dl = $t('tUserList');
+    dl.innerHTML = (r.users || []).map(u => `<option value="${escT(u)}">`).join('');
+  } catch (e) {}
+}
+async function tLoad() {
+  const uid = ($t('tUser').value || '').trim();
+  $t('tBody').innerHTML = '<div class="empty"><div class="ic">⏳</div>加载中...</div>';
+  if (!uid) { $t('tBody').innerHTML = '<div class="empty"><div class="ic">🎯</div>请先选择用户<br><span style="font-size:12px">输入与插件交互过的用户ID</span></div>'; return }
+  try {
+    const r = await B.apiGet('trainer/data', { user_id: uid });
+    TD = r;
+    TP === 1 ? tPanelPersona() : TP === 2 ? tPanelKnowledge() : TP === 3 ? tPanelStyle() : tPanelMemory();
+  } catch (e) { $t('tBody').innerHTML = `<div class="empty"><div class="ic">⚠️</div>${escT(e.message || e)}</div>` }
+}
+function tPanelPersona() {
+  const p = TD.persona || {}, meta = TD.persona_meta || {};
+  let h = `<div class="sec-box"><div class="item"><span class="ic">🎚️</span>稳定度 <strong>${Math.round(p.stability||0)}%</strong> · 训练轮数 <strong>${p.total_training_turns||0}</strong> · 最近更新 ${escT(p.last_updated||'—')}</div><div class="item"><span class="ic">${p.locked?'🔒':'🔓'}</span>当前状态：${p.locked?'<span style="color:var(--red)">已锁定（参数不可调）</span>':'<span style="color:var(--green)">可训练</span>'}</div></div>`;
+  h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><button class="btn sm" id="tpLock">' + (p.locked ? '🔓 解锁' : '🔒 锁定') + '</button><button class="btn sm" id="tpReset">♻️ 重置</button></div>';
+  const skip = ['stability', 'total_training_turns', 'locked', 'last_updated'];
+  const floats = ['joy_baseline','sadness_sensitivity','anger_threshold','trust_baseline','expectation_growth','tequila_rate','sajiao_rate','emotional_express','grudge_coefficient','romantic_memory_weight','forget_speed','milestone_sensitivity'];
+  const options = ['proactive_topic','jealousy_threshold','conflict_style','support_style','humor_tone','length_preference'];
+  for (const k of Object.keys(meta)) {
+    if (skip.includes(k) || k.startsWith('_')) continue;
+    const m = meta[k];
+    h += `<div class="cs"><div class="cs-t">${escT(m.label||k)}</div><div class="ch">${escT(m.desc||'')}</div><div class="cr">`;
+    if (options.includes(k)) {
+      h += `<div><select class="fld" data-p="${k}">${(m.options||[]).map(o=>`<option value="${o}"${String(p[k])===o?' selected':''}>${o}</option>`).join('')}</select></div>`;
+    } else if (floats.includes(k)) {
+      const v = parseFloat(p[k] ?? m.default ?? 0);
+      h += `<div class="sl"><input type="range" data-p="${k}" min="${m.min}" max="${m.max}" step="0.1" value="${v}"><span class="sv" id="sv-${k}">${v.toFixed(1)}</span></div>`;
+    } else {
+      const v = p[k] ?? m.default ?? 0;
+      h += `<div class="sl"><input type="range" data-p="${k}" min="${m.min}" max="${m.max}" step="1" value="${v}"><span class="sv" id="sv-${k}">${v}</span></div>`;
+    }
+    h += '</div></div>';
+  }
+  h += '<div style="font-size:11px;color:var(--dim)">💡 滑块实时生效（锁定状态下仅可查看）。调整会累计训练轮数。</div>';
+  $t('tBody').innerHTML = h;
+  for (const el of document.querySelectorAll('#tBody input[data-p]')) {
+    el.oninput = async () => {
+      const k = el.dataset.p, v = el.value;
+      const sv = $t('sv-' + k); if (sv) sv.textContent = parseFloat(v).toFixed(1);
+      await tPost('trainer/persona', { user_id: $t('tUser').value.trim(), action: 'set', param: k, value: v });
+    };
+  }
+  for (const el of document.querySelectorAll('#tBody select[data-p]')) {
+    el.onchange = async () => tPost('trainer/persona', { user_id: $t('tUser').value.trim(), action: 'set', param: el.dataset.p, value: el.value });
+  }
+  $t('tpLock').onclick = async () => {
+    const p = TD.persona || {};
+    await tPost('trainer/persona', { user_id: $t('tUser').value.trim(), action: p.locked ? 'unlock' : 'lock' });
+    await tLoad();
+  };
+  $t('tpReset').onclick = async () => { if (confirm('确认重置全部人格参数？')) { await tPost('trainer/persona', { user_id: $t('tUser').value.trim(), action: 'reset' }); await tLoad() } };
+}
+function tPanelKnowledge() {
+  const kb = TD.knowledge || {};
+  const items = kb.items || [];
+  let h = `<div class="sec-box"><div class="item"><span class="ic">📚</span>知识条目 <strong>${items.length}</strong> 条</div></div>`;
+  h += '<div class="cs"><div class="cs-t">➕ 添加知识</div><div class="cr"><div><div class="cn">分类</div><div><select class="fld" id="tkCat">' + Object.entries(TKMETA).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('') + '</select></div></div><div><div class="cn">关键词</div><div><input class="fld" id="tkKey" placeholder="如：最喜欢的食物"></div></div></div><div class="cr"><div><div class="cn">内容</div><div><input class="fld" id="tkVal" placeholder="如：火锅"></div></div></div><button class="btn pri sm" id="tkAdd" style="margin-top:6px">添加</button></div>';
+  h += '<div class="sec-t">📇 条目列表</div>';
+  if (!items.length) h += '<div class="empty"><div class="ic">📭</div>暂无知识</div>';
+  else for (const it of items) {
+    const cat = TKMETA[it.category] || [it.category, '📄'];
+    h += `<div class="row" style="cursor:default"><div class="row-info"><div class="row-name">${cat[1]} ${escT(it.key)} <span class="role-tag">${escT(cat[0])}</span></div><div class="row-id">${escT(it.value)} · ${escT(it.source||'')} · ${it.created_ts?new Date(it.created_ts*1000).toLocaleDateString('zh-CN'):''}</div></div><button class="btn sm dan" data-rid="${escT(it.id)}">删除</button></div>`;
+  }
+  $t('tBody').innerHTML = h;
+  $t('tkAdd').onclick = async () => {
+    const key = $t('tkKey').value.trim(), val = $t('tkVal').value.trim();
+    if (!key || !val) { tMsg('⚠️ 关键词和内容不能为空', true); return }
+    await tPost('trainer/knowledge', { user_id: $t('tUser').value.trim(), action: 'add', category: $t('tkCat').value, key, value });
+    await tLoad();
+  };
+  for (const b of document.querySelectorAll('#tBody button[data-rid]')) {
+    b.onclick = async () => { await tPost('trainer/knowledge', { user_id: $t('tUser').value.trim(), action: 'remove', id: b.dataset.rid }); await tLoad() };
+  }
+}
+function tPanelStyle() {
+  const s = TD.style || {}, pr = s.profile || {};
+  const phaseLabel = { collection: '📝 采集期', adoption: '🌱 模仿期', fused: '🌊 融合期' };
+  let h = `<div class="sec-box"><div class="item"><span class="ic">🚦</span>训练状态：${escT(phaseLabel[s.phase]||s.phase||'未开始')} · 融合度 <strong>${Math.round((s.fusion_ratio||0)*100)}%</strong> ${s.locked?'· <span style="color:var(--red)">🔒 已锁定</span>':''}</div><div class="item"><span class="ic">📏</span>平均句长 <strong>${(pr.avg_length||0).toFixed(1)}</strong> 字 · 累计 <strong>${pr.total_turns||0}</strong> 轮</div><div class="item"><span class="ic">🎓</span>正式度 <strong>${Math.round((pr.formality_score||0.5)*100)}%</strong> · 直白度 <strong>${Math.round((pr.directness_score||0.5)*100)}%</strong> · 英文混用 <strong>${Math.round((pr.english_mix_rate||0)*100)}%</strong></div><div class="item"><span class="ic">🗣️</span>语气词：${(pr.top_particles||[]).join('、')||'—'} · 口头禅：${(pr.top_expressions||[]).join('、')||'—'}</div><div class="item"><span class="ic">💬</span>标点：~×${(pr.punctuation&&pr.punctuation['~'])||0} ……×${(pr.punctuation&&pr.punctuation['……'])||0} ！×${(pr.punctuation&&pr.punctuation['！'])||0}</div><div class="item"><span class="ic">📛</span>称呼：你叫我「${escT(pr.preferred_name||'—')}」· 我唤你「${escT(pr.preferred_address||'—')}」</div></div>`;
+  h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><button class="btn sm" id="tsLock">' + (s.locked ? '🔓 解锁' : '🔒 锁定') + '</button><button class="btn sm" id="tsSnap">📸 保存快照</button></div>';
+  h += '<div class="sec-t">📸 快照管理</div><div class="sec-box">';
+  const snaps = s.snapshots || [];
+  if (!snaps.length) h += '<div class="item" style="color:var(--dim)">暂无快照</div>';
+  else for (const sn of snaps) {
+    h += `<div class="item" style="justify-content:space-between"><span>${escT(sn.name)} · ${sn.created_ts?new Date(sn.created_ts*1000).toLocaleString('zh-CN'):''}</span><button class="btn sm" data-snap="${escT(sn.name)}">恢复</button></div>`;
+  }
+  h += '</div>';
+  $t('tBody').innerHTML = h;
+  $t('tsLock').onclick = async () => { await tPost('trainer/style', { user_id: $t('tUser').value.trim(), action: s.locked ? 'unlock' : 'lock' }); await tLoad() };
+  $t('tsSnap').onclick = async () => { const n = prompt('快照名称（留空自动命名）'); await tPost('trainer/style', { user_id: $t('tUser').value.trim(), action: 'snapshot', name: n || '' }); await tLoad() };
+  for (const b of document.querySelectorAll('#tBody button[data-snap]')) {
+    b.onclick = async () => { await tPost('trainer/style', { user_id: $t('tUser').value.trim(), action: 'restore', name: b.dataset.snap }); await tLoad() };
+  }
+}
+function tPanelMemory() {
+  const mem = TD.memory || {};
+  const all = [...(mem.text||[]), ...(mem.images||[]), ...(mem.promises||[]), ...(mem.emotional||[])];
+  let h = `<div class="sec-box"><div class="item"><span class="ic">🧠</span>记忆 <strong>${all.length}</strong> 条 · ⭐ 星标 <strong>${(mem.starred||[]).length}</strong></div></div>`;
+  h += '<div class="cs"><div class="cs-t">➕ 添加记忆</div><div class="cr"><div><div class="cn">类型</div><div><select class="fld" id="tmType">' + Object.entries(TMLABEL).map(([k, v]) => `<option value="${k}">${v}</option>`).join('') + '</select></div></div><div><div class="cn">重要度</div><div><select class="fld" id="tmImp"><option value="5">5</option><option value="8">8 ⭐</option><option value="3">3</option></select></div></div></div><div class="cr"><div><div class="cn">内容</div><div><input class="fld" id="tmVal" placeholder="如：第一次一起看海"></div></div></div><button class="btn pri sm" id="tmAdd" style="margin-top:6px">添加</button></div>';
+  h += '<div class="sec-t">📚 记忆列表</div>';
+  if (!all.length) h += '<div class="empty"><div class="ic">📭</div>暂无记忆</div>';
+  else for (const m of all) {
+    const star = (mem.starred||[]).includes(m.id);
+    h += `<div class="row" style="cursor:default"><div class="row-info"><div class="row-name">${escT(TMLABEL[m.type]||m.type)} · ${escT(m.date||'')} ${star?'⭐':''} ${m.sensitive?'· 🔒 敏感':''}</div><div class="row-id">${escT(m.content)}</div></div><button class="btn sm" data-star="${escT(m.id)}">${star?'取消⭐':'⭐'}</button> <button class="btn sm dan" data-mid="${escT(m.id)}">删除</button></div>`;
+  }
+  $t('tBody').innerHTML = h;
+  $t('tmAdd').onclick = async () => {
+    const val = $t('tmVal').value.trim();
+    if (!val) { tMsg('⚠️ 内容不能为空', true); return }
+    await tPost('trainer/memory', { user_id: $t('tUser').value.trim(), action: 'add', type: $t('tmType').value, content: val, importance: parseInt($t('tmImp').value, 10) });
+    await tLoad();
+  };
+  for (const b of document.querySelectorAll('#tBody button[data-mid]')) {
+    b.onclick = async () => { await tPost('trainer/memory', { user_id: $t('tUser').value.trim(), action: 'remove', id: b.dataset.mid }); await tLoad() };
+  }
+  for (const b of document.querySelectorAll('#tBody button[data-star]')) {
+    b.onclick = async () => { const starred = (mem.starred||[]).includes(b.dataset.star); await tPost('trainer/memory', { user_id: $t('tUser').value.trim(), action: 'star', id: b.dataset.star, starred: !starred }); await tLoad() };
+  }
+}
+async function tPost(endpoint, body) {
+  try { tMsg('⏳ 处理中...'); const r = await B.apiPost(endpoint, body); tMsg((r.data&&r.data.message)||r.message||'✅ 成功') }
+  catch (e) { tMsg('❌ ' + (e.message||String(e)), true) }
+}
+$t('bTra').onclick = async () => { tMsg(''); await tLoadUsers(); $t('oTra').classList.add('on'); if (!$t('tUser').value) tLoad(); };
+$t('tCan').onclick = () => $t('oTra').classList.remove('on');
+$t('oTra').onclick = e => { if (e.target === $t('oTra')) $t('oTra').classList.remove('on') };
+$t('tUser').onchange = tLoad;
+$t('tP1').onclick = () => { TP = 1; TD && tLoad() };
+$t('tP2').onclick = () => { TP = 2; TD && tLoad() };
+$t('tP3').onclick = () => { TP = 3; TD && tLoad() };
+$t('tP4').onclick = () => { TP = 4; TD && tLoad() };
 </script>
 </body>
 </html>
