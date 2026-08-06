@@ -1,6 +1,25 @@
 # 心旅知音 (SoulSync) 更新日志
 
-### v2.16 修复补丁（当前版本）
+### v2.17 个性化训练模块（当前版本）
+- **人格微调**：20 参数（情感倾向 5 / 行为模式 5 / 表达风格 4 / 记忆偏好 6），反馈词隐式训练 + 稳定度半衰期防抖，`/人格微调` `/人格参数` `/人格重置` `/人格锁定`
+- **知识库**：6 类知识（基本信息/兴趣偏好/人物关系/私密约定/个人经历/价值观），情景捕捉自动提取 + 冲突检测 + 手动增删，`/知识库` `/知识添加` `/知识删除`
+- **语言风格**：三阶段训练（采集→模仿→融合），特征统计（句长/正式度/直白度/英文混用/语气词），快照保存/恢复，`/风格训练` `/风格快照` `/风格锁定`
+- **私人记忆**：4 类型（文字/图片/约定/情感）+ 星标，显著性阈值自动沉淀 + 审计日志 + 容量上限，`/记忆库` `/记忆添加` `/记忆删除` `/记忆星标`
+- **四模块联动**：
+  - 注入优先级 人格>知识>记忆>风格，总预算 `personalization_total_token_budget`（默认 450）超限裁剪，人格永不整块丢弃
+  - importance≥8 文字/情感记忆自动提取为「个人经历」知识；`promises` 类知识自动联动纪念日系统（正则解析日期）
+  - v2.16 长期记忆高显著性事件（≥8 或重要）自动沉淀为私人记忆（`set_event_hook` 回调）
+  - 记忆检索人格加权：记仇系数加权负向记忆、浪漫权重加权甜蜜记忆、遗忘速度加速衰减
+  - joy/trust 基线注入情感引擎（clamp 0-100）；辅助 LLM 深度分析注入个性化上下文
+- **v2.16 改造**：`on_llm_request` 接入人格偏移 + 每轮训练 + 个性化注入（temp TextPart 不进历史）；`_call_secondary_llm` 传个性化上下文；全部受 `enable_personalization` 门控（默认关闭，与 v2.16 行为完全一致）
+- **WebUI**：控制台新增「🎯 个性化训练」面板（用户选择 + 四标签页），人格 20 参数滑块/下拉实时生效，知识 6 分类增删，风格快照保存/恢复/锁定，记忆增删/星标；新增 7 组 trainer API（`/trainer/data` `/trainer/config` `/trainer/persona` `/trainer/knowledge` `/trainer/memory` `/trainer/style`）
+- **命令**：新增 15 个命令（见上）；`/个性化导出` 导出 persona/knowledge/style/memory 全量 JSON 至 `data/personalization/{uid}/personalization_export.json`
+- **配置**：新增 `_section_personalization` 14 项配置（`enable_personalization` 总开关 / `personalization_total_token_budget` / 四模块开关与参数），全部 WebUI 热改即时生效
+- **数据**：`data/personalization/{user_id}/` 每用户独立 JSON（原子写入 .tmp+.bak，目录总容量 5MB 自动清理），重启完整恢复
+- **测试**：`tests/` 下 test_orchestrator（20 轮 e2e 平均 5ms）、test_performance（200 轮平均 9.3ms P95 11.7ms）、test_phase6_integration、test_phase7_webui、test_phase8_full（边缘 12 项 + 持久化 + 1000 轮内存增长 <1MB + 命令区回归 + schema 校验）全部通过
+- **修复**：修复 v2.16 遗留 `/个性化导出` 命令重复装饰器注册
+
+### v2.16 修复补丁
 - **报告/注入防污染**：注入 LLM 的全部上下文（月度回顾/角色独白/时间跳跃/情感状态等）改为临时内容（本轮有效、不进会话历史）；`/角色回顾`、`/月度报告`、`/时间回溯`、`/标记重要回忆`、`/忘记这件事` 输出带不可见标记，`on_llm_request` 自动将历史中的插件报告替换为占位——解决 LLM 复读记忆原文（如"唯一的你"）与回复字数失控、不遵守人格字数设定
 - **角色 prompt 防泄漏**：`<stage_role>`/`<char_role>` 注入块追加「禁止复述设定原文」约束；新增 `on_llm_response` 兜底，自动清理回复中整块复述的设定与 persona meta 句式
 - **体验修复**：`/标记重要回忆` 刷屏改单次输出；`/雷达图` 接入图片模式（新增 render_radar 双面填充雷达图）；`/月度报告` `/角色回顾` `/时间回溯` `/角色列表` 统一接入图片模式（渲染失败自动降级文本）；WebUI 雷达图改面填充、复合情绪标签单行滚动
