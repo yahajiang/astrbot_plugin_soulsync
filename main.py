@@ -47,6 +47,7 @@ from .rde.narrative.stage_definitions import stage_id_from_index
 from .relationship_roles import (
     RelationshipRoleManager,
     resolve_relationship_key,
+    SYSTEM_ROLES,
     SYSTEM_ROLES_BY_KEY,
 )
 from .image_renderer import ImageRenderer
@@ -813,42 +814,90 @@ class SoulSyncPro(Star):
         if orch is None:
             rde_cfg = {k: v for k, v in self.config.items()
                        if k in _RDE_CONFIG_KEYS}
-            raw_uid = str(state_key).rpartition("::")[0] or state_key
-            cid = str(state_key).rpartition("::")[2]
+            raw_uid, cid = self._split_state_key(state_key)
             custom_relations = {}
             if cid:
                 custom_relations = self.character_manager.get_relations(raw_uid, cid)
             if custom_relations:
                 rde_cfg["custom_relations"] = custom_relations
             orch = RDEOrchestrator(rde_cfg)
+            saved = self._load_rde_state(state_key)
+            if saved:
+                try:
+                    orch.load_state(state_key, saved)
+                except Exception as e:
+                    logger.debug(f"SoulSync RDE 状态恢复失败 {state_key}: {e}")
             self.rde_orchestrators[state_key] = orch
         return orch
 
+    def _split_state_key(self, state_key: str) -> Tuple[str, str]:
+        """state_key → (raw_uid, cid)；无 :: 时 cid 为空串"""
+        if "::" in state_key:
+            raw_uid, _, cid = state_key.rpartition("::")
+            return raw_uid, cid
+        return state_key, ""
+
+    def _rde_role_name(self, raw_uid: str, cid: str) -> str:
+        """当前对话角色在关系网中的名字（自定义角色名 / 关系角色名）"""
+        if cid:
+            return self.character_manager.role_info(raw_uid).get("name", "") or cid
+        active = self.relationship_manager.active_role(raw_uid)
+        r = SYSTEM_ROLES_BY_KEY.get(active) if active else None
+        return (r or {}).get("name", "") if r else ""
+
+    def _rde_favorabilities(self, raw_uid: str) -> dict:
+        """同 raw uid 各状态键的角色名→好感表（社交事件/感知判定用）"""
+        favs = {}
+        prefix = raw_uid + "::"
+        custom_names = {
+            row.get("cid"): row.get("name", "")
+            for row in self.character_manager.list_for(raw_uid)
+            if row.get("cid")
+        }
+        for key, p in self.profiles.items():
+            if key != raw_uid and not key.startswith(prefix):
+                continue
+            cid = key.rpartition("::")[2] if "::" in key else ""
+            name = custom_names.get(cid, "") if cid else self._rde_role_name(raw_uid, "")
+            if name:
+                favs[name] = p.favorability
+        return favs
+
+    def _rde_mention_roles(self, text: str, raw_uid: str, current_role: str) -> List[str]:
+        """对话文本中提到的其他角色名（关系角色 39 名 + 用户自定义角色名）"""
+        names = {r.get("name", "") for r in SYSTEM_ROLES}
+        names |= {row.get("name", "") for row in self.character_manager.list_for(raw_uid)}
+        names.discard(current_role)
+        return [nm for nm in names if nm and len(nm) >= 2 and nm in text]
+
     def _run_rde_turn(self, uid: str, profile: EmotionProfile,
-                      fav_delta: float, pr_events: List[str]) -> Optional[dict]:
+                      fav_delta: float, pr_events: List[str],
+                      extra_ctx: Optional[dict] = None) -> Optional[dict]:
         """每轮对话的 RDE 完整流程（调度器 6 步 + 结果应用）"""
         if not self.config.get("enable_rde", False):
             return None
         state_key = profile.user_id
         orch = self._get_rde_orchestrator(state_key)
-        cold_add = 1 if any("冷落" in evt for evt in (pr_events or [])) else 0
+        raw_uid, cid = self._split_state_key(state_key)
+        current_role = self._rde_role_name(raw_uid, cid)
+        extra = extra_ctx or {}
         stage_id = stage_id_from_index(
             profile.stage_index,
             self._get_negative_stage_label(profile.favorability)
             if profile.favorability < 0 else None,
         )
-        result = orch.process_message(uid, {
+        result = orch.process_message(state_key, {
             "round": profile.total_interactions,
             "stage_id": stage_id,
             "favorability": profile.favorability,
             "fav_delta": float(fav_delta or 0),
-            "cold_penalty_add": cold_add,
-            "current_role": "",
-            "source_role": "",
-            "special_date": False,
-            "mention_other": False,
-            "favorabilities": {},
-            "user_name": "",
+            "current_role": current_role,
+            "source_role": current_role,
+            "special_date": bool(extra.get("special_date", False)),
+            "mention_roles": self._rde_mention_roles(
+                extra.get("text", "") or "", raw_uid, current_role),
+            "favorabilities": self._rde_favorabilities(raw_uid),
+            "user_name": profile.user_name or "",
         })
 
         resolved = result.get("crisis_resolved")
@@ -2171,8 +2220,7 @@ class SoulSyncPro(Star):
                 "description": orch.get_stage_description(s.stage_id),
             })
         active = orch.get_active_crisis(key)
-        raw_uid = str(key).rpartition("::")[0] or key
-        cid = str(key).rpartition("::")[2]
+        raw_uid, cid = self._split_state_key(key)
         return {
             "enabled": orch.enabled,
             "stage_id": stage_id,
@@ -3090,7 +3138,11 @@ class SoulSyncPro(Star):
             if self.config.get("enable_rde", False):
                 try:
                     rde_result = self._run_rde_turn(
-                        uid, profile, fav_delta, pr_events
+                        uid, profile, fav_delta, pr_events,
+                        extra_ctx={
+                            "special_date": bool(anniv_events),
+                            "text": text,
+                        },
                     )
                 except Exception as e:
                     logger.debug(f"SoulSync RDE 处理失败: {e}")
@@ -3985,6 +4037,42 @@ class SoulSyncPro(Star):
         self.anniversary_manager.save()
         self.stats_tracker.force_save()
         self.relationship_manager.save()
+        self._save_rde_state()
+
+    def _save_rde_state(self):
+        """RDE 状态落盘（data/rde/{state_key}.json，原子写 .tmp+.bak）"""
+        if not self.rde_orchestrators:
+            return
+        rde_dir = self.data_dir / "rde"
+        try:
+            rde_dir.mkdir(exist_ok=True)
+        except Exception as e:
+            logger.debug(f"SoulSync RDE 目录创建失败: {e}")
+            return
+        for key, orch in self.rde_orchestrators.items():
+            fname = key.replace("::", "__") + ".json"
+            f = rde_dir / fname
+            tmp = rde_dir / (fname + ".tmp")
+            try:
+                data = json.dumps(orch.save_state(key), ensure_ascii=False)
+                tmp.write_text(data, encoding="utf-8")
+                bak = rde_dir / (fname + ".bak")
+                if f.exists():
+                    if bak.exists():
+                        bak.unlink()
+                    f.replace(bak)
+                tmp.replace(f)
+            except Exception as e:
+                logger.debug(f"SoulSync RDE 状态保存失败 {key}: {e}")
+
+    def _load_rde_state(self, state_key: str) -> Optional[dict]:
+        f = self.data_dir / "rde" / (state_key.replace("::", "__") + ".json")
+        if not f.exists():
+            return None
+        try:
+            return json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            return None
 
     def _load_show_status(self):
         f = self.data_dir / "show_status.json"

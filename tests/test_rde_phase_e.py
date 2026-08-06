@@ -20,6 +20,7 @@ RDE_KEYS = {
     "crisis_trigger_probability": 0.02, "crisis_max_probability": 0.10,
     "crisis_min_stage": "s3", "crisis_min_cold_penalties": 3,
     "crisis_min_rounds_secret": 500, "crisis_protection_hours": 72,
+    "fav_growth_rate": 0.5,
     "network_transmission_delay_turns": 1, "social_event_cooldown_rounds": 10,
     "jealousy_gap_threshold": 20, "assist_min_fav": 100, "competition_gap_threshold": 10,
 }
@@ -32,7 +33,6 @@ for k, default in RDE_KEYS.items():
 assert "enable_multi_role" in by_key, "既有键被破坏"
 assert by_key["enable_rde"].get("group") == "RDE 关系深度演进" or "RDE" in str(by_key["enable_rde"].get("group", "")) or by_key["enable_rde"].get("group") is None, "enable_rde 分组"
 print(f"PASS: 配置注册（{len(RDE_KEYS)} 个 RDE 键，schema 共 {len(schema)} 键）")
-
 # ── 2. 面板数据形状（E.2 的 _build_rde_panel 依赖）────────
 orch = RDEOrchestrator({"enable_rde": True, "enable_crisis_system": True, "enable_network": True})
 stages = orch.all_stages()

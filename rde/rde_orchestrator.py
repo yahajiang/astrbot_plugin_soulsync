@@ -17,6 +17,7 @@ from .crisis import (
     CrisisTriggerEngine,
     CrisisHandler,
     ResolutionResult,
+    get_crisis_event,
 )
 from .network import NetworkSystem, RelationDef, Impact, SocialEvent, PendingTransfer
 from .narrative.address_system import AddressSystem
@@ -166,6 +167,7 @@ class RDEOrchestrator:
         self._last_stage[user_id] = stage_id
 
         # Step 5 上下文生成（阶段叙事 + 危机叙事 + 关系网感知）
+        ctx["crisis_active"] = st.active is not None
         stage_ctx = self.generate_stage_context(
             stage_id, {"user_name": ctx.get("user_name")}
         )
@@ -196,6 +198,32 @@ class RDEOrchestrator:
 
     def all_stages(self) -> list:
         return STAGE_DEFINITIONS
+
+    def save_state(self, user_id: str) -> dict:
+        """导出单用户 RDE 状态（危机/关系网/跃迁缓存），供落盘"""
+        return {
+            "crisis": self.crisis_store.export_state(user_id),
+            "network": self.network.store.export_state(user_id),
+            "last_stage": self._last_stage.get(user_id),
+            "recent_transitions": dict(self._recent_transitions),
+        }
+
+    def load_state(self, user_id: str, data: Optional[dict]) -> None:
+        """从导出的 dict 恢复单用户 RDE 状态"""
+        if not data:
+            return
+        self.crisis_store.import_state(
+            user_id, data.get("crisis") or {}, get_crisis=get_crisis_event
+        )
+        self.network.store.import_state(user_id, data.get("network") or {})
+        last_stage = data.get("last_stage")
+        if isinstance(last_stage, str):
+            self._last_stage[user_id] = last_stage
+        recent = data.get("recent_transitions")
+        if isinstance(recent, dict):
+            self._recent_transitions.update(
+                {k: v for k, v in recent.items() if isinstance(v, dict)}
+            )
 
     def clear_recent_transitions(self) -> None:
         self._recent_transitions.clear()

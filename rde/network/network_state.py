@@ -91,3 +91,35 @@ class NetworkStateStore:
 
     def clear_user(self, user_id: str) -> None:
         self._states.pop(user_id, None)
+
+    def export_state(self, user_id: str) -> dict:
+        """导出可落盘状态（pending/stats 纯 dict）"""
+        st = self._states.get(user_id)
+        if st is None:
+            return {}
+        return {
+            "pending": [p.to_dict() for p in st.pending],
+            "stats": self.interaction_stats(user_id),
+        }
+
+    def import_state(self, user_id: str, data: dict) -> None:
+        if not data:
+            return
+        st = self.get(user_id)
+        st.pending = []
+        for p in (data.get("pending") or []):
+            if isinstance(p, dict):
+                st.pending.append(PendingTransfer(
+                    target=str(p.get("target", "")),
+                    amount=float(p.get("amount", 0.0)),
+                    ready_round=int(p.get("ready_round", 0)),
+                    source=str(p.get("source", "")),
+                ))
+        for role, s in (data.get("stats") or {}).items():
+            if isinstance(s, dict):
+                st.stats[str(role)] = InteractionStat(
+                    count=int(s.get("count", 0)),
+                    last_round=int(s.get("last_round", 0)),
+                    fav_delta_total=float(s.get("fav_delta_total", 0.0)),
+                    fav_delta_last=float(s.get("fav_delta_last", 0.0)),
+                )

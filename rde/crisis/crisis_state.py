@@ -89,5 +89,52 @@ class CrisisStateStore:
     def clear_user(self, user_id: str) -> None:
         self._states.pop(user_id, None)
 
+    def export_state(self, user_id: str) -> dict:
+        """导出可落盘状态（ActiveCrisis 以 crisis_id 引用）"""
+        st = self._states.get(user_id)
+        if st is None:
+            return {}
+        active = None
+        if st.active is not None:
+            active = {
+                "crisis_id": st.active.crisis.id,
+                "started_round": st.active.started_round,
+                "rounds_left": st.active.rounds_left,
+                "injected": st.active.injected,
+            }
+        return {
+            "active": active,
+            "cooldown_until_round": st.cooldown_until_round,
+            "protection_until_ts": st.protection_until_ts,
+            "last_crisis_round": st.last_crisis_round,
+            "cold_penalties": st.cold_penalties,
+            "total_rounds": st.total_rounds,
+            "history": list(st.history),
+        }
+
+    def import_state(self, user_id: str, data: dict,
+                     get_crisis=None) -> None:
+        """从导出的 dict 恢复状态；get_crisis(crisis_id) 用于还原 CrisisEvent"""
+        if not data:
+            return
+        st = self.get(user_id)
+        active_data = data.get("active")
+        if active_data and get_crisis is not None:
+            crisis = get_crisis(active_data.get("crisis_id"))
+            if crisis is not None:
+                st.active = ActiveCrisis(
+                    crisis,
+                    started_round=int(active_data.get("started_round", 0)),
+                    rounds_left=int(active_data.get("rounds_left", 1)),
+                    injected=bool(active_data.get("injected", False)),
+                )
+        st.cooldown_until_round = int(data.get("cooldown_until_round", 0))
+        st.protection_until_ts = float(data.get("protection_until_ts", 0.0))
+        st.last_crisis_round = int(data.get("last_crisis_round", 0))
+        st.cold_penalties = int(data.get("cold_penalties", 0))
+        st.total_rounds = int(data.get("total_rounds", 0))
+        hist = data.get("history") or []
+        st.history = [h for h in hist if isinstance(h, dict)][-50:]
+
     def snapshot(self) -> dict:
         return {uid: state.__dict__ for uid, state in self._states.items()}
