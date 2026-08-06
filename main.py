@@ -491,7 +491,16 @@ class InjGuard(Star):
 
         if sub in ("图片模式", "图片"):
             if self._renderer is None or not self._renderer.available:
-                yield event.plain_result("⚠️ 图片渲染不可用（未安装 Pillow 或缺少中文字体），保持文本输出。")
+                if self._renderer is None or getattr(self._renderer, "reason", "") == "pillow":
+                    yield event.plain_result(
+                        "⚠️ 图片渲染不可用：未安装 Pillow。\n"
+                        "安装方法：在 AstrBot 的 Python 环境执行 pip install Pillow，然后重启/重载插件。"
+                    )
+                else:
+                    yield event.plain_result(
+                        "⚠️ 图片渲染不可用：缺少中文字体，保持文本输出。\n"
+                        "建议安装微软雅黑/思源黑体等中文字体后重载插件。"
+                    )
                 return
             cur = bool(self.config.get("image_mode", True))
             self.config.update({"image_mode": not cur})

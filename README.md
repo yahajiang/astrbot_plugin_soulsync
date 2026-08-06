@@ -9,7 +9,7 @@
 [![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.10.0-blue)](https://github.com/Soulter/AstrBot)
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.10-green)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.4.2-8A2BE2)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.4.3-8A2BE2)](CHANGELOG.md)
 
 </div>
 

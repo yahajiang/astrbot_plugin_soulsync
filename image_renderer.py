@@ -17,12 +17,18 @@ _BODY_FONT_CANDIDATES = [
     "C:/Windows/Fonts/msyh.ttc",
     "C:/Windows/Fonts/simhei.ttf",
     "C:/Windows/Fonts/simsun.ttc",
+    "C:/Windows/Fonts/simkai.ttf",
+    "C:/Windows/Fonts/simfang.ttf",
     "C:/Windows/Fonts/Deng.ttf",
     "/System/Library/Fonts/PingFang.ttc",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
     "/System/Library/Fonts/STHeiti Light.ttc",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
     "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
 _BOLD_FONT_CANDIDATES = [
     "C:/Windows/Fonts/msyhbd.ttc",
@@ -31,6 +37,24 @@ _BOLD_FONT_CANDIDATES = [
     "/System/Library/Fonts/PingFang.ttc",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
 ]
+
+# 字体目录扫描兜底：按文件名关键词匹配中文字体
+_FONT_DIRS = [
+    "C:/Windows/Fonts",
+    "/System/Library/Fonts",
+    "/Library/Fonts",
+    "/usr/share/fonts",
+    "/usr/local/share/fonts",
+    "~/.local/share/fonts",
+    "~/.fonts",
+]
+_FONT_KEYWORDS = (
+    "msyh", "simhei", "simsun", "simkai", "simfang", "deng",
+    "notosanscjk", "notoserifcjk", "sourcehansans", "wqy",
+    "droid", "pingfang", "hiragino", "malgun", "nanum",
+    "arialunicodems", "yahei", "microsoftyahei",
+)
+_BOLD_KEYWORDS = ("bd", "bold", "heavy", "semibold")
 
 # Pillow 渲染不支持的 emoji / 装饰字符替换为 □，避免豆腐块
 _EMOJI_RE = re.compile(
@@ -70,6 +94,26 @@ def _find_font(candidates: list[str]) -> Optional[str]:
     return None
 
 
+def _scan_font_dirs(bold: bool = False) -> Optional[str]:
+    """兜底：递归扫描常见字体目录，按文件名关键词找中文字体。"""
+    best: Optional[str] = None
+    for raw_dir in _FONT_DIRS:
+        dir_path = Path(raw_dir).expanduser()
+        if not dir_path.is_dir():
+            continue
+        try:
+            for f in dir_path.rglob("*.[tToO][tTfF][cCfF]"):
+                name = f.name.lower()
+                if not any(k in name for k in _FONT_KEYWORDS):
+                    continue
+                if bold and not any(k in name for k in _BOLD_KEYWORDS):
+                    continue
+                return str(f)
+        except Exception:
+            continue
+    return best
+
+
 def _lerp(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> tuple[int, int, int]:
     return tuple(round(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
@@ -82,17 +126,20 @@ class ImageRenderer:
     def __init__(self, data_dir: Path) -> None:
         self.data_dir = data_dir
         self.available = False
+        self.reason = ""  # "pillow" = 缺 Pillow；"font" = 缺中文字体
         self._body_path: Optional[str] = None
         self._bold_path: Optional[str] = None
         try:
             from PIL import Image, ImageDraw, ImageFont  # noqa: F401
         except ImportError:
+            self.reason = "pillow"
             return
-        body = _find_font(_BODY_FONT_CANDIDATES)
+        body = _find_font(_BODY_FONT_CANDIDATES) or _scan_font_dirs(bold=False)
         if body is None:
+            self.reason = "font"
             return
         self._body_path = body
-        self._bold_path = _find_font(_BOLD_FONT_CANDIDATES) or body
+        self._bold_path = _find_font(_BOLD_FONT_CANDIDATES) or _scan_font_dirs(bold=True) or body
         self.available = True
 
     def render_stats_card(
