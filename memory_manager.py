@@ -38,10 +38,15 @@ class LongTermMemory:
         # 遗忘曲线半衰期（天）：记忆清晰度减半所需天数
         self.half_life_days = max(1.0, float(half_life_days))
         self._memory: Dict[str, List[dict]] = {}
+        self._event_hook = None
         self._load_all()
 
     def set_half_life(self, days: float):
         self.half_life_days = max(1.0, float(days))
+
+    def set_event_hook(self, callback):
+        """注册事件写入回调 callback(user_id, event)，用于个性化训练模块联动。"""
+        self._event_hook = callback
 
     def add_event(self, user_id: str, event: dict):
         """添加一条重要情感事件"""
@@ -59,6 +64,12 @@ class LongTermMemory:
             self._memory[user_id] = self._memory[user_id][-self.max_events:]
 
         self._save_user(user_id)
+
+        if self._event_hook:
+            try:
+                self._event_hook(user_id, event)
+            except Exception:
+                pass
 
     @staticmethod
     def vividness_of(event: dict, half_life_days: float = 30.0, now: float = 0.0) -> int:

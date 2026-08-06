@@ -204,6 +204,9 @@ class SoulSyncPro(Star):
         self.trainer_storage = TrainerStorage(self.data_dir)
         self.trainer_orchestrators: Dict[str, PersonalizationOrchestrator] = {}
 
+        # ── 个性化训练：长期记忆写入联动 ──
+        self.long_memory.set_event_hook(self._on_long_memory_event)
+
         # ── 时间感知（仿 LLMPerception）──
         load_calendar_dependencies()
         import zoneinfo
@@ -526,8 +529,39 @@ class SoulSyncPro(Star):
     def _get_orchestrator(self, user_id: str):
         if user_id not in self.trainer_orchestrators:
             from .trainer.trainer_orchestrator import PersonalizationOrchestrator
-            self.trainer_orchestrators[user_id] = PersonalizationOrchestrator(user_id, self.trainer_storage, self.config)
+            orch = PersonalizationOrchestrator(user_id, self.trainer_storage, self.config)
+            orch.set_anniversary_hook(
+                lambda item: self._promise_to_anniversary(user_id, item)
+            )
+            self.trainer_orchestrators[user_id] = orch
         return self.trainer_orchestrators[user_id]
+
+    def _promise_to_anniversary(self, user_id: str, item):
+        """promises 类知识自动关联纪念日系统（知识→纪念日联动）。"""
+        try:
+            if not self.config.get("enable_personalization", False):
+                return
+            import re as _re
+            m = _re.search(r"(\d{1,2})[-/月](\d{1,2})(?:日|号)?", item.value)
+            if not m:
+                return
+            date_str = f"{m.group(1)}-{m.group(2)}"
+            self.anniversary_manager.add_external_anniversary(
+                user_id, item.value[:20], date_str, "anniversary"
+            )
+        except Exception:
+            pass
+
+    def _on_long_memory_event(self, user_id: str, event: dict):
+        """长期记忆写入通知 → 个性化训练模块。"""
+        try:
+            if not self.config.get("enable_personalization", False):
+                return
+            uid = str(user_id).rpartition("::")[0] or user_id
+            orch = self._get_orchestrator(uid)
+            orch.on_memory_write(event)
+        except Exception:
+            pass
 
     # ═══════════════════════════════════════════════════════════════
     #  用户命令
@@ -2529,6 +2563,28 @@ class SoulSyncPro(Star):
                 profile, fav_delta, int_delta, emotion_deltas, llm_adjust
             )
 
+            # ── 个性化训练：人格偏移 + 每轮处理 ──
+            if self.config.get("enable_personalization", False):
+                try:
+                    orch = self._get_orchestrator(uid)
+                    persona = orch.get_persona()
+                    offsets = persona.get_emotion_offsets()
+                    for dim, offset in offsets.items():
+                        if dim in profile.emotions:
+                            profile.emotions[dim] = max(
+                                0.0, min(100.0, profile.emotions[dim] + offset)
+                            )
+                    orch.on_each_turn(
+                        text,
+                        {
+                            "emotion_snapshot": dict(profile.emotions),
+                            "favorability": profile.favorability,
+                            "stage": profile.stage_index,
+                        },
+                    )
+                except Exception as e:
+                    logger.debug(f"SoulSync 个性化训练处理失败: {e}")
+
             # ── 第五步半：情绪传染模型（张力积累 → 延迟爆发）──
             eruption_ctx = ""
             if self.config.get("enable_emotion_contagion", True):
@@ -2617,6 +2673,18 @@ class SoulSyncPro(Star):
             emotion_context = self._build_emotion_context(profile)
             if emotion_context:
                 req.extra_user_content_parts.append(TextPart(text=emotion_context).mark_as_temp())
+
+            # ── 注入个性化训练上下文（人格/知识/记忆/风格，总预算裁剪）──
+            if self.config.get("enable_personalization", False):
+                try:
+                    orch = self._get_orchestrator(uid)
+                    personalization_context = orch.get_full_injection()
+                    if personalization_context:
+                        req.extra_user_content_parts.append(
+                            TextPart(text=personalization_context).mark_as_temp()
+                        )
+                except Exception as e:
+                    logger.debug(f"SoulSync 个性化上下文注入失败: {e}")
 
             # ── 注入多角色 persona（自定义角色扮演）──
             role_block = self._role_prompt_block(uid)
@@ -2812,6 +2880,14 @@ class SoulSyncPro(Star):
                 if rr:
                     role_context = f"{rr['emoji']}{rr['name']}：{rr.get('desc', '')}"
 
+        personalization_ctx = ""
+        if self.config.get("enable_personalization", False):
+            try:
+                orch = self._get_orchestrator(raw_uid)
+                personalization_ctx = orch.get_full_injection()
+            except Exception:
+                pass
+
         prompt = self.llm_analyzer.build_analysis_prompt(
             favorability=profile.favorability,
             intimacy=profile.intimacy,
@@ -2820,6 +2896,7 @@ class SoulSyncPro(Star):
             memory_summary=memory_summary,
             recent_messages=recent_text,
             role_context=role_context,
+            personalization_context=personalization_ctx,
         )
 
         resp = None

@@ -62,8 +62,9 @@ class LLMAnalyzer:
         memory_summary: str,
         recent_messages: str,
         role_context: str = "",
+        personalization_context: str = "",
     ) -> str:
-        return EMOTION_ANALYSIS_PROMPT.format(
+        prompt = EMOTION_ANALYSIS_PROMPT.format(
             favorability=round(favorability, 1),
             intimacy=round(intimacy, 1),
             stage_label=stage_label,
@@ -80,6 +81,9 @@ class LLMAnalyzer:
             recent_messages=recent_messages or "暂无",
             role_context=role_context or "陌生人（普通朋友关系）",
         )
+        if personalization_context:
+            prompt += "\n\n[个性化上下文]\n" + personalization_context
+        return prompt
 
     @staticmethod
     def parse_analysis_response(text: str) -> Optional[dict]:

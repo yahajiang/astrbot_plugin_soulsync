@@ -276,6 +276,21 @@ class AnniversaryManager:
                 return True, f"✅ 已删除纪念日「{name}」"
         return False, f"未找到纪念日「{name}」"
 
+    def add_external_anniversary(
+        self, user_id: str, name: str, date: str, anniv_type: str = "anniversary"
+    ) -> Tuple[bool, str]:
+        """允许个性化训练模块写入约定纪念日。
+        date 格式: "MM-DD" 或 "YYYY-MM-DD"；anniv_type: "anniversary" | "birthday"
+        """
+        date = (date or "").strip()
+        if len(date) == 10 and date[4] == "-":
+            date = date[5:]
+        parsed = parse_month_day(date)
+        if not parsed:
+            return False, f"日期格式无效：{date}"
+        month, day = parsed
+        return self.add_anniversary(user_id, name, month, day, anniv_type)
+
     # ── 全球节日 ──
     def add_festival(self, name: str, month: int, day: int, lunar: bool = False) -> Tuple[bool, str]:
         if not name.strip():

@@ -234,9 +234,23 @@ class PersonalizationOrchestrator:
             out += ch
         return (out.rstrip() + "…") if out else text[:10] + "…"
 
-    # ── v2.16 联动预留 ──
+    # ── v2.16 联动：长期记忆写入通知 ──
     def on_memory_write(self, event: dict) -> None:
-        pass
+        """v2.16 长期记忆写入时：高显著性事件自动提取为私人记忆（text 类）。"""
+        try:
+            sig = float(event.get("significance", 0) or 0)
+            if not (sig >= 8 or event.get("important")):
+                return
+            content = (event.get("message") or event.get("description") or "").strip()
+            if not content or len(content) < 4:
+                return
+            store = self.get_private_memory()
+            if any(m.content == content for m in store.text):
+                return
+            self._memory_mgr.add("text", content, importance=8)
+            self._memory = None
+        except Exception:
+            pass
 
     def on_llm_response(self, response: str) -> None:
         pass
