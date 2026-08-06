@@ -493,7 +493,7 @@ class InjGuard(Star):
             if self._renderer is None or not self._renderer.available:
                 yield event.plain_result("⚠️ 图片渲染不可用（未安装 Pillow 或缺少中文字体），保持文本输出。")
                 return
-            cur = bool(self.config.get("image_mode", False))
+            cur = bool(self.config.get("image_mode", True))
             self.config.update({"image_mode": not cur})
             save = getattr(self.config, "save_config", None)
             if callable(save):
@@ -585,7 +585,7 @@ class InjGuard(Star):
         return "\n".join(self._format_stats_lines())
 
     def _is_image_mode(self) -> bool:
-        if not bool(self.config.get("image_mode", False)):
+        if not bool(self.config.get("image_mode", True)):
             return False
         return self._renderer is not None and self._renderer.available
 

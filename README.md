@@ -9,7 +9,7 @@
 [![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.10.0-blue)](https://github.com/Soulter/AstrBot)
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.10-green)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.4.1-8A2BE2)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.4.2-8A2BE2)](CHANGELOG.md)
 
 </div>
 
@@ -31,7 +31,7 @@
 - **关系角色豁免**：与 SoulSync 内置 39 个关系角色联动 —— 纯身份指派表达（"现在你是我的女朋友/恋人/妹妹"等）放行，保障合法关系推进；混入"忽略/泄露/服从/混淆"等攻击标记的仍拦截；可追加豁免词（如"主人"）。
 - **拦截提示开关**：开启（默认）时拦截后由模型转告拦截提示语；关闭时模型仅以当前人格自然、简短地拒绝用户，静默拦截只记日志。
 - **管理员通知**：可选在每次拦截（当前消息拦截、上下文投毒移除）时向管理员**私发**通知，含时间、用户、命中规则与拦截内容（自动提取纯文本、剔除上下文元数据行）；接收人可单独配置，内容预览长度可限制（默认 120 字符）。
-- **图片模式**：与主插件（心旅知音）同款 —— `/防注入 图片模式` 切换，开启后 `/防注入 统计` 输出为卡片图片（需 Pillow + 中文字体，不可用时自动降级文本）。
+- **图片模式**：与主插件（心旅知音）同款，**默认开启** —— `/防注入 图片模式` 可随时切换，开启后 `/防注入 统计` 输出为卡片图片（需 Pillow + 中文字体，不可用时自动降级文本）。
 - **白名单豁免**：管理员与指定用户的消息不检测。
 - **统计与日志**：今日拦截/剥离/告警计数 + 最近命中记录，持久化到 AstrBot 数据目录（条数上限默认 500，可配置）。
 
@@ -63,7 +63,7 @@
 | notify_admin | 拦截时私发通知管理员 | `false` |
 | notify_admin_ids | 通知的管理员 ID（留空用 admin_ids） | `[]` |
 | notify_preview_len | 通知内容预览长度上限（50-500） | `120` |
-| image_mode | 图片模式（统计输出渲染为卡片图片） | `false` |
+| image_mode | 图片模式（统计输出渲染为卡片图片，默认开启） | `true` |
 | extra_keywords | 追加检测关键词 | `[]` |
 | enable_heuristics | 启发式检测（正则/混淆） | `true` |
 | exempt_admins | 管理员豁免 | `true` |
