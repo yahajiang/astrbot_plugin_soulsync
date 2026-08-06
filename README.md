@@ -1,4 +1,4 @@
-# 心旅知音 (SoulSync) v2.17 - 融合版情感智能插件（个性化训练）
+# 心旅知音 (SoulSync) v2.18 - 融合版情感智能插件（关系深度演进）
 
 > 本插件由 AI 编写，融合 EmotionAI 与 FavourPro 精华，实现「关键词+LLM 双通道情感分析 · 8 维情感 · 好感/亲密度 · 十二阶段演进 · 惩罚奖励 · 长期记忆 · 关系角色 · 纪念日节日 · 时间感知 · 数据趋势 · 自画像 · 图片输出 · WebUI 控制台」，v2.17 新增「个性化训练」模块（人格微调 · 知识库 · 语言风格 · 私人记忆），打造真实、渐进、可养成的 AI 情感交互系统。
 
@@ -6,7 +6,7 @@
 
 ## 📑 目录
 
-- [✨ 功能模块总览](#overview) · [🙏 参考与致谢](#credits) · [📦 安装](#install) · [🎯 命令](#commands) · [🔄 更新流程](#flow) · [🖼️ 情感自画像](#portrait) · [🎂 纪念日与节日](#anniversary) · [⏰ 时间感知](#time) · [📈 数据趋势](#trends) · [🎭 关系角色](#roles) · [🖨️ 图片输出](#image) · [🎮 WebUI](#webui) · [🧬 十二阶段](#stages) · [⚖️ 惩罚奖励](#pr) · [🧠 智能更新](#smart) · [📜 记忆系统](#memory) · [🎯 个性化训练](#trainer) · [⚙️ 配置说明](#config) · [📂 文件结构](#files) · [📜 版本记录](#changelog)
+- [✨ 功能模块总览](#overview) · [🙏 参考与致谢](#credits) · [📦 安装](#install) · [🎯 命令](#commands) · [🔄 更新流程](#flow) · [🖼️ 情感自画像](#portrait) · [🎂 纪念日与节日](#anniversary) · [⏰ 时间感知](#time) · [📈 数据趋势](#trends) · [🎭 关系角色](#roles) · [🖨️ 图片输出](#image) · [🎮 WebUI](#webui) · [🧬 十二阶段](#stages) · [⚖️ 惩罚奖励](#pr) · [🧠 智能更新](#smart) · [📜 记忆系统](#memory) · [🎯 个性化训练](#trainer) · [🌐 关系深度演进](#rde) · [⚙️ 配置说明](#config) · [📂 文件结构](#files) · [📜 版本记录](#changelog)
 
 ---
 
@@ -30,6 +30,7 @@
 | 🖨️ 图片输出 | 信息命令渲染为 Pillow 图片卡片（含趋势图），三级开关，自动降级 |
 | 🎮 WebUI 控制台 | 仪表盘 / 自画像 / 57 项配置热更新 / 排行榜 / 管理员工具 |
 | 🎭 个性化训练（v2.17） | 人格微调（20 参数隐式训练+稳定化）/ 知识库（6 类知识） / 语言风格（三阶段+快照）/ 私人记忆（4 类型+星标+审计） |
+| 🌐 关系深度演进（v2.18） | 十二阶段叙事注入 / 关系危机系统（7 类型 14 事件、概率触发、选择处理、阶段倒退）/ 多角色关系网（跨角色好感传导、5 类社交事件、关系感知注入） |
 
 各模块详细说明见下文对应章节。
 
@@ -120,6 +121,16 @@
 | `/个性化导出` | 导出全部个性化数据为 JSON（persona/knowledge/style/memory） |
 
 > 个性化训练默认关闭：需在配置中开启 `enable_personalization` 后命令才可用（未开启时命令会提示）。
+
+**关系深度演进（v2.18）**：
+
+| 命令 | 说明 |
+|------|------|
+| `/RDE阶段 [ID]` | 查看 RDE 关系阶段详情（当前阶段/称谓/叙事/危机状态/冷却）；管理员加 ID 查看他人 |
+| `/危机记录 [ID]` | 查看关系危机历史（事件/选择/好感变化）与当前冷却；管理员加 ID 查看他人 |
+| `/角色关系网 [ID]` | 查看多角色关系网（全部关系定义与跨角色互动统计）；管理员加 ID 查看他人 |
+
+> RDE 系统默认关闭：需在配置中开启 `enable_rde` 后生效（未开启时命令会提示「未启用」）。
 
 ### 管理员命令
 
@@ -240,9 +251,9 @@
 
 ## 🎮 WebUI 控制台
 
-独立控制台页面（AstrBot 插件详情页进入）：概览仪表盘（档案数/平均好感/平均亲密/最高阶段）、用户列表（好感排序）、用户自画像、57 项配置 12 组可视化编辑（保存即热更新）、正/负排行榜 TOP15、管理员工具（设置好感/清空记忆/重置/强制关系角色/添加节日）、系统状态。v2.17 新增「🎯 个性化训练」面板：选择用户后四标签页管理人格（20 参数滑块/下拉实时生效 + 锁定/重置）、知识库（6 分类增删）、语言风格（阶段/融合度/快照保存恢复/锁定）、私人记忆（4 类型增删/星标）。
+独立控制台页面（AstrBot 插件详情页进入）：概览仪表盘（档案数/平均好感/平均亲密/最高阶段）、用户列表（好感排序）、用户自画像、57 项配置 12 组可视化编辑（保存即热更新）、正/负排行榜 TOP15、管理员工具（设置好感/清空记忆/重置/强制关系角色/添加节日）、系统状态。v2.17 新增「🎯 个性化训练」面板：选择用户后四标签页管理人格（20 参数滑块/下拉实时生效 + 锁定/重置）、知识库（6 分类增删）、语言风格（阶段/融合度/快照保存恢复/锁定）、私人记忆（4 类型增删/星标）。v2.18 新增「🌐 RDE 关系演进」面板：选择用户后四区块展示当前阶段叙事（含称谓/阈值/下一阶段）、危机状态与历史记录、角色关系网（全部关系边与系数）、完整阶段叙事配置列表。
 
-**API：** `/data`(GET 档案) · `/config`(GET 配置+schema / POST 保存) · `/admin`(POST 管理员操作) · `/trainer/data`(GET 个性化数据/用户列表) · `/trainer/config`(POST 个性化配置) · `/trainer/persona`(POST 人格 set/reset/lock/unlock) · `/trainer/knowledge`(POST 知识增删) · `/trainer/memory`(POST 记忆增删/星标) · `/trainer/style`(POST 风格 lock/snapshot/restore)
+**API：** `/data`(GET 档案) · `/config`(GET 配置+schema / POST 保存) · `/admin`(POST 管理员操作) · `/trainer/data`(GET 个性化数据/用户列表) · `/trainer/config`(POST 个性化配置) · `/trainer/persona`(POST 人格 set/reset/lock/unlock) · `/trainer/knowledge`(POST 知识增删) · `/trainer/memory`(POST 记忆增删/星标) · `/trainer/style`(POST 风格 lock/snapshot/restore) · `/rde/data`(GET RDE 数据/用户列表)
 
 ---
 
@@ -314,6 +325,84 @@
 - **辅助 LLM**：`_call_secondary_llm` 注入个性化上下文供深度分析参考
 
 **数据存储**：`data/personalization/{user_id}/`（persona.json / knowledge.json / language_profile.json / private_memory.json / audit.json / snapshots/），每用户独立，JSON 原子写入（.tmp+.bak 防损坏），目录总容量上限 5MB 自动清理。
+
+---
+
+<a id="rde"></a>
+
+## 🌐 关系深度演进（v2.18）
+
+RDE（Relationship Depth Evolution）三大子系统，开启 `enable_rde` 后每轮对话自动生效（默认关闭，关闭时与 v2.17 行为完全一致）：
+
+| 子系统 | 说明 |
+|--------|------|
+| 📜 十二阶段叙事 | 正向 s1~s12（初识→共生）+ 负向 n1~n4（冷淡→敌对），每阶段独立称谓/口吻/互动倾向/叙事注入文本，称谓随阶段从「你」自然演进到专属爱称 |
+| 🌪️ 关系危机 | 7 类型 14 事件（误会/冷落/信任/成长/外部/秘密/嫉妒），概率+阶段/好感/冷落/节日修正因子触发，2~3 个选择分支处理，超时自动解决，仅危机可致阶段倒退，冷却/保护期防抖 |
+| 🕸️ 多角色关系网 | 39 角色稀疏关系矩阵，跨角色好感传导（延迟一轮到账，ΔB = ΔA × 系数），5 类社交事件（吃醋/助攻/竞争/调解/误解传播），关系感知注入 LLM |
+
+**每轮流程**（`rde/rde_orchestrator.py` `process_message`）：危机检测（超时自动解决+新触发）→ 跨角色好感传导 → 阶段跃迁叙事 → 三段上下文注入（阶段叙事/危机叙事/关系网感知）。性能实测单轮处理 **<0.01ms**（目标 <30ms）。
+
+**子开关**：`enable_crisis_system`（危机系统）/ `enable_network`（关系网），概率与阈值参数见配置面板「RDE 关系深度演进」分组（`crisis_trigger_probability` 0.02 基础概率 · `crisis_max_probability` 0.10 上限 · `crisis_min_stage` 最低阶段 · `crisis_min_cold_penalties` 冷落门槛 · `crisis_min_rounds_secret` 秘密型轮数 · `crisis_protection_hours` 72h 保护期 · `network_transmission_delay_turns` 传导延迟 · `social_event_cooldown_rounds` 社交事件冷却 · `jealousy_gap_threshold`/`assist_min_fav`/`competition_gap_threshold` 社交事件条件）。
+
+### 十二阶段叙事配置说明
+
+阶段定义在 `rde/narrative/stage_definitions.py`：正向 `STAGE_DEFINITIONS`（12 条）+ 负向 `NEGATIVE_STAGE_DEFINITIONS`（4 条），字段：
+
+| 字段 | 说明 |
+|------|------|
+| `stage_id` | "s1"~"s12" / "n1"~"n4" |
+| `stage_name` / `relationship_state` | 阶段名与关系状态描述 |
+| `threshold` | 正向阶段好感阈值（15/35/55/75/95/115/135/152/168/180/185/200） |
+| `address_config` | 称谓配置 `{"base": "你"}`，跨阶段演进：你 → 你啊/傻瓜 → 昵称 → 宝贝 → 亲爱的 → 我的宝贝 → 爱人 → 唯一的你 |
+| `dialogue_style` / `interaction_features` | LLM 注入的口吻与互动倾向指令 |
+| `transition_trigger` | 跃迁叙事（升段/退行文案，见 `rde/narrative/transition_handler.py`） |
+
+负向称谓由 `rde/narrative/address_system.py` 配置（n1「你」→ n2 省略 → n3「那个人」→ n4 不愿提及）。自定义叙事：编辑对应条目后重启插件生效。
+
+### 危机事件自定义指南
+
+事件池在 `rde/crisis/crisis_definitions.py` 的 `CRISIS_EVENTS` 列表（7 类型 × 2 = 14 个内置事件），追加条目即可添加自定义危机：
+
+```python
+_crisis("my_crisis", "trust", "你想自定义的事件", "s6", 130.0,
+        "叙事文本 {char_name} 对你说……{user_name}，{friend_name} 也在场",
+        [Choice("a", "选项A文字", +8.0, 0, emotion_deltas={"joy": 10},
+                memory_text="……", response_text="角色回复……"),
+         Choice("b", "选项B文字", -15.0, -1, memory_text="……", response_text="……")],
+        cooldown_rounds=200, duration_rounds=3,
+        extra_conditions={"cold_penalties": 2},      # 可选附加条件
+        extra_probability={"special_date": 0.01})     # 可选附加概率
+```
+
+| 字段 | 说明 |
+|------|------|
+| `type` | 七类之一：misunderstanding/cold/trust/growth/external/secret/jealousy |
+| `stage_requirement` / `favorability_requirement` | 最低阶段与好感下限 |
+| `narrative` | 事件叙事文本，占位符 `{char_name}`/`{user_name}`/`{friend_name}` 注入时替换 |
+| `choices` | 2~3 个 `Choice`（`favorability_delta` 好感变化、`stage_delta` 阶段变化 0/±1、`emotion_deltas` 8 维情感、`memory_text` 写入长期记忆、`response_text` 角色回复、`unlocks_stage_context` 解锁叙事） |
+| `cooldown_rounds` / `duration_rounds` | 触发冷却轮数 / 持续轮数（期限内未选择自动解决） |
+| `auto_resolve` / `auto_resolve_effect` | 超时是否自动解决及效果 |
+| `extra_conditions` / `extra_probability` | 附加触发条件（如冷落次数）与附加概率（如节日） |
+
+### 角色关系矩阵配置指南
+
+默认网在 `rde/network/relation_definitions.py`（39 角色稀疏矩阵）。自定义关系写在角色卡 `relations` 字段（数据文件 `data/characters.json`，结构 `{uid: {cid: {relations: {...}}}}`）：
+
+```json
+"relations": {
+  "小雪": {"type": "bestie", "cross_coefficient": 0.1, "description": "从小一起长大的好友"},
+  "阿澈": {"type": "rival_love", "cross_coefficient": -0.05}
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| 键名 | 目标角色名（source 缺省=用户，即「用户 ↔ 角色」边） |
+| `type` | 关系类型：bestie 挚友 / partner 恋人 / senior_junior 前辈后辈 / rival_love 情敌 / opponent 对手 / cold 冷漠 / sworn_enemy 死敌 / stranger 陌生人 / none 无关联 |
+| `cross_coefficient` | 传导系数（可正可负），该角色好感变化 ΔA 传导到对方 ΔB = ΔA × 系数，延迟 `network_transmission_delay_turns` 轮到账 |
+| `description` | 关系描述（感知注入用） |
+
+自定义关系与默认网**叠加**生效；无 `relations` 字段的角色卡自动使用默认网。
 
 ---
 
