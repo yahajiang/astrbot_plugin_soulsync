@@ -815,7 +815,7 @@ function tMsg(m, e) { const el = $t('tTst'); if (el) { el.textContent = m || '';
 async function tLoadUsers() {
   try {
     const r = await B.apiGet('trainer/data');
-    TU_USERS = (r.users || []).map(u => String(u)).sort();
+    TU_USERS = (r.users || []).map(u => ({ id: String(u.id ?? u), name: String(u.name ?? u.id ?? u), fav: Number(u.fav ?? -101) }));
     tRenderDrop();
   } catch (e) {}
 }
@@ -823,11 +823,11 @@ function tRenderDrop(filter) {
   const dl = $t('tUserDrop');
   if (!dl) return;
   const q = (filter || '').trim().toLowerCase();
-  const list = q ? TU_USERS.filter(u => u.toLowerCase().includes(q)) : TU_USERS;
+  const list = q ? TU_USERS.filter(u => u.name.toLowerCase().includes(q) || u.id.toLowerCase().includes(q)) : TU_USERS;
   if (!list.length) {
     dl.innerHTML = '<div class="tu-empty">' + (q ? '未找到匹配用户' : '暂无用户，请先与插件对话') + '</div>';
   } else {
-    dl.innerHTML = list.map(u => `<div class="tu-i" data-uid="${escT(u)}"><span class="tu-q">${escT(u)}</span><span class="tu-t">点击选择</span></div>`).join('');
+    dl.innerHTML = list.map(u => `<div class="tu-i" data-uid="${escT(u.id)}"><span class="tu-q">${escT(u.name)}</span><span class="tu-t">${u.id !== u.name ? escT(u.id) + ' · ' : ''}点击选择</span></div>`).join('');
     for (const el of dl.querySelectorAll('.tu-i')) {
       el.onclick = () => { tPickUser(el.dataset.uid); };
     }

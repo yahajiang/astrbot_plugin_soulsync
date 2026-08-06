@@ -615,13 +615,30 @@ class SoulSyncPro(Star):
                     "memory": mem.to_dict(),
                     "audit": orch._memory_auditor.get_logs(50),
                 })
-            users = set()
+            user_ids = set()
             base = Path(self.data_dir) / "personalization"
             if base.exists():
                 for d in base.iterdir():
                     if d.is_dir() and any(d.rglob("*.json")):
-                        users.add(d.name)
-            return json_response({"users": sorted(users)})
+                        user_ids.add(d.name)
+            for key in self.profiles:
+                user_ids.add(key.rpartition("::")[0] if "::" in key else key)
+            name_map: Dict[str, str] = {}
+            fav_map: Dict[str, float] = {}
+            for key, p in self.profiles.items():
+                raw_uid = key.rpartition("::")[0] if "::" in key else key
+                if raw_uid not in user_ids:
+                    continue
+                if p.user_name and not name_map.get(raw_uid):
+                    name_map[raw_uid] = p.user_name
+                if fav_map.get(raw_uid, -101.0) < p.favorability:
+                    fav_map[raw_uid] = p.favorability
+            users = [
+                {"id": u, "name": name_map.get(u) or u, "fav": round(fav_map.get(u, -101.0), 1)}
+                for u in user_ids
+            ]
+            users.sort(key=lambda x: x["fav"], reverse=True)
+            return json_response({"users": users})
         except Exception as e:
             return error_response(str(e))
 
