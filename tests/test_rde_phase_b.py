@@ -1,5 +1,5 @@
 """SoulSync RDE - Phase B 单模块测试：危机事件池/触发引擎/选择处理/阶段倒退/调度器集成"""
-import sys, io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import sys, io;
 import random
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))

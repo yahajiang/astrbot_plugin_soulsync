@@ -1,5 +1,5 @@
 """SoulSync - Phase 7 验证：WebUI API 后端逻辑"""
-import sys, io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import sys, io;
 import json, tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))

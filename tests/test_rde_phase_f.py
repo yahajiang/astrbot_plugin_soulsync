@@ -6,7 +6,6 @@
 3. 性能基准（RDE 全部处理平均 <30ms）
 """
 import sys, io, time, random
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from astrbot_plugin_soulsync.rde import RDEOrchestrator

@@ -1,5 +1,5 @@
 """SoulSync - Phase 6 验证：v2.16 改造 + 回归测试"""
-import sys, io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import sys, io;
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 

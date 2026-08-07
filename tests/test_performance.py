@@ -1,5 +1,5 @@
 """SoulSync - Phase 5.5 性能测试：四模块同时运行延迟<50ms"""
-import sys, io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import sys, io;
 import time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))

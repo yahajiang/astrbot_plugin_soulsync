@@ -4,7 +4,6 @@
 stage_id 映射 / llm_analyzer RDE 叙事参数 / 角色卡 relations / 危机结果应用序列（模拟 main 调用方式）
 """
 import sys, io, tempfile, time
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from astrbot_plugin_soulsync.rde import RDEOrchestrator

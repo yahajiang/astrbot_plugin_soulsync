@@ -1,5 +1,5 @@
 """SoulSync RDE - Phase A 单模块测试：阶段叙事/称谓体系/跃迁处理/调度器骨架"""
-import sys, io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import sys, io;
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from astrbot_plugin_soulsync.rde import (

@@ -6,7 +6,6 @@
 3. 持久化 roundtrip（save_state → load_state 状态完整恢复）
 """
 import sys, io, json
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from astrbot_plugin_soulsync.rde import RDEOrchestrator

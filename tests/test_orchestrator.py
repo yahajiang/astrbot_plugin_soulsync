@@ -1,5 +1,5 @@
 """SoulSync - Phase 5.4 端到端场景测试：20轮完整对话模拟"""
-import sys, io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import sys, io;
 import time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))

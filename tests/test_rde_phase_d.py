@@ -3,7 +3,7 @@
 覆盖：基础流程 / 危机触发与叙事注入 / 选择与自动解决 / 跨角色传导 / 阶段跃迁 /
 冷落惩罚累计 / 社交事件联动 / 禁用模式
 """
-import sys, io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import sys, io;
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from astrbot_plugin_soulsync.rde import RDEOrchestrator

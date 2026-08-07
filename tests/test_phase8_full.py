@@ -1,7 +1,6 @@
 # Phase 8: 全面测试 - 边缘情况清单 + 持久化 + 内存 + 命令区回归
 # 运行: python tests/test_phase8_full.py
 import io, re, sys, time
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent.parent))
 
 import ctypes

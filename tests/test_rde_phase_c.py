@@ -1,5 +1,5 @@
 """SoulSync RDE - Phase C 单模块测试：关系矩阵/跨角色传导/社交事件/感知注入/统计"""
-import sys, io; sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+import sys, io;
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from astrbot_plugin_soulsync.rde import (

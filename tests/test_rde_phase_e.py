@@ -4,7 +4,6 @@
 main.py 命令与路由的静态接线（字符串级检查，无需 astrbot 运行时）。
 """
 import sys, io, json, tempfile
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
