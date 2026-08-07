@@ -202,4 +202,76 @@ def test_should_inject_static():
     assert should_inject_static("你好", 10, 0) is True, "every_n=0 表示每轮注入"
 
 
-print("ALL PASS: Token 节省 P0 骨架压缩 6 组断言")
+# ── 8. P2 动态裁剪（trainer 注入器 + RDE 叙事瘦身）────────
+def test_persona_relevance_cut():
+    from astrbot_plugin_soulsync.trainer.persona.persona_injector import PersonaInjector
+    from astrbot_plugin_soulsync.trainer.trainer_types import PersonaParams
+    inj = PersonaInjector()
+    p = PersonaParams()
+    full = inj.generate(p)
+    assert "悲伤敏感" in full and "表达风格" in full, "无文本时应全量注入"
+    hit = inj.generate(p, "我有点难过，心情好差")
+    assert "悲伤敏感" in hit and "愤怒门槛" in hit, "负面词应保留情感维度"
+    assert "表达风格" not in hit and "记忆偏好" not in hit, "无关维度应裁剪"
+    miss = inj.generate(p, "嗯")
+    assert "悲伤敏感" not in miss and "表达风格" not in miss, "无命中仅基础行"
+    assert "训练阶段" in miss and len(miss.splitlines()) == 2
+
+
+def test_knowledge_relevance_topn():
+    from astrbot_plugin_soulsync.trainer.knowledge.knowledge_injector import KnowledgeInjector
+    from astrbot_plugin_soulsync.trainer.trainer_types import KnowledgeBase, KnowledgeItem
+    kb = KnowledgeBase(items=[
+        KnowledgeItem(id="1", category="interests", key="篮球", value="每周三打篮球"),
+        KnowledgeItem(id="2", category="interests", key="滑雪", value="冬天去滑雪"),
+        KnowledgeItem(id="3", category="profile", key="生日", value="6月1日出生"),
+        KnowledgeItem(id="4", category="values", key="态度", value="认真生活"),
+    ])
+    inj = KnowledgeInjector()
+    out = inj.generate(kb, text="周末一起去滑雪吧")
+    assert "滑雪" in out, "命中条目应优先注入"
+    assert "篮球" not in out and "生日" not in out, "未命中条目应裁剪"
+    assert "[用户知识库]" in out
+
+
+def test_memory_star_full_text():
+    from astrbot_plugin_soulsync.trainer.memory.private_memory_retriever import PrivateMemoryRetriever
+    from astrbot_plugin_soulsync.trainer.trainer_types import PrivateMemory
+    star = PrivateMemory(id="pm_1", date="2026-08-01", content="我们约定每年秋天一起看银杏，那是我们的秘密" * 3)
+    normal = PrivateMemory(id="pm_2", date="2026-08-02", content="一起吃过的火锅" * 5)
+    r = PrivateMemoryRetriever()
+    fmt = r.format_for_llm([star, normal], starred_ids={"pm_1"})
+    assert "⭐ " in fmt, "星标记忆应有标记"
+    assert "我们约定" in fmt and "秘密" in fmt, "星标记忆保留全文"
+    assert "吃过的火锅" in fmt, "普通记忆应注入"
+    assert "⭐ " not in r.format_for_llm([normal]), "未传星标集合时普通记忆无标记"
+
+
+def test_style_fused_skip():
+    from astrbot_plugin_soulsync.trainer.style.style_injector import StyleInjector
+    from astrbot_plugin_soulsync.trainer.trainer_types import StyleState, LanguageProfile
+    inj = StyleInjector()
+    fused = StyleState(phase="fused", fusion_ratio=1.0, profile=LanguageProfile())
+    assert inj.generate(fused) == "", "融合度100%应跳过风格注入"
+    adopting = StyleState(phase="adoption", fusion_ratio=0.5, profile=LanguageProfile())
+    out = inj.generate(adopting)
+    assert out and "融合度" in out, "融合中应正常注入"
+
+
+def test_stage_ctx_compact():
+    from astrbot_plugin_soulsync.rde.narrative.stage_injector import StageInjector
+    orch = StageInjector(enabled=True)
+    ctx = orch.generate_stage_context("s6", {"user_name": "小雅"})
+    assert "【当前关系阶段】" in ctx and "禁忌：" in ctx
+    assert "阶段：暧昧萌动" in ctx, "压缩格式应含阶段名锚点"
+    assert "保持此阶段特征" in ctx and "勿超前或滞后" in ctx
+    assert "你正处于" not in ctx, "模板外壳应被移除"
+    ctx12 = orch.generate_stage_context("s12", {})
+    assert "每轮回复 1~2 次即可" in ctx12, "s12 降频措辞保留"
+    ctx12f = orch.generate_stage_context("s12", {}, recent_transition=None)
+    forced = StageInjector(enabled=True, s12_forced_address=True)
+    ctx12h = forced.generate_stage_context("s12", {})
+    assert "100% 使用最深情的称呼" in ctx12h, "强制措辞开关仍生效"
+
+
+print("ALL PASS: Token 节省 P0 骨架压缩 + P1 按需注入 + P2 动态裁剪 8 组断言")

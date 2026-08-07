@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import re
 from typing import List, Optional
 
 from .stage_definitions import StageDefinition, get_stage_definition
@@ -48,6 +49,7 @@ class StageInjector:
         directive = stage.style_directive
         if stage_id == "s12" and self.s12_forced_address:
             directive = directive.replace(self._SOFT_ADDRESS, self._FORCED_ADDRESS)
+        directive = self._compact_directive(directive)
         lines.append(directive)
         if stage.taboo:
             lines.append("禁忌：" + "；".join(stage.taboo))
@@ -55,6 +57,33 @@ class StageInjector:
             lines.append("【关系变化】")
             lines.append(recent_transition["narrative"])
         return "\n".join(lines)
+
+    @staticmethod
+    def _compact_directive(directive: str) -> str:
+        """v2.21 叙事瘦身：去掉模板外壳（"你正处于…阶段/请保持此阶段特征"），
+        保留 阶段/状态/风格/称谓/互动 五段信息，压缩为紧凑单行。"""
+        parts = [p.strip() for p in directive.split("。") if p.strip()]
+        segs = []
+        name = ""
+        for p in parts:
+            if p.startswith("你正处于") and "」阶段" in p:
+                m = re.match(r"你正处于「(.+?)」阶段", p)
+                if m:
+                    name = m.group(1)
+            elif p.startswith("关系状态："):
+                segs.append(("状态", p[len("关系状态："):]))
+            elif p.startswith("对话风格："):
+                segs.append(("风格", p[len("对话风格："):]))
+            elif p.startswith("称谓："):
+                segs.append(("称谓", p[len("称谓："):]))
+            elif p.startswith("互动特征："):
+                segs.append(("互动", p[len("互动特征："):]))
+        if not name and not segs:
+            return directive
+        line = f"阶段：{name or '?'}"
+        if segs:
+            line += " ｜ " + " ｜ ".join(f"{k}：{v}" for k, v in segs)
+        return line + "。保持此阶段特征，勿超前或滞后。"
 
     def get_stage_description(self, stage_id: str) -> str:
         """返回阶段叙事简介（命令展示用）"""
