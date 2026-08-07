@@ -1017,7 +1017,147 @@ class SoulSyncPro(Star):
     #  用户命令
     # ═══════════════════════════════════════════════════════════════
 
-    @filter.command("好感度")
+    # ── v2.20 父命令路由器（命令极简化：10 父命令 + /admin）──
+
+    def _sub_parts(self, event, maxsplit: int = -1, keep_sub: bool = False) -> list:
+        """把 '/父命令 子命令 参数...' 归一化为 '命令 参数...'（剥离子命令 token）。
+
+        保留原 maxsplit 语义：maxsplit=N>0 时前 N 个参数各成一段，其余合并为最后一段，
+        使旧命令方法从 parts[1] 起取参数的逻辑无需改动。
+        keep_sub=True 用于方法自身已实现子命令解析的场景（如风格快照）。
+        """
+        text = event.message_str
+        tokens = text.split()
+        if keep_sub or len(tokens) < 2:
+            return text.split(maxsplit=maxsplit)
+        rest = tokens[2:]
+        if not rest:
+            return [tokens[0]]
+        if maxsplit <= 0:
+            return [tokens[0]] + rest
+        head = rest[:maxsplit]
+        tail = rest[maxsplit:]
+        out = [tokens[0]] + head
+        if tail:
+            out.append(" ".join(tail))
+        return out
+
+    async def _dispatch_parent(self, event, parent: str):
+        """父命令分发器：查子命令表 → 调用对应方法"""
+        from .command_router import parent_help, resolve_parent
+        parts = event.message_str.split()
+        sub = parts[1] if len(parts) >= 2 else ""
+        method = resolve_parent(parent, sub)
+        if not method:
+            yield event.plain_result(parent_help(parent))
+            return
+        cmd = getattr(self, method, None)
+        if cmd is None:
+            yield event.plain_result(f"❌ 命令未实现：{method}")
+            return
+        async for res in cmd(event):
+            yield res
+
+    async def _dispatch_admin(self, event):
+        """/admin 分发器：管理员集中管理入口"""
+        from .command_router import admin_help, resolve_admin
+        parts = event.message_str.split()
+        sub = parts[1] if len(parts) >= 2 else ""
+        method = resolve_admin(sub)
+        if not method:
+            yield event.plain_result(admin_help())
+            return
+        cmd = getattr(self, method, None)
+        if cmd is None:
+            yield event.plain_result(f"❌ 命令未实现：{method}")
+            return
+        async for res in cmd(event):
+            yield res
+
+    @filter.command("命令")
+    async def cmd_commands(self, event: AstrMessageEvent):
+        """查看 SoulSync 命令总览（10 父命令）"""
+        from .command_router import all_parent_help
+        yield event.plain_result(all_parent_help())
+
+    @filter.command("状态")
+    async def cmd_p_status(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "状态"):
+            yield res
+
+    @filter.command("回顾")
+    async def cmd_p_review(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "回顾"):
+            yield res
+
+    @filter.command("纪念")
+    async def cmd_p_anniversary(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "纪念"):
+            yield res
+
+    @filter.command("角色")
+    async def cmd_p_character(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "角色"):
+            yield res
+
+    @filter.command("人格")
+    async def cmd_p_persona(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "人格"):
+            yield res
+
+    @filter.command("知识")
+    async def cmd_p_knowledge(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "知识"):
+            yield res
+
+    @filter.command("风格")
+    async def cmd_p_style(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "风格"):
+            yield res
+
+    @filter.command("记忆")
+    async def cmd_p_memory(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "记忆"):
+            yield res
+
+    @filter.command("环境")
+    async def cmd_p_environment(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "环境"):
+            yield res
+
+    @filter.command("排行")
+    async def cmd_p_rank(self, event: AstrMessageEvent):
+        async for res in self._dispatch_parent(event, "排行"):
+            yield res
+
+    @filter.command("图片模式")
+    async def cmd_image_mode(self, event: AstrMessageEvent):
+        """切换指令输出是否渲染为图片"""
+        if not self.image_renderer.available:
+            yield event.plain_result("⚠️ 图片渲染不可用（未安装 Pillow 或缺少中文字体），已保持文本输出。")
+            return
+        uid = self._get_user_id(event)
+        current = self.image_mode.get(uid, self.image_output_default)
+        self.image_mode[uid] = not current
+        self._save_image_mode()
+        state = "开启 ✅（图片输出）" if self.image_mode[uid] else "关闭 ❌（文本输出）"
+        yield event.plain_result(f"指令图片输出已{state}")
+
+    @filter.command("设置")
+    async def cmd_toggle_status(self, event: AstrMessageEvent):
+        """切换是否在对话后显示情感状态"""
+        uid = self._get_user_id(event)
+        current = self.show_status.get(uid, self.config.get("show_status_default", False))
+        self.show_status[uid] = not current
+        self._save_show_status()
+        state = "开启 ✅" if self.show_status[uid] else "关闭 ❌"
+        yield event.plain_result(f"情感状态显示已{state}")
+
+    @filter.command("admin")
+    async def cmd_admin(self, event: AstrMessageEvent):
+        async for res in self._dispatch_admin(event):
+            yield res
+
     async def cmd_favorability(self, event: AstrMessageEvent):
         """查看当前情感状态（含惩罚奖励信息）"""
         profile = self._get_or_create_profile(event)
@@ -1029,7 +1169,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("状态显示")
     async def cmd_toggle_status(self, event: AstrMessageEvent):
         """切换是否在对话后显示情感状态"""
         uid = self._get_user_id(event)
@@ -1039,20 +1178,18 @@ class SoulSyncPro(Star):
         state = "开启 ✅" if self.show_status[uid] else "关闭 ❌"
         yield event.plain_result(f"情感状态显示已{state}")
 
-    @filter.command("好感排行")
     async def cmd_leaderboard(self, event: AstrMessageEvent):
         """查看好感度排行榜 TOP n"""
         for res in self._render_leaderboard(event, positive=True):
             yield res
 
-    @filter.command("负好感排行")
     async def cmd_negative_leaderboard(self, event: AstrMessageEvent):
         """查看负好感排行榜 BOTTOM n"""
         for res in self._render_leaderboard(event, positive=False):
             yield res
 
     def _render_leaderboard(self, event, positive: bool):
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         n = 10
         if len(parts) >= 2:
             try:
@@ -1105,7 +1242,6 @@ class SoulSyncPro(Star):
                 pass
         yield event.plain_result("\n".join(lines))
 
-    @filter.command("关系阶段")
     async def cmd_relationship_stage(self, event: AstrMessageEvent):
         """显示当前阶段、动态权重、过渡状态与进阶建议"""
         profile = self._get_or_create_profile(event)
@@ -1164,7 +1300,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("缓存统计")
     async def cmd_cache_stats(self, event: AstrMessageEvent):
         """查看插件数据规模"""
         lines = [
@@ -1183,22 +1318,8 @@ class SoulSyncPro(Star):
     #  新功能命令（纪念日/节日、趋势统计、关系角色、图片模式）
     # ═══════════════════════════════════════════════════════════════
 
-    @filter.command("图片模式")
-    async def cmd_image_mode(self, event: AstrMessageEvent):
-        """切换指令输出是否渲染为图片"""
-        if not self.image_renderer.available:
-            yield event.plain_result("⚠️ 图片渲染不可用（未安装 Pillow 或缺少中文字体），已保持文本输出。")
-            return
-        uid = self._get_user_id(event)
-        current = self.image_mode.get(uid, self.image_output_default)
-        self.image_mode[uid] = not current
-        self._save_image_mode()
-        state = "开启 ✅（图片输出）" if self.image_mode[uid] else "关闭 ❌（文本输出）"
-        yield event.plain_result(f"指令图片输出已{state}")
-
-    @filter.command("全局图片模式")
     async def cmd_global_image_mode(self, event: AstrMessageEvent):
-        """管理员：全局开启/关闭图片输出（所有信息命令强制图片）"""
+        """管理员：全局开启/关闭图片输出。用法：/admin 图片模式"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -1215,7 +1336,6 @@ class SoulSyncPro(Star):
     #  个性化训练命令（Personalization Trainer v2.17）
     # ═══════════════════════════════════════════════════════════════
 
-    @filter.command("人格微调")
     async def cmd_persona(self, event: AstrMessageEvent):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
@@ -1244,22 +1364,21 @@ class SoulSyncPro(Star):
                   "▸ 记忆偏好",
                   f"  记仇系数：{params.grudge_coefficient:.1f}x · 浪漫回忆权重：{params.romantic_memory_weight:.1f}x",
                   f"  遗忘速度：{params.forget_speed:.1f}x · 里程碑重视度：{params.milestone_sensitivity:.1f}x", "",
-                  "💡 /人格参数 <名称> <值> 调整参数 · /人格重置 重置为默认",
-                  "💡 /人格锁定 · /人格解锁"]
+                  "💡 /人格 设置 <参数> <值>（管理员）· /人格 重置（管理员）",
+                  "💡 /人格 锁定（管理员）"]
         path = self._try_render_image(event, "🎭 人格微调面板", lines)
         if path:
             yield event.image_result(path)
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("人格参数")
     async def cmd_persona_params(self, event: AstrMessageEvent):
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
         orch = self._get_orchestrator(uid)
         params = orch.get_persona()
         from .trainer.persona.persona_params import PARAM_META
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) >= 3:
             name, val = parts[1], parts[2]
             meta = PARAM_META.get(name)
@@ -1301,14 +1420,13 @@ class SoulSyncPro(Star):
                 val_range = f" {'/'.join(meta['options'])}"
             lines.append(f"  {meta['label']}: {cur}{val_range}")
         lines.append("")
-        lines.append("💡 /人格参数 <名称> <值> 调整参数")
+        lines.append("💡 /人格 设置 <参数> <值>（管理员）调整参数")
         path = self._try_render_image(event, "🎭 人格参数列表", lines)
         if path:
             yield event.image_result(path)
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("人格重置")
     async def cmd_persona_reset(self, event: AstrMessageEvent):
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
@@ -1319,7 +1437,6 @@ class SoulSyncPro(Star):
         orch._persona_params = None
         yield event.plain_result("✅ 人格参数已重置为默认值")
 
-    @filter.command("人格锁定")
     async def cmd_persona_lock(self, event: AstrMessageEvent):
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
@@ -1334,7 +1451,6 @@ class SoulSyncPro(Star):
             orch.save_all()
             yield event.plain_result("🔒 人格已锁定，参数不再变化")
 
-    @filter.command("知识库")
     async def cmd_knowledge(self, event: AstrMessageEvent):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
@@ -1344,7 +1460,7 @@ class SoulSyncPro(Star):
         orch = self._get_orchestrator(uid)
         kb = orch.get_knowledge()
         if not kb.items:
-            yield event.plain_result("📚 知识库为空\n用 /知识添加 <分类> <关键词> <内容> 添加知识\n分类：profile/interests/people/promises/experiences/values")
+            yield event.plain_result("📚 知识库为空\n用 /知识 添加 <分类> <关键词> <内容> 添加知识\n分类：profile/interests/people/promises/experiences/values")
             return
         from .trainer.knowledge.knowledge_injector import CATEGORY_LABELS
         lines = ["📚 知识库", "━" * 22]
@@ -1360,18 +1476,17 @@ class SoulSyncPro(Star):
                     src = {"user_direct": "📝", "auto_capture": "🤖", "batch_import": "📥"}.get(item.source, "📄")
                     lines.append(f"  {src} {item.key}: {item.value[:40]}")
         lines.append("")
-        lines.append("💡 /知识添加 <分类> <关键词> <内容> · /知识删除 <id>")
+        lines.append("💡 /知识 添加 <分类> <关键词> <内容> · /知识 删除 <id>")
         path = self._try_render_image(event, "📚 知识库", lines)
         if path:
             yield event.image_result(path)
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("知识添加")
     async def cmd_knowledge_add(self, event: AstrMessageEvent):
-        parts = event.message_str.split(maxsplit=3)
+        parts = self._sub_parts(event, maxsplit=3)
         if len(parts) < 4:
-            yield event.plain_result("用法：/知识添加 <分类> <关键词> <内容>\n分类：profile/interests/people/promises/experiences/values")
+            yield event.plain_result("用法：/知识 添加 <分类> <关键词> <内容>\n分类：profile/interests/people/promises/experiences/values")
             return
         cat, key, val = parts[1], parts[2], parts[3]
         valid_cats = ["profile", "interests", "people", "promises", "experiences", "values"]
@@ -1386,17 +1501,16 @@ class SoulSyncPro(Star):
         conflict = mgr.check_conflict(cat, key, val)
         if conflict.has_conflict:
             existing = "、".join(f"{e.key}={e.value}" for e in conflict.existing)
-            yield event.plain_result(f"⚠️ 检测到冲突：已有「{existing}」，是否覆盖？\n用 /知识删除 {conflict.existing[0].id} 删除旧条目后再添加")
+            yield event.plain_result(f"⚠️ 检测到冲突：已有「{existing}」，是否覆盖？\n用 /知识 删除 {conflict.existing[0].id} 删除旧条目后再添加")
             return
         item = mgr.add(cat, key, val)
         orch._knowledge = None
         yield event.plain_result(f"✅ 已添加知识 [{cat}] {key}: {val} (id: {item.id})")
 
-    @filter.command("知识删除")
     async def cmd_knowledge_remove(self, event: AstrMessageEvent):
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/知识删除 <id>")
+            yield event.plain_result("用法：/知识 删除 <id>")
             return
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
@@ -1409,7 +1523,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result(f"❌ 未找到知识 {parts[1]}")
 
-    @filter.command("风格训练")
     async def cmd_style(self, event: AstrMessageEvent):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
@@ -1434,7 +1547,7 @@ class SoulSyncPro(Star):
             f"  正式度：{p.formality_score:.0%} · 直白度：{p.directness_score:.0%}",
             f"  英文混用率：{p.english_mix_rate:.1%}",
             "",
-            "💡 /风格快照 管理快照 · /风格锁定 切换锁定",
+            "💡 /风格 保存 [名称] 保存快照 · /风格 恢复 <名称> 恢复 · /风格 锁定",
         ]
         path = self._try_render_image(event, "💬 语言风格训练", lines)
         if path:
@@ -1442,7 +1555,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("风格快照")
     async def cmd_style_snapshot(self, event: AstrMessageEvent):
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
@@ -1450,7 +1562,7 @@ class SoulSyncPro(Star):
         state = orch.get_style()
         from .trainer.style.style_snapshot import StyleSnapshotManager
         snap_mgr = StyleSnapshotManager(self.trainer_storage, uid)
-        parts = event.message_str.split()
+        parts = self._sub_parts(event, keep_sub=True)
         if len(parts) >= 2:
             if parts[1] == "保存":
                 name = parts[2] if len(parts) >= 3 else ""
@@ -1473,7 +1585,7 @@ class SoulSyncPro(Star):
                 ts = time.strftime("%m-%d %H:%M", time.localtime(snap.created_ts)) if hasattr(snap, 'created_ts') else ""
                 lines.append(f"  {i}. {snap.name} {ts}")
         lines.append("")
-        lines.append("💡 /风格快照 保存 [名称] · /风格快照 恢复 <名称>")
+        lines.append("💡 /风格 保存 [名称] · /风格 恢复 <名称>")
         import time
         path = self._try_render_image(event, "💬 风格快照管理", lines)
         if path:
@@ -1481,7 +1593,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("风格锁定")
     async def cmd_style_lock(self, event: AstrMessageEvent):
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
@@ -1491,7 +1602,6 @@ class SoulSyncPro(Star):
         orch.save_all()
         yield event.plain_result("🔒 风格已锁定" if state.locked else "🔓 风格已解锁")
 
-    @filter.command("记忆库")
     async def cmd_memory(self, event: AstrMessageEvent):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
@@ -1502,7 +1612,7 @@ class SoulSyncPro(Star):
         store = orch.get_private_memory()
         all_mems = orch._memory_mgr.all_memories(store)
         if not all_mems:
-            yield event.plain_result("🧠 私人记忆库为空\n用 /记忆添加 <类型> <内容> 添加\n类型：text/image/promise/emotional")
+            yield event.plain_result("🧠 私人记忆库为空\n用 /记忆 添加 <类型> <内容> 添加\n类型：text/image/promise/emotional")
             return
         type_labels = {"text": "文字", "image": "图片", "promise": "约定", "emotional": "情感"}
         lines = ["🧠 私人记忆库", "━" * 22]
@@ -1520,18 +1630,17 @@ class SoulSyncPro(Star):
             if len(items) > 3:
                 lines.append(f"  ... 还有{len(items) - 3}条")
         lines.append("")
-        lines.append("💡 /记忆添加 <类型> <内容> · /记忆删除 <id> · /记忆星标 <id>")
+        lines.append("💡 /记忆 添加 <类型> <内容> · /记忆 删除 <id> · /记忆 星标 <id>")
         path = self._try_render_image(event, "🧠 私人记忆库", lines)
         if path:
             yield event.image_result(path)
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("记忆添加")
     async def cmd_memory_add(self, event: AstrMessageEvent):
-        parts = event.message_str.split(maxsplit=2)
+        parts = self._sub_parts(event, maxsplit=2)
         if len(parts) < 3:
-            yield event.plain_result("用法：/记忆添加 <类型> <内容>\n类型：text/image/promise/emotional")
+            yield event.plain_result("用法：/记忆 添加 <类型> <内容>\n类型：text/image/promise/emotional")
             return
         mem_type, content = parts[1], parts[2]
         valid_types = ["text", "image", "promise", "emotional"]
@@ -1547,11 +1656,10 @@ class SoulSyncPro(Star):
         except ValueError as e:
             yield event.plain_result(f"❌ {e}")
 
-    @filter.command("记忆删除")
     async def cmd_memory_remove(self, event: AstrMessageEvent):
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/记忆删除 <id>")
+            yield event.plain_result("用法：/记忆 删除 <id>")
             return
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
@@ -1562,11 +1670,10 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result(f"❌ 未找到记忆 {parts[1]}")
 
-    @filter.command("记忆星标")
     async def cmd_memory_star(self, event: AstrMessageEvent):
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/记忆星标 <id>")
+            yield event.plain_result("用法：/记忆 星标 <id>")
             return
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
@@ -1575,7 +1682,6 @@ class SoulSyncPro(Star):
         orch._memory = None
         yield event.plain_result(f"⭐ 已星标记忆 {parts[1]}")
 
-    @filter.command("个性化导出")
     async def cmd_personalization_export(self, event: AstrMessageEvent):
         if not self.config.get("enable_personalization", False):
             yield event.plain_result("⚠️ 个性化训练未启用，请先在配置中开启 enable_personalization")
@@ -1599,7 +1705,6 @@ class SoulSyncPro(Star):
         fpath.write_text(_json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         yield event.plain_result(f"📤 个性化数据已导出：{fpath}\n包含人格参数、知识库、语言风格、私人记忆四部分数据。")
 
-    @filter.command("纪念日")
     async def cmd_anniversary(self, event: AstrMessageEvent):
         """查看纪念日、节日与倒计时"""
         import datetime as _dt
@@ -1627,7 +1732,7 @@ class SoulSyncPro(Star):
             lines.append("")
         else:
             lines.append("💝 我的纪念日：暂无")
-            lines.append("  用 /添加纪念日 <名称> <MM-DD> 记录一个吧！")
+            lines.append("  用 /纪念 添加 <MM-DD> <名称> 记录一个吧！")
             lines.append("")
         fest = self.anniversary_manager.list_festivals_with_dates(today)
         up = [f for f in fest if not f["is_today"]][:8]
@@ -1642,22 +1747,21 @@ class SoulSyncPro(Star):
             for f in up[:8]:
                 lines.append(f"  {f['name']} · {f['date'][5:]} · {f['days_left']} 天后")
         lines.append("")
-        lines.append("💡 /设置生日 <MM-DD> · /添加纪念日 <名称> <MM-DD> · /节日列表")
+        lines.append("💡 /纪念 生日 <MM-DD> · /纪念 添加 <MM-DD> <名称> · /纪念 节日")
         path = self._try_render_image(event, "纪念日与节日", lines)
         if path:
             yield event.image_result(path)
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("添加纪念日")
     async def cmd_add_anniversary(self, event: AstrMessageEvent):
-        """添加自定义纪念日。用法：/添加纪念日 <名称> <MM-DD>"""
+        """添加自定义纪念日。用法：/纪念 添加 <MM-DD> <名称>"""
         if not self.config.get("enable_anniversary_system", True):
             yield event.plain_result("⚠️ 纪念日系统未启用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 3:
-            yield event.plain_result("用法：/添加纪念日 <名称> <MM-DD>，例如：/添加纪念日 恋爱纪念日 05-20")
+            yield event.plain_result("用法：/纪念 添加 <MM-DD> <名称>，例如：/纪念 添加 05-20 恋爱纪念日")
             return
         md = parse_month_day(parts[-1])
         if not md:
@@ -1670,12 +1774,11 @@ class SoulSyncPro(Star):
         self._save_all()
         yield event.plain_result(msg)
 
-    @filter.command("删除纪念日")
     async def cmd_remove_anniversary(self, event: AstrMessageEvent):
-        """删除自定义纪念日。用法：/删除纪念日 <名称>"""
-        parts = event.message_str.split(maxsplit=1)
+        """删除自定义纪念日。用法：/纪念 删除 <名称>"""
+        parts = self._sub_parts(event, maxsplit=1)
         if len(parts) < 2:
-            yield event.plain_result("用法：/删除纪念日 <名称>")
+            yield event.plain_result("用法：/纪念 删除 <名称>")
             return
         uid = self._get_user_id(event)
         ok, msg = self.anniversary_manager.remove_anniversary(uid, parts[1].strip())
@@ -1683,12 +1786,11 @@ class SoulSyncPro(Star):
             self._save_all()
         yield event.plain_result(msg)
 
-    @filter.command("设置生日")
     async def cmd_set_birthday(self, event: AstrMessageEvent):
-        """设置生日。用法：/设置生日 <MM-DD>"""
-        parts = event.message_str.split()
+        """设置生日。用法：/纪念 生日 <MM-DD>"""
+        parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/设置生日 <MM-DD>")
+            yield event.plain_result("用法：/纪念 生日 <MM-DD>")
             return
         md = parse_month_day(parts[1])
         if not md:
@@ -1700,7 +1802,6 @@ class SoulSyncPro(Star):
         self._save_all()
         yield event.plain_result(msg)
 
-    @filter.command("节日列表")
     async def cmd_festival_list(self, event: AstrMessageEvent):
         """查看全部节日"""
         import datetime as _dt
@@ -1710,22 +1811,21 @@ class SoulSyncPro(Star):
             kind = "农历" if f["lunar"] else "公历"
             lines.append(f"  {f['name']} · {kind} · {f['month']:02d}-{f['day']:02d}")
         lines.append("")
-        lines.append("管理员可用 /设置节日 <名称> <MM-DD> 添加")
+        lines.append("管理员可用 /纪念 节日添加 <名称> <MM-DD> 添加")
         path = self._try_render_image(event, "节日列表", lines)
         if path:
             yield event.image_result(path)
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("设置节日")
     async def cmd_add_festival(self, event: AstrMessageEvent):
-        """管理员：添加全球节日。用法：/设置节日 <名称> <MM-DD>"""
+        """管理员：添加全球节日。用法：/纪念 节日添加 <名称> <MM-DD>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 3:
-            yield event.plain_result("用法：/设置节日 <名称> <MM-DD>")
+            yield event.plain_result("用法：/纪念 节日添加 <名称> <MM-DD>")
             return
         md = parse_month_day(parts[-1])
         if not md:
@@ -1737,29 +1837,27 @@ class SoulSyncPro(Star):
             self._save_all()
         yield event.plain_result(msg)
 
-    @filter.command("删除节日")
     async def cmd_remove_festival(self, event: AstrMessageEvent):
-        """管理员：删除全球节日。用法：/删除节日 <名称>"""
+        """管理员：删除全球节日。用法：/纪念 节日删除 <名称>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split(maxsplit=1)
+        parts = self._sub_parts(event, maxsplit=1)
         if len(parts) < 2:
-            yield event.plain_result("用法：/删除节日 <名称>")
+            yield event.plain_result("用法：/纪念 节日删除 <名称>")
             return
         ok, msg = self.anniversary_manager.remove_festival(parts[1].strip())
         if ok:
             self._save_all()
         yield event.plain_result(msg)
 
-    @filter.command("趋势")
     async def cmd_trend(self, event: AstrMessageEvent):
         """查看好感度/亲密度趋势。用法：/趋势 [天数]"""
         if not self.config.get("enable_stats_tracking", True):
             yield event.plain_result("⚠️ 数据统计未启用")
             return
         uid = self._get_user_id(event)
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         days = self.trend_default_days
         if len(parts) >= 2:
             try:
@@ -1788,12 +1886,11 @@ class SoulSyncPro(Star):
             else:
                 yield event.plain_result("\n".join(lines))
 
-    @filter.command("关系角色")
     async def cmd_relationship_roles(self, event: AstrMessageEvent):
-        """查看关系角色列表与解锁进度。用法：/关系角色 [角色]"""
+        """查看关系角色列表与解锁进度。用法：/角色 关系 [角色]"""
         uid = self._get_user_id(event)
         profile = self._get_or_create_profile(event)
-        parts = event.message_str.split(maxsplit=1)
+        parts = self._sub_parts(event, maxsplit=1)
         if len(parts) >= 2:
             key = resolve_relationship_key(parts[1])
             if not key:
@@ -1828,8 +1925,8 @@ class SoulSyncPro(Star):
                     if need:
                         lines.append(f"解锁条件：{'、'.join(need)}")
             lines.append("")
-            lines.append("💡 /解锁关系 <角色> 解锁；/切换关系 <角色> 切换（一次且不可逆）")
-            lines.append("💡 管理员：/设置关系角色 <用户ID> <角色> 可强制调整并解除锁定")
+            lines.append("💡 /角色 解锁 <角色>；/角色 关系切换 <角色>（一次且不可逆）")
+            lines.append("💡 管理员：/admin 关系角色 <用户ID> <角色> 可强制调整并解除锁定")
             path = self._try_render_image(event, f"{r['name']} · 关系角色", lines)
             if path:
                 yield event.image_result(path)
@@ -1871,25 +1968,24 @@ class SoulSyncPro(Star):
                     progress = "  (" + " ".join(need) + ")"
             lines.append(f"{mark} {row['emoji']} {row['name']}{progress}")
         lines.append("")
-        lines.append("💡 /解锁关系 <角色> 解锁；/切换关系 <角色> 切换（一次且不可逆）")
-        lines.append("💡 管理员：/设置关系角色 <用户ID> <角色> 可强制调整并解除锁定")
+        lines.append("💡 /角色 解锁 <角色>；/角色 关系切换 <角色>（一次且不可逆）")
+        lines.append("💡 管理员：/admin 关系角色 <用户ID> <角色> 可强制调整并解除锁定")
         path = self._try_render_image(event, "关系角色解锁", lines)
         if path:
             yield event.image_result(path)
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("解锁关系")
     async def cmd_unlock_relationship(self, event: AstrMessageEvent):
-        """解锁关系角色（仅限系统内置角色）。用法：/解锁关系 <角色>"""
+        """解锁关系角色（仅限系统内置角色）。用法：/角色 解锁 <角色>"""
         if not self.config.get("enable_relationship_roles", True):
             yield event.plain_result("⚠️ 关系角色系统未启用")
             return
         uid = self._get_user_id(event)
         profile = self._get_or_create_profile(event)
-        parts = event.message_str.split(maxsplit=1)
+        parts = self._sub_parts(event, maxsplit=1)
         if len(parts) < 2:
-            yield event.plain_result("用法：/解锁关系 <角色>\n例如：/解锁关系 恋人、/解锁关系 哥哥、/解锁关系 妹妹")
+            yield event.plain_result("用法：/角色 解锁 <角色>\n例如：/角色 解锁 恋人、/角色 解锁 哥哥、/角色 解锁 妹妹")
             return
         key = resolve_relationship_key(parts[1])
         if not key:
@@ -1902,16 +1998,15 @@ class SoulSyncPro(Star):
             self._save_all()
         yield event.plain_result(msg)
 
-    @filter.command("切换关系")
     async def cmd_switch_relationship(self, event: AstrMessageEvent):
-        """切换已解锁的关系角色。用法：/切换关系 <角色>"""
+        """切换已解锁的关系角色。用法：/角色 关系切换 <角色>"""
         if not self.config.get("enable_relationship_roles", True):
             yield event.plain_result("⚠️ 关系角色系统未启用")
             return
         uid = self._get_user_id(event)
-        parts = event.message_str.split(maxsplit=1)
+        parts = self._sub_parts(event, maxsplit=1)
         if len(parts) < 2:
-            yield event.plain_result("用法：/切换关系 <角色>")
+            yield event.plain_result("用法：/角色 关系切换 <角色>")
             return
         key = resolve_relationship_key(parts[1])
         if not key:
@@ -1922,7 +2017,6 @@ class SoulSyncPro(Star):
             self._save_all()
         yield event.plain_result(msg)
 
-    @filter.command("我的画像")
     async def cmd_my_portrait(self, event: AstrMessageEvent):
         """查看个人情感自画像（完整档案 + 行为模式 + 长期记忆）"""
         uid = self._get_user_id(event)
@@ -2117,15 +2211,14 @@ class SoulSyncPro(Star):
     #  管理员命令
     # ═══════════════════════════════════════════════════════════════
 
-    @filter.command("设置关系角色")
     async def cmd_set_relationship_role(self, event: AstrMessageEvent):
-        """管理员：强制调整指定用户的关系角色（绕过锁定与解锁条件）。用法：/设置关系角色 <ID> <角色>"""
+        """管理员：强制调整指定用户的关系角色（绕过锁定与解锁条件）。用法：/admin 关系角色 <ID> <角色>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split(maxsplit=2)
+        parts = self._sub_parts(event, maxsplit=2)
         if len(parts) < 3:
-            yield event.plain_result("用法：/设置关系角色 <用户ID> <角色>\n例如：/设置关系角色 123456 恋人、/设置关系角色 123456 陌生人")
+            yield event.plain_result("用法：/admin 关系角色 <用户ID> <角色>\n例如：/设置关系角色 123456 恋人、/设置关系角色 123456 陌生人")
             return
         key = resolve_relationship_key(parts[2])
         if not key:
@@ -2136,15 +2229,14 @@ class SoulSyncPro(Star):
             self._save_all()
         yield event.plain_result(msg)
 
-    @filter.command("设置好感")
     async def cmd_set_favorability(self, event: AstrMessageEvent):
-        """管理员：设置指定用户好感度。用法：/设置好感 <ID> <值>"""
+        """管理员：设置指定用户好感度。用法：/admin 好感 <ID> <值>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 3:
-            yield event.plain_result("用法：/设置好感 <用户ID> <-100~200的数值>")
+            yield event.plain_result("用法：/admin 好感 <用户ID> <-100~200的数值>")
             return
         user_id = parts[1]
         try:
@@ -2155,18 +2247,17 @@ class SoulSyncPro(Star):
         old, msg = self._set_profile_value(user_id, fav=max(-100, min(FAVORABILITY_MAX, value)))
         yield event.plain_result(f"✅ 已将 {user_id} 好感度从 {old:+.1f} 设置为 {value:+.1f}")
 
-    @filter.command("设置亲密")
     async def cmd_set_intimacy(self, event: AstrMessageEvent):
-        """管理员：设置指定用户亲密度。用法：/设置亲密 <ID> <值>"""
+        """管理员：设置指定用户亲密度。用法：/admin 亲密 <ID> <值>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 3:
-            yield event.plain_result("用法：/设置亲密 <用户ID> <0~100的数值>")
+            yield event.plain_result("用法：/admin 亲密 <用户ID> <0~100的数值>")
             return
         user_id = parts[1]
-        yield event.plain_result(f"ℹ️ 亲密度已改为按好感度百分比派生（亲密度=(好感+100)/3），请使用 /设置好感 调整")
+        yield event.plain_result(f"ℹ️ 亲密度已改为按好感度百分比派生（亲密度=(好感+100)/3），请使用 /admin 好感 调整")
         return
 
     def _set_profile_value(self, user_id: str, fav: Optional[float] = None,
@@ -2186,9 +2277,8 @@ class SoulSyncPro(Star):
         self._save_profile(profile)
         return old, ""
 
-    @filter.command("设置态度")
     async def cmd_set_attitude(self, event: AstrMessageEvent):
-        """管理员：自定义用户态度描述（合并进关系角色人设）。用法：/设置态度 <ID> <文本>"""
+        """管理员：自定义用户态度描述（合并进关系角色人设）。用法：/admin 态度 <ID> <文本>"""
         for res in self._set_user_text(event, "attitude", "态度"):
             yield res
 
@@ -2196,7 +2286,7 @@ class SoulSyncPro(Star):
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split(maxsplit=2)
+        parts = self._sub_parts(event, maxsplit=2)
         if len(parts) < 3:
             yield event.plain_result(f"用法：/设置{label} <用户ID> <{label}描述文本>")
             return
@@ -2204,21 +2294,19 @@ class SoulSyncPro(Star):
         ok, msg = self.relationship_manager.set_custom(user_id, kind, text)
         yield event.plain_result(msg)
 
-    @filter.command("设置关系")
     async def cmd_set_relationship(self, event: AstrMessageEvent):
-        """管理员：自定义用户关系描述（合并进关系角色人设）。用法：/设置关系 <ID> <文本>"""
+        """管理员：自定义用户关系描述（合并进关系角色人设）。用法：/admin 关系 <ID> <文本>"""
         for res in self._set_user_text(event, "relationship", "关系"):
             yield res
 
-    @filter.command("重置好感")
     async def cmd_reset(self, event: AstrMessageEvent):
-        """管理员：重置指定用户情感数据。用法：/重置好感 <ID>"""
+        """管理员：重置指定用户情感数据。用法：/admin 重置好感 <ID>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/重置好感 <用户ID>")
+            yield event.plain_result("用法：/admin 重置好感 <用户ID>")
             return
         user_id = parts[1]
         key = self._state_key(user_id)
@@ -2228,15 +2316,14 @@ class SoulSyncPro(Star):
         self._save_all()
         yield event.plain_result(f"✅ 已重置 {user_id} 的所有情感数据（含行为档案）")
 
-    @filter.command("查看好感")
     async def cmd_view_detail(self, event: AstrMessageEvent):
-        """管理员：查看完整情感档案。用法：/查看好感 <ID>"""
+        """管理员：查看完整情感档案。用法：/admin 查看好感 <ID>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/查看好感 <用户ID>")
+            yield event.plain_result("用法：/admin 查看好感 <用户ID>")
             return
         user_id = parts[1]
         profile = self._get_or_create_profile_by_id(user_id)
@@ -2252,7 +2339,7 @@ class SoulSyncPro(Star):
 
     def _rde_target(self, event) -> Tuple[str, str]:
         """解析 RDE 查看命令的目标：(uid, state_key)；无参数时查看自己"""
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) >= 2:
             return parts[1], self._state_key(parts[1])
         uid = self._get_user_id(event)
@@ -2307,9 +2394,8 @@ class SoulSyncPro(Star):
             "custom_relations": self.character_manager.get_relations(raw_uid, cid) if cid else {},
         }
 
-    @filter.command("RDE阶段")
     async def cmd_rde_stage(self, event: AstrMessageEvent):
-        """查看 RDE 关系阶段详情。用法：/RDE阶段 [ID]（管理员可查看他人）"""
+        """查看 RDE 关系阶段详情。用法：/回顾 时间线 [ID]（管理员可查看他人）"""
         uid, key = self._rde_target(event)
         try:
             data = self._build_rde_panel(key)
@@ -2337,9 +2423,8 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("危机记录")
     async def cmd_rde_crisis_log(self, event: AstrMessageEvent):
-        """查看 RDE 危机记录。用法：/危机记录 [ID]"""
+        """查看 RDE 危机记录。用法：/回顾 危机 [ID]"""
         uid, key = self._rde_target(event)
         try:
             data = self._build_rde_panel(key)
@@ -2371,9 +2456,8 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("角色关系网")
     async def cmd_rde_network(self, event: AstrMessageEvent):
-        """查看 RDE 角色关系网。用法：/角色关系网 [ID]"""
+        """查看 RDE 角色关系网。用法：/回顾 关系网 [ID]"""
         uid, key = self._rde_target(event)
         try:
             data = self._build_rde_panel(key)
@@ -2409,15 +2493,14 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("隐私级别")
     async def cmd_privacy_level(self, event: AstrMessageEvent):
-        """管理员：设置全局隐私级别。用法：/隐私级别 <0-2>"""
+        """管理员：设置全局隐私级别。用法：/admin 隐私 <0-2>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/隐私级别 <0|1|2>")
+            yield event.plain_result("用法：/admin 隐私 <0|1|2>")
             return
         try:
             level = int(parts[1])
@@ -2429,9 +2512,8 @@ class SoulSyncPro(Star):
         self.config.save_config()
         yield event.plain_result(f"✅ 全局隐私级别已设置为 {level}（0=保密 1=基础 2=详细）")
 
-    @filter.command("重置插件")
     async def cmd_reset_plugin(self, event: AstrMessageEvent):
-        """管理员：清空所有情感数据"""
+        """管理员：清空所有情感数据。用法：/admin 重置"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2441,9 +2523,8 @@ class SoulSyncPro(Star):
         self._save_all()
         yield event.plain_result("✅ 所有情感数据已清空（含行为档案）")
 
-    @filter.command("备份数据")
     async def cmd_backup(self, event: AstrMessageEvent):
-        """管理员：创建数据快照"""
+        """管理员：创建数据快照。用法：/admin 备份"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2464,9 +2545,8 @@ class SoulSyncPro(Star):
             shutil.copytree(ltm_dir, backup_path / "long_term_memory", dirs_exist_ok=True)
         yield event.plain_result(f"✅ 数据已备份到：{backup_path.name}")
 
-    @filter.command("修复互动统计")
     async def cmd_fix_stats(self, event: AstrMessageEvent):
-        """管理员：依据好感/亲密度自动修正正负互动次数"""
+        """管理员：依据好感/亲密度自动修正正负互动次数。用法：/admin 修复统计"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2491,9 +2571,8 @@ class SoulSyncPro(Star):
         self._save_all()
         yield event.plain_result(f"✅ 已修正 {fixed} 个用户的互动统计")
 
-    @filter.command("标记重要回忆")
     async def cmd_mark_important(self, event: AstrMessageEvent):
-        """用户：把某条长期记忆标记为重要（永不忘却）。用法：/标记重要回忆 <序号>"""
+        """用户：把某条长期记忆标记为重要（永不忘却）。用法：/记忆 重要 <序号>"""
         uid = self._state_key(self._get_user_id(event))
         events = self.long_memory.get_events(uid, 10)
         if not events:
@@ -2510,7 +2589,7 @@ class SoulSyncPro(Star):
                     f"{i}. [{time.strftime('%m-%d %H:%M', time.localtime(e.get('ts', 0)))}] {desc}"
                 )
             lines.append("")
-            lines.append("用法：/标记重要回忆 <序号>（1=最近）")
+            lines.append("用法：/记忆 重要 <序号>（1=最近）")
             path = self._try_render_image(event, "标记重要回忆", lines)
             if path:
                 yield event.image_result(path)
@@ -2525,9 +2604,8 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("❌ 未找到该记忆")
 
-    @filter.command("忘记这件事")
     async def cmd_forget(self, event: AstrMessageEvent):
-        """用户：忘掉某条长期记忆。用法：/忘记这件事 <序号>"""
+        """用户：忘掉某条长期记忆。用法：/记忆 忘记 <序号>"""
         uid = self._state_key(self._get_user_id(event))
         events = self.long_memory.get_events(uid, 10)
         if not events:
@@ -2544,7 +2622,7 @@ class SoulSyncPro(Star):
                     f"{i}. [{time.strftime('%m-%d %H:%M', time.localtime(e.get('ts', 0)))}] {desc}"
                 )
             lines.append("")
-            lines.append("用法：/忘记这件事 <序号>（1=最近）")
+            lines.append("用法：/记忆 忘记 <序号>（1=最近）")
             path = self._try_render_image(event, "忘记这件事", lines)
             if path:
                 yield event.image_result(path)
@@ -2557,10 +2635,9 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("❌ 未找到该记忆")
 
-    @staticmethod
-    def _parse_memory_index(event, count: int) -> Optional[int]:
+    def _parse_memory_index(self, event, count: int) -> Optional[int]:
         """解析记忆序号参数（1=最近一条），非法返回 None"""
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 2:
             return None
         try:
@@ -2571,10 +2648,8 @@ class SoulSyncPro(Star):
             return None
         return count - n
 
-    @filter.command("月度报告")
-    @filter.command("月报")
     async def cmd_monthly_report(self, event: AstrMessageEvent):
-        """用户：查看本月（或上月）关系月报。用法：/月度报告 [月] 或 /月度报告 上月"""
+        """用户：查看本月（或上月）关系月报。用法：/回顾 月报 [上月]"""
         uid = self._state_key(self._get_user_id(event))
         from datetime import date as _rdate
         today_r = _rdate.today()
@@ -2595,10 +2670,8 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result(REPORT_MARK + format_report(stats))
 
-    @filter.command("角色回顾")
-    @filter.command("回顾")
     async def cmd_role_report(self, event: AstrMessageEvent):
-        """用户：以角色口吻总结最近一段时间的相处。用法：/角色回顾 [天数]（默认14）"""
+        """用户：以角色口吻总结最近一段时间的相处。用法：/回顾 报告 [天数]（默认14）"""
         uid = self._state_key(self._get_user_id(event))
         kw = event.message_str.strip()
         days = int(self.config.get("report_window_days", 14))
@@ -2623,8 +2696,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result(REPORT_MARK + text)
 
-    @filter.command("雷达图")
-    @filter.command("对比雷达")
     async def cmd_radar(self, event: AstrMessageEvent):
         """用户：对比最近两段各 N 天的关系维度。用法：/雷达图 [天数]（默认7）"""
         uid = self._state_key(self._get_user_id(event))
@@ -2669,7 +2740,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result(format_compare(comp, days))
 
-    @filter.command("时间回溯")
     async def cmd_time_jump(self, event: AstrMessageEvent):
         """用户：回溯关键时刻的时间线叙事（最多5条）"""
         uid = self._state_key(self._get_user_id(event))
@@ -2698,7 +2768,6 @@ class SoulSyncPro(Star):
     # TPD 时间感知深化系统命令（Phase E）
     # ══════════════════════════════════════════════════════════════
 
-    @filter.command("天气")
     async def cmd_tpd_weather(self, event: AstrMessageEvent):
         """查看当前环境感知（天气/季节/节气/月相/心情倾向）"""
         panel = self.tpd_orchestrator.environment_panel_data()
@@ -2743,7 +2812,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("倒计时")
     async def cmd_tpd_countdown(self, event: AstrMessageEvent):
         """查看即将到来的倒计时事件"""
         uid = self._state_key(self._get_user_id(event))
@@ -2772,11 +2840,10 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("跳跃")
     async def cmd_tpd_skip(self, event: AstrMessageEvent):
         """查看时间跳跃状态，或触发跳跃。用法：/跳跃 [N天后见]"""
         uid = self._state_key(self._get_user_id(event))
-        parts = event.message_str.split(maxsplit=1)
+        parts = self._sub_parts(event, maxsplit=1)
         panel = self.tpd_orchestrator.skip_panel_data(uid)
         status = panel.get("status", {})
         if len(parts) >= 2:
@@ -2825,15 +2892,14 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("强制跳跃")
     async def cmd_tpd_force_skip(self, event: AstrMessageEvent):
-        """管理员：强制指定用户时间跳跃。用法：/强制跳跃 <用户ID> <N天>"""
+        """管理员：强制指定用户时间跳跃。用法：/admin 强制跳跃 <用户ID> <N天>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         if len(parts) < 3:
-            yield event.plain_result("用法：/强制跳跃 <用户ID> <天数>\n例如：/强制跳跃 123456 7")
+            yield event.plain_result("用法：/admin 强制跳跃 <用户ID> <天数>\n例如：/强制跳跃 123456 7")
             return
         target_uid = parts[1]
         try:
@@ -2854,13 +2920,12 @@ class SoulSyncPro(Star):
         )
         yield event.plain_result(f"✅ 已强制跳跃 {target_uid} {days} 天")
 
-    @filter.command("重置跳跃")
     async def cmd_tpd_reset_skip(self, event: AstrMessageEvent):
-        """管理员：重置指定用户的跳跃状态。用法：/重置跳跃 [用户ID]"""
+        """管理员：重置指定用户的跳跃状态。用法：/admin 重置跳跃 [用户ID]"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
-        parts = event.message_str.split()
+        parts = self._sub_parts(event)
         target_uid = parts[1] if len(parts) >= 2 else self._state_key(self._get_user_id(event))
         state = self.tpd_orchestrator.skip_executor.get_state(target_uid)
         state["offset_days"] = 0
@@ -2870,9 +2935,8 @@ class SoulSyncPro(Star):
         self.tpd_orchestrator.skip_executor.save_uid(target_uid)
         yield event.plain_result(f"✅ 已重置 {target_uid} 的跳跃状态")
 
-    @filter.command("天气调试")
     async def cmd_tpd_weather_debug(self, event: AstrMessageEvent):
-        """管理员：查看天气获取调试信息"""
+        """管理员：查看天气获取调试信息。用法：/admin 天气调试"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2904,7 +2968,6 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("角色列表")
     async def cmd_character_list(self, event: AstrMessageEvent):
         """用户：查看可对话的角色列表。用法：/角色列表"""
         uid = self._get_user_id(event)
@@ -2921,17 +2984,16 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
-    @filter.command("切换角色")
     async def cmd_character_switch(self, event: AstrMessageEvent):
         """用户：切换当前对话角色。用法：/切换角色 <名字|默认>"""
         uid = self._get_user_id(event)
-        parts = event.message_str.split(maxsplit=1)
+        parts = self._sub_parts(event, maxsplit=1)
         if len(parts) < 2:
-            yield event.plain_result("用法：/切换角色 <名字|默认>\n/角色列表 查看可选角色")
+            yield event.plain_result("用法：/切换角色 <名字|默认>\n/角色 列表 查看可选角色")
             return
         cid = self.character_manager.find_cid(uid, parts[1])
         if cid is None:
-            yield event.plain_result(f"❌ 未找到角色「{parts[1]}」，/角色列表 查看可选角色")
+            yield event.plain_result(f"❌ 未找到角色「{parts[1]}」，/角色 列表 查看可选角色")
             return
         self.character_manager.set_active(uid, cid)
         info = self.character_manager.role_info(uid)
@@ -2944,11 +3006,10 @@ class SoulSyncPro(Star):
             "之前角色的好感与记忆互不影响。"
         )
 
-    @filter.command("创建角色")
     async def cmd_character_create(self, event: AstrMessageEvent):
         """用户：创建并切换到一个自定义角色。用法：/创建角色 <名字> [emoji] [性格描述]"""
         uid = self._get_user_id(event)
-        parts = event.message_str.split(maxsplit=1)
+        parts = self._sub_parts(event, maxsplit=1)
         if len(parts) < 2:
             yield event.plain_result("用法：/创建角色 <名字> [emoji] [性格描述]")
             return
@@ -2967,11 +3028,10 @@ class SoulSyncPro(Star):
         cid, msg = self.character_manager.create(uid, name, emoji, persona)
         yield event.plain_result(msg)
 
-    @filter.command("删除角色")
     async def cmd_character_remove(self, event: AstrMessageEvent):
         """用户：删除一个自建角色（档案保留不删）。用法：/删除角色 <名字>"""
         uid = self._get_user_id(event)
-        parts = event.message_str.split(maxsplit=1)
+        parts = self._sub_parts(event, maxsplit=1)
         if len(parts) < 2:
             yield event.plain_result("用法：/删除角色 <名字>")
             return
@@ -2982,9 +3042,8 @@ class SoulSyncPro(Star):
         ok, msg = self.character_manager.remove(uid, cid)
         yield event.plain_result(msg)
 
-    @filter.command("调试事件")
     async def cmd_debug_event(self, event: AstrMessageEvent):
-        """管理员：输出事件结构（排障用）"""
+        """管理员：输出事件结构（排障用）。用法：/admin 调试事件"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2997,7 +3056,6 @@ class SoulSyncPro(Star):
         }
         yield event.plain_result(f"🔧 事件结构：\n{json.dumps(info, ensure_ascii=False, indent=2)}")
 
-    @filter.command("调试记忆")
     async def cmd_debug_memory(self, event: AstrMessageEvent):
         """管理员：查看短期缓存与长期记忆（含行为档案）"""
         if not self._is_admin(event):
@@ -3636,22 +3694,25 @@ class SoulSyncPro(Star):
         except Exception as e:
             logger.error(f"SoulSync on_llm_request 异常: {e}", exc_info=True)
 
-    # ── Agent 模式指令兜底拦截 ──
-    _LLM_CMD_MAP = {
-        "雷达图": "cmd_radar",
-        "对比雷达": "cmd_radar",
-        "月度报告": "cmd_monthly_report",
-        "月报": "cmd_monthly_report",
-        "角色回顾": "cmd_role_report",
-        "回顾": "cmd_role_report",
-        "时间回溯": "cmd_time_jump",
-        "角色列表": "cmd_character_list",
-        "标记重要回忆": "cmd_mark_important",
-        "忘记这件事": "cmd_forget",
-        "天气": "cmd_tpd_weather",
-        "倒计时": "cmd_tpd_countdown",
-        "跳跃": "cmd_tpd_skip",
-    }
+    # ── Agent 模式指令兜底拦截（v2.20：按 10 父命令 + 子命令路由）──
+
+    def _resolve_llm_command(self, text: str) -> Optional[str]:
+        """把纯指令词解析为方法名（父命令/独立命令/子命令/单 token 命令）"""
+        from .command_router import (
+            ADMIN_COMMANDS, PARENT_COMMANDS, STANDALONE_COMMANDS, resolve_parent,
+        )
+        parts = text.split()
+        if not parts:
+            return None
+        head = parts[0]
+        sub = parts[1] if len(parts) >= 2 else ""
+        if head in STANDALONE_COMMANDS:
+            return STANDALONE_COMMANDS[head]
+        if head in PARENT_COMMANDS:
+            return resolve_parent(head, sub) or resolve_parent(head, "")
+        if head in ADMIN_COMMANDS:
+            return ADMIN_COMMANDS[head]
+        return None
 
     async def _try_intercept_command_in_llm(self, event) -> bool:
         """Agent 会话吞掉指令时：检测纯指令词并直接执行插件命令输出结果。
@@ -3663,11 +3724,7 @@ class SoulSyncPro(Star):
             text = (event.message_str or "").strip().lstrip("/").strip()
             if not text:
                 return False
-            cmd_name = None
-            for name, cn in self._LLM_CMD_MAP.items():
-                if text == name or text.startswith(name + " "):
-                    cmd_name = cn
-                    break
+            cmd_name = self._resolve_llm_command(text)
             if not cmd_name:
                 return False
             cmd = getattr(self, cmd_name, None)

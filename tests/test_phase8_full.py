@@ -159,25 +159,22 @@ growth = end_mb - base_mb
 assert growth < 50, f"1000轮内存增长 {growth:.1f}MB"
 ok(f"内存 1000轮增长 {growth:.1f}MB <50MB")
 
-# ── 命令区回归: 新命令 + v2.16 全部命令存在 ────────────────
+# ── 命令区回归: v2.20 10父命令 + 独立命令 + admin 存在 ───────
 cmds = re.findall(r'@filter\.command\("([^"]+)"\)', main_src)
 counts = {}
 for c in cmds:
     counts[c] = counts.get(c, 0) + 1
 dups = {c: n for c, n in counts.items() if n > 1}
 assert not dups, f"命令重复注册: {dups}"
-new_cmds = ["人格微调", "人格参数", "人格重置", "人格锁定", "知识库", "知识添加",
-            "知识删除", "风格训练", "风格快照", "风格锁定", "记忆库", "记忆添加",
-            "记忆删除", "记忆星标", "个性化导出"]
-missing = [c for c in new_cmds if c not in counts]
-assert not missing, f"缺失新命令: {missing}"
-v2_cmds = ["好感度", "状态显示", "纪念日", "添加纪念日", "删除纪念日", "设置生日",
-           "节日列表", "设置节日", "删除节日", "趋势", "月度报告", "月报",
-           "角色回顾", "回顾", "雷达图", "对比雷达", "时间回溯", "备份数据",
-           "重置插件", "修复互动统计"]
-missing_v2 = [c for c in v2_cmds if c not in counts]
-assert not missing_v2, f"v2.16回归缺失: {missing_v2}"
-ok(f"命令区 无重复注册, 新命令+回归命令全在 (共{len(cmds)}个)")
+parent_cmds = ["状态", "回顾", "纪念", "角色", "人格", "知识",
+               "风格", "记忆", "环境", "排行", "admin", "图片模式", "设置", "命令"]
+missing = [c for c in parent_cmds if c not in counts]
+assert not missing, f"缺失父命令: {missing}"
+legacy_cmds = ["好感度", "人格微调", "知识添加", "记忆添加", "添加纪念日",
+               "月度报告", "角色回顾", "时间回溯", "设置好感"]
+leftover = [c for c in legacy_cmds if c in counts]
+assert not leftover, f"旧命令未收敛: {leftover}"
+ok(f"命令区 无重复注册, 10父命令+独立命令+admin 齐全 (共{len(cmds)}个)")
 
 # ── 配置 schema 完整 ───────────────────────────────────────
 schema_src = (BASE / "_conf_schema.json").read_text(encoding='utf-8')
