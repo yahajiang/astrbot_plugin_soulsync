@@ -1114,7 +1114,12 @@ class SoulSyncPro(Star):
         sub = parts[1] if len(parts) >= 2 else ""
         method = resolve_admin(sub)
         if not method:
-            yield event.plain_result(admin_help())
+            lines = admin_help().split("\n")
+            path = self._try_render_image(event, "心管后台", lines)
+            if path:
+                yield event.image_result(path)
+            else:
+                yield event.plain_result("\n".join(lines))
             return
         cmd = getattr(self, method, None)
         if cmd is None:
@@ -1127,7 +1132,12 @@ class SoulSyncPro(Star):
     async def cmd_commands(self, event: AstrMessageEvent):
         """查看 SoulSync 命令总览（10 父命令）"""
         from .command_router import all_parent_help
-        yield event.plain_result(all_parent_help())
+        lines = all_parent_help().split("\n")
+        path = self._try_render_image(event, "SoulSync 命令总览", lines)
+        if path:
+            yield event.image_result(path)
+        else:
+            yield event.plain_result("\n".join(lines))
 
     @filter.command("心声", desc="[好感|阶段|画像|系统] 核心情感数值、阶段与画像")
     async def cmd_p_status(self, event: AstrMessageEvent):
