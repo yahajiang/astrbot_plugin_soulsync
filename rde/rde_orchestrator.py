@@ -242,6 +242,11 @@ class RDEOrchestrator:
         active = self.crisis_store.get(user_id).active
         return active.crisis if active else None
 
+    def get_active_crisis_panel(self, user_id: str) -> Optional[dict]:
+        """面板展示用：未解决危机的展示快照（含 title/rounds_left 等）"""
+        st = self.crisis_store.get(user_id)
+        return st.active.to_dict() if st.active is not None else None
+
     def resolve_choice(self, user_id: str, crisis_id: str,
                        choice_id: str, context: Optional[dict] = None) -> Optional[ResolutionResult]:
         """用户做出选择，返回结果（含好感/情感/阶段变化建议与角色回复）"""

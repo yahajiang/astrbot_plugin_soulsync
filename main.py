@@ -2394,7 +2394,6 @@ class SoulSyncPro(Star):
                 "interaction": s.interaction_features,
                 "description": orch.get_stage_description(s.stage_id),
             })
-        active = orch.get_active_crisis(key)
         raw_uid, cid = self._split_state_key(key)
         return {
             "enabled": orch.enabled,
@@ -2411,7 +2410,7 @@ class SoulSyncPro(Star):
                 "fav": round(fav, 1),
             },
             "crisis": {
-                "active": active.to_dict() if active is not None else None,
+                "active": orch.get_active_crisis_panel(key),
                 "history": orch.get_crisis_history(key),
                 "cooldown": orch.get_cooldown(key),
             },
