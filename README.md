@@ -1,4 +1,4 @@
-# astrbot_plugin_menu_image
+# astrbot_plugin_soulsync_menu
 
 自动汇总 Bot **全部已注册指令**，按插件分组生成一张菜单图片的 AstrBot 插件。
 
@@ -42,11 +42,11 @@
 
 ## 安装
 
-将 `astrbot_plugin_menu_image` 文件夹放入 AstrBot 插件目录，安装依赖 `Pillow`（`requirements.txt`），重启 AstrBot。
+将 `astrbot_plugin_soulsync_menu` 文件夹放入 AstrBot 插件目录，安装依赖 `Pillow`（`requirements.txt`），重启 AstrBot。
 
 ## 数据目录
 
-`AstrBot/data/plugin_data/astrbot_plugin_menu_image/cache/` 存放生成的菜单图片，按 `cache_max_files` 自动清理。
+`AstrBot/data/plugin_data/astrbot_plugin_soulsync_menu/cache/` 存放生成的菜单图片，按 `cache_max_files` 自动清理。
 
 ## 版本历史
 

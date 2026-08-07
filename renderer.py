@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""astrbot_plugin_menu_image - 菜单图片渲染器
+"""astrbot_plugin_soulsync_menu - 菜单图片渲染器
 
 纯 Pillow 实现，不依赖 AstrBot，便于独立测试。
 自动探测系统中文字体（Windows / Linux / macOS / WSL），找不到字体时仍可渲染（中文显示为方块）。
@@ -36,7 +36,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-_log = logging.getLogger("astrbot_plugin_menu_image.renderer")
+_log = logging.getLogger("astrbot_plugin_soulsync_menu.renderer")
 
 _EMOJI_RE = re.compile(
     "[\U0001F000-\U0001FAFF"

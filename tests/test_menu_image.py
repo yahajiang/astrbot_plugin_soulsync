@@ -1,4 +1,4 @@
-"""astrbot_plugin_menu_image 冒烟测试
+"""astrbot_plugin_soulsync_menu 冒烟测试
 
 不依赖真实 AstrBot：通过 sys.modules 注入桩模块，再导入插件 main.py。
 验证：
@@ -81,9 +81,9 @@ def _make_logger():
 
 def install_stubs(data_dir: Path):
     """注入 AstrBot 桩模块，返回 (registry, star_map)"""
-    sys.modules.pop("astrbot_plugin_menu_image", None)
-    sys.modules.pop("astrbot_plugin_menu_image.main", None)
-    sys.modules.pop("astrbot_plugin_menu_image.renderer", None)
+    sys.modules.pop("astrbot_plugin_soulsync_menu", None)
+    sys.modules.pop("astrbot_plugin_soulsync_menu.main", None)
+    sys.modules.pop("astrbot_plugin_soulsync_menu.renderer", None)
     sys.modules.pop("astrbot", None)
     sys.modules.pop("astrbot.api", None)
     sys.modules.pop("astrbot.api.event", None)
@@ -213,7 +213,7 @@ def _populate(registry, star_map):
         ),
         # 本插件自身指令（默认应被隐藏）
         _Handler(
-            "astrbot_plugin_menu_image.main",
+            "astrbot_plugin_soulsync_menu.main",
             "menu",
             [_CmdFilter("menu", alias={"菜单"})],
             desc="查看功能菜单图片",
@@ -236,7 +236,7 @@ def _populate(registry, star_map):
 
 def _install_and_import(data_dir):
     registry, star_map = install_stubs(data_dir)
-    from astrbot_plugin_menu_image.main import MenuImagePlugin
+    from astrbot_plugin_soulsync_menu.main import MenuImagePlugin
 
     return registry, star_map, MenuImagePlugin
 
@@ -251,7 +251,7 @@ def test_collect_and_group():
         names = [g["name"] for g in groups]
         assert names[0] == "AstrBot 内置指令", f"内置指令组应排最前: {names}"
         assert "爱点赞" in names and "群签到" in names and "生图工具" in names
-        assert not any(n == "astrbot_plugin_menu_image" for n in names), (
+        assert not any(n == "astrbot_plugin_soulsync_menu" for n in names), (
             "默认应隐藏本插件自身"
         )
 
@@ -285,7 +285,7 @@ def test_filters():
         plugin = cls(None, {"exclude_plugins": ["爱点赞"], "hide_self": False})
         names = [g["name"] for g in plugin._collect_groups()]
         assert "爱点赞" not in names
-        assert "astrbot_plugin_menu_image" in names
+        assert "astrbot_plugin_soulsync_menu" in names
 
 
 def test_disabled_plugin_excluded():
@@ -446,7 +446,7 @@ def test_pagination():
 
 def test_render_png():
     with tempfile.TemporaryDirectory() as td:
-        from astrbot_plugin_menu_image.renderer import MenuRenderer
+        from astrbot_plugin_soulsync_menu.renderer import MenuRenderer
 
         cfg = {
             "menu_title": "功能菜单",
@@ -483,14 +483,14 @@ def test_render_png():
             img.load()
             assert img.size[0] == 1080, f"宽度应为 1080: {img.size}"
             assert img.size[1] > 300, f"高度应合理: {img.size}"
-        from astrbot_plugin_menu_image.renderer import sanitize_text
+        from astrbot_plugin_soulsync_menu.renderer import sanitize_text
 
         assert sanitize_text("赞🎉") == "赞", "emoji 应被去除"
 
 
 def test_font_selection():
     with tempfile.TemporaryDirectory() as td:
-        from astrbot_plugin_menu_image.renderer import MenuRenderer
+        from astrbot_plugin_soulsync_menu.renderer import MenuRenderer
 
         # 自定义字体路径应被优先使用
         custom = "C:/Windows/Fonts/msyh.ttc"
@@ -514,7 +514,7 @@ def test_font_selection():
 
 def test_frost_glass():
     with tempfile.TemporaryDirectory() as td:
-        from astrbot_plugin_menu_image.renderer import MenuRenderer
+        from astrbot_plugin_soulsync_menu.renderer import MenuRenderer
 
         groups = [
             {

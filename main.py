@@ -1,4 +1,4 @@
-"""astrbot_plugin_menu_image - 根据 Bot 全部已注册指令自动生成菜单图片
+"""astrbot_plugin_soulsync_menu - 根据 Bot 全部已注册指令自动生成菜单图片
 
 特性：
 - 自动读取 AstrBot 所有已注册指令（含子指令与别名），无需手动维护列表
@@ -33,10 +33,10 @@ try:
     _CORE_IMPORT_OK = True
 except Exception as e:  # 核心模块导入失败时菜单功能不可用，指令直接提示
     _CORE_IMPORT_OK = False
-    logger.warning(f"menu_image: 核心模块导入失败，菜单功能不可用: {e}")
+    logger.warning(f"soulsync_menu: 核心模块导入失败，菜单功能不可用: {e}")
 
 _BUILTIN_LABEL = "AstrBot 内置指令"
-_SELF_MODULE_PREFIX = "astrbot_plugin_menu_image"
+_SELF_MODULE_PREFIX = "astrbot_plugin_soulsync_menu"
 
 
 class MenuImagePlugin(Star):
@@ -48,7 +48,7 @@ class MenuImagePlugin(Star):
         self.data_dir = (
             Path(get_astrbot_data_path())
             / "plugin_data"
-            / "astrbot_plugin_menu_image"
+            / "astrbot_plugin_soulsync_menu"
         )
         try:
             self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -310,7 +310,7 @@ class MenuImagePlugin(Star):
         try:
             groups = self._collect_groups(for_admin=is_admin)
         except Exception as e:
-            logger.error(f"menu_image: 收集指令失败: {e}")
+            logger.error(f"soulsync_menu: 收集指令失败: {e}")
             yield event.plain_result(f"菜单生成失败：{e}")
             return
         if not groups:
@@ -347,7 +347,7 @@ class MenuImagePlugin(Star):
                     out_path=out_path,
                 )
             except Exception as e:
-                logger.error(f"menu_image: 渲染菜单图片失败: {e}")
+                logger.error(f"soulsync_menu: 渲染菜单图片失败: {e}")
                 rendered = None
         if rendered is None or not Path(rendered).exists():
             yield event.plain_result(
