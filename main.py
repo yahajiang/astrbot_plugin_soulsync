@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import time
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -54,7 +55,8 @@ class MenuImagePlugin(Star):
         except OSError:
             pass
         self.renderer = MenuRenderer(self.data_dir, dict(self.config))
-        self._groups_cache: Dict[bool, Tuple[float, List[Dict]]] = {}
+        self._groups_cache: Dict[bool, Tuple[float, str, List[Dict]]] = {}
+        self._cache_fingerprint: str = ""
         self._groups_ttl = 60.0
         self._page_ttl = 30.0
         logger.info(
@@ -92,17 +94,47 @@ class MenuImagePlugin(Star):
                 return True
         return False
 
+    def _fingerprint(self) -> str:
+        """轻量状态指纹：插件元数据 + 已注册 handler 概要。
+
+        任何指令增删、插件启停、插件重载都会改变指纹，
+        用于实时失效 _groups_cache 与已渲染的图片缓存。
+        """
+        parts = []
+        for path, md in star_map.items():
+            parts.append(
+                f"{path}|{getattr(md, 'activated', True)}|"
+                f"{getattr(md, 'version', '')}|{getattr(md, 'display_name', '')}"
+            )
+        for handler in star_handlers_registry:
+            parts.append(
+                f"{getattr(handler, 'handler_module_path', '')}|"
+                f"{getattr(handler, 'handler_name', '')}|"
+                f"{getattr(handler, 'enabled', True)}"
+            )
+        return hashlib.sha1(
+            "|".join(sorted(parts)).encode("utf-8", "ignore")
+        ).hexdigest()[:10]
+
     def _collect_groups(self, for_admin: bool = False) -> List[Dict]:
         """遍历 AstrBot 全部已注册 handler，收集指令并按插件分组。
 
         for_admin=True（管理员视图）：包含全部指令，管理员指令带 admin 标记；
         for_admin=False（普通用户视图）：只包含非管理员权限指令。
 
-        结果按 60s TTL 缓存（WebUI 变更插件状态后最多延迟 60s 可见）。
+        缓存策略：状态指纹变化时立即失效（WebUI 变更插件状态实时可见）；
+        指纹未变时按 60s TTL 强制刷新兜底（handler 描述等未纳入指纹的改动）。
         """
+        fingerprint = self._fingerprint()
         cached = self._groups_cache.get(for_admin)
-        if cached is not None and time.monotonic() - cached[0] < self._groups_ttl:
-            return cached[1]
+        if (
+            cached is not None
+            and time.monotonic() - cached[0] < self._groups_ttl
+            and cached[1] == fingerprint
+        ):
+            self._cache_fingerprint = fingerprint
+            return cached[2]
+        self._cache_fingerprint = fingerprint
         exclude_plugins = [str(x) for x in (self.config.get("exclude_plugins") or [])]
         show_builtin = bool(self.config.get("show_builtin", True))
         hide_self = bool(self.config.get("hide_self", True))
@@ -195,11 +227,11 @@ class MenuImagePlugin(Star):
         )
         for g in ordered:
             g["commands"].sort(key=lambda c: c["cmd"])
-        self._groups_cache[for_admin] = (time.monotonic(), ordered)
+        self._groups_cache[for_admin] = (time.monotonic(), fingerprint, ordered)
         return ordered
 
     def _cached_page(self, key: str):
-        """同键渲染结果在 30s TTL 内直接复用（同名指令变更最多延迟 30s 可见）"""
+        """同键渲染结果在 30s TTL 内直接复用（键含状态指纹，指令变更后旧图不再命中）"""
         try:
             now = time.monotonic()
             for p in self.renderer.cache_dir.glob(f"{key}_*.png"):
@@ -302,7 +334,7 @@ class MenuImagePlugin(Star):
             )
             return
 
-        cache_key = f"menu_{'a' if is_admin else 'u'}_p{page}"
+        cache_key = f"menu_{'a' if is_admin else 'u'}_p{page}_{self._cache_fingerprint}"
         rendered = self._cached_page(cache_key)
         if rendered is None:
             out_path = self.renderer.cache_dir / f"{cache_key}_{int(time.time())}.png"

@@ -32,6 +32,7 @@ import logging
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -586,14 +587,27 @@ class MenuRenderer:
         return out_path
 
     def _cleanup_cache(self, limit: Optional[int] = None):
+        """清理缓存：保留最近 limit 个文件，超过 TTL（默认 30s）的旧文件一律删除。"""
         if limit is None:
             try:
                 limit = max(1, int(self.cfg.get("cache_max_files", 20)))
             except (TypeError, ValueError):
                 limit = 20
         try:
-            files = sorted(self.cache_dir.glob("*.png"), key=lambda p: p.stat().st_mtime, reverse=True)
+            files = sorted(
+                self.cache_dir.glob("*.png"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
             for f in files[limit:]:
                 f.unlink(missing_ok=True)
+            try:
+                ttl = max(1.0, float(self.cfg.get("cache_file_ttl", 30.0)))
+            except (TypeError, ValueError):
+                ttl = 30.0
+            now = time.monotonic()
+            for f in files:
+                if now - f.stat().st_mtime > ttl:
+                    f.unlink(missing_ok=True)
         except OSError:
             pass

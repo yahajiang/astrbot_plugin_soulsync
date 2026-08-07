@@ -8,6 +8,7 @@
 4. 分页逻辑（组尽量保持完整）
 5. Pillow 渲染出图（PNG 尺寸、可打开）
 6. 纯文本降级输出
+7. 状态指纹实时失效（插件启停、新指令注册立即反映；指纹不变时命中缓存）
 """
 
 import sys
@@ -319,13 +320,14 @@ def test_disabled_plugin_excluded():
 
 
 def test_collect_cache():
+    """缓存行为：指纹变化立即失效重收集；指纹不变时 TTL 内命中缓存"""
     with tempfile.TemporaryDirectory() as td:
         registry, star_map, cls = _install_and_import(Path(td))
         _populate(registry, star_map)
         plugin = cls(None, {})
 
         g1 = plugin._collect_groups()
-        # 追加停用插件，未清缓存：TTL 内应命中旧结果
+        # 追加停用插件 → 指纹变化 → 无需清缓存，立即反映新状态
         star_map["astrbot_plugin_disabled.main"] = _StarMeta(
             name="astrbot_plugin_disabled",
             display_name="已停用插件",
@@ -340,16 +342,54 @@ def test_collect_cache():
             )
         )
         g2 = plugin._collect_groups()
-        assert [x["name"] for x in g1] == [x["name"] for x in g2], (
-            "TTL 内应命中缓存，不反映新状态"
+        assert "已停用插件" not in [x["name"] for x in g2], (
+            "指纹变化后应立即反映新状态"
         )
-
-        # 清缓存后应反映新状态
-        plugin._groups_cache.clear()
+        # 指纹不变且 TTL 内 → 命中缓存（返回同一列表对象）
         g3 = plugin._collect_groups()
-        assert "已停用插件" not in [x["name"] for x in g3], (
-            "清缓存后应反映新状态"
+        assert g3 is g2, "指纹不变且 TTL 内应命中缓存"
+
+
+def test_fingerprint_invalidation():
+    """插件启停 / 新指令注册 → 指纹变化 → 立即实时更新"""
+    with tempfile.TemporaryDirectory() as td:
+        registry, star_map, cls = _install_and_import(Path(td))
+        _populate(registry, star_map)
+        plugin = cls(None, {})
+
+        plugin._collect_groups()
+        # 停用插件 → 立即从菜单消失
+        star_map["astrbot_plugin_furry_zan.main"].activated = False
+        names = [g["name"] for g in plugin._collect_groups()]
+        assert "爱点赞" not in names, "插件停用后应立即从菜单消失"
+        # 恢复启用 → 立即出现
+        star_map["astrbot_plugin_furry_zan.main"].activated = True
+        names = [g["name"] for g in plugin._collect_groups()]
+        assert "爱点赞" in names, "插件启用后应立即出现在菜单"
+        # 新指令注册 → 立即出现
+        registry.handlers.append(
+            _Handler(
+                "astrbot_plugin_furry_zan.main",
+                "zanall",
+                [_CmdFilter("zanall")],
+                desc="赞所有人",
+            )
         )
+        cmds = [c["cmd"] for g in plugin._collect_groups() for c in g["commands"]]
+        assert "zanall" in cmds, "新注册的指令应立即出现在菜单"
+
+
+def test_cache_hit_without_fingerprint_change():
+    """指纹未纳入的改动（如 handler 描述）在 TTL 内命中缓存，由 60s 兜底刷新"""
+    with tempfile.TemporaryDirectory() as td:
+        registry, star_map, cls = _install_and_import(Path(td))
+        _populate(registry, star_map)
+        plugin = cls(None, {})
+
+        g1 = plugin._collect_groups()
+        registry.handlers[0].desc = "修改后的描述"
+        g2 = plugin._collect_groups()
+        assert g2 is g1, "指纹不变且 TTL 内应命中缓存"
 
 
 def test_permission_filter():
@@ -517,6 +557,8 @@ def main():
         test_filters,
         test_disabled_plugin_excluded,
         test_collect_cache,
+        test_fingerprint_invalidation,
+        test_cache_hit_without_fingerprint_change,
         test_permission_filter,
         test_is_admin,
         test_pagination,
