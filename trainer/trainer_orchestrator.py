@@ -11,6 +11,7 @@ from .trainer_storage import TrainerStorage
 from .persona.persona_modifier import PersonaModifier
 from .persona.persona_trainer import PersonaTrainer
 from .persona.persona_stability import PersonaStability
+from .persona.persona_guard import PersonaGuard
 from .persona.persona_injector import PersonaInjector
 from .knowledge.knowledge_manager import KnowledgeManager, ConflictResult
 from .knowledge.knowledge_capture import KnowledgeCapture
@@ -53,6 +54,7 @@ class PersonalizationOrchestrator:
         self._modifier = PersonaModifier(storage, user_id)
         self._trainer = PersonaTrainer(self._modifier)
         self._stability = PersonaStability()
+        self._guard = PersonaGuard(storage, user_id, self._modifier)
         self._injector = PersonaInjector()
         self._knowledge_mgr = KnowledgeManager(storage, user_id)
         self._knowledge_capture = KnowledgeCapture(self._knowledge_mgr)
@@ -146,11 +148,17 @@ class PersonalizationOrchestrator:
     # ── 每轮处理 ──
     def on_each_turn(self, message: str, context: dict) -> None:
         params = self.get_persona()
-        fb = self._trainer.check_feedback(message, params)
-        self._stability.decay_params(params)
-        self._stability.update_stability(params)
-        if fb:
-            context["needs_persona_hint"] = True
+        # v2.20 人格护栏：自动锁定 / 震荡回滚（每轮先跑，护栏事件进 context）
+        guard_events = self._guard.on_turn(params)
+        if guard_events:
+            context["persona_guard"] = guard_events
+            self.save_all()
+        if not self._guard.is_auto_paused(params):
+            fb = self._trainer.check_feedback(message, params)
+            self._stability.decay_params(params)
+            self._stability.update_stability(params)
+            if fb:
+                context["needs_persona_hint"] = True
         self._cached_results["persona"] = params
         kb = self.get_knowledge()
         trigger = self._knowledge_capture.check_trigger_full(message, kb)

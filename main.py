@@ -1380,6 +1380,9 @@ class SoulSyncPro(Star):
         from .trainer.persona.persona_params import PARAM_META
         parts = self._sub_parts(event)
         if len(parts) >= 3:
+            if not self._is_admin(event):
+                yield event.plain_result("⛔ 仅管理员可调教人格；系统默认由自动化隐式训练自主调整")
+                return
             name, val = parts[1], parts[2]
             meta = PARAM_META.get(name)
             if not meta:
@@ -1406,7 +1409,12 @@ class SoulSyncPro(Star):
                         return
                     setattr(params, name, val)
                 orch.save_all()
-                yield event.plain_result(f"✅ 已设置 {meta['label']} = {val}")
+                # v2.20：管理员手动设置 → 2h 临时锁定，期间自动化微调暂停
+                orch._guard.apply_manual_lock(params)
+                yield event.plain_result(
+                    f"✅ 已设置 {meta['label']} = {val}\n"
+                    "🛡️ 自动化微调已暂停 2 小时（保护管理意图）"
+                )
             except ValueError:
                 yield event.plain_result("❌ 参数值格式错误")
             return
@@ -1428,6 +1436,9 @@ class SoulSyncPro(Star):
             yield event.plain_result("\n".join(lines))
 
     async def cmd_persona_reset(self, event: AstrMessageEvent):
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 仅管理员可调教人格；系统默认由自动化隐式训练自主调整")
+            return
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
         orch = self._get_orchestrator(uid)
@@ -1435,9 +1446,13 @@ class SoulSyncPro(Star):
         modifier = PersonaModifier(self.trainer_storage, uid)
         modifier.reset()
         orch._persona_params = None
-        yield event.plain_result("✅ 人格参数已重置为默认值")
+        orch._guard.apply_manual_lock(orch.get_persona())
+        yield event.plain_result("✅ 人格参数已重置为默认值\n🛡️ 自动化微调已暂停 2 小时（保护管理意图）")
 
     async def cmd_persona_lock(self, event: AstrMessageEvent):
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 仅管理员可调教人格；系统默认由自动化隐式训练自主调整")
+            return
         uid = self._get_user_id(event)
         uid = str(uid).rpartition("::")[0] or uid
         orch = self._get_orchestrator(uid)
@@ -3373,6 +3388,14 @@ class SoulSyncPro(Star):
                 # 惩罚奖励事件记入长期记忆
                 if pr_events:
                     for evt in pr_events:
+                        # v2.20：背叛极端事件 → 人格护栏自动解锁，允许角色重新适应
+                        if "💔" in evt:
+                            try:
+                                orch = self._get_orchestrator(uid)
+                                if orch._guard.on_extreme_event(orch.get_persona(), "betrayal"):
+                                    logger.info(f"SoulSync 人格自动解锁 [{uid}]：背叛事件")
+                            except Exception as e:
+                                logger.debug(f"SoulSync 人格背叛解锁失败: {e}")
                         if any(icon in evt for icon in ["💔", "💫", "🏆", "🔥", "⚡"]):
                             self.long_memory.add_event(profile.user_id, {
                                 "favorability": round(profile.favorability + fav_delta, 1),
@@ -4565,6 +4588,15 @@ class SoulSyncPro(Star):
                     self._get_rde_orchestrator(uid).add_cold_penalty(uid, 1)
                 except Exception as e:
                     logger.debug(f"SoulSync RDE 冷落联动失败: {e}")
+            # v2.20：连续冷落 ≥3 天（72h+）→ 人格护栏自动解锁，允许角色重新适应
+            if bp.cold_days >= 3:
+                try:
+                    raw_uid, _ = self._split_state_key(uid)
+                    orch = self._get_orchestrator(raw_uid)
+                    if orch._guard.on_extreme_event(orch.get_persona(), "cold_72h"):
+                        logger.info(f"SoulSync 人格自动解锁 [{raw_uid}]：连续冷落 {bp.cold_days} 天")
+                except Exception as e:
+                    logger.debug(f"SoulSync 人格极端解锁失败 [{uid}]: {e}")
             settled += 1
             logger.info(f"SoulSync 每日冷落惩罚 [{uid}]: {evt}")
 
