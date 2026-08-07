@@ -164,9 +164,10 @@ def test_env_injector():
            "moon_phase": "蛾眉月", "moon_emoji": "🌒"}
     deltas = mood_deltas(env, weather_strength=0.3, season_strength=0.2, moon_strength=0.1)
     text = build_environment_info(env, deltas)
-    for key in ("天气", "温度", "季节", "节气", "月相", "心情倾向", "清明", "今日"):
+    # v2.21 骨架缩写：保留语义信息，移除「天气:」等冗余词前缀
+    for key in ("[环境]", "☀️晴", "24℃", "春", "清明今", "🌒蛾眉月", "心情:", "喜悦↑"):
         assert key in text, f"注入文本应含「{key}」: {text}"
-    assert "喜悦↑" in text, f"应有喜悦上升倾向: {text}"
+    assert "天气:" not in text and "温度:" not in text, "骨架化后不应有冗余词前缀"
     tendency = build_mood_tendency_text({})
     assert tendency == "", "无影响时应为空"
     print(f"PASS: 环境叙事注入（文本完整，示例: {text}）")

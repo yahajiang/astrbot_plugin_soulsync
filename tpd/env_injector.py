@@ -28,29 +28,30 @@ def build_mood_tendency_text(deltas: Optional[Dict[str, float]]) -> str:
 
 
 def build_environment_info(env: dict, deltas: Optional[Dict[str, float]] = None) -> str:
-    """环境注入文本，示例：
-    ☀️天气: 晴 · 温度: 24℃（舒适）· 季节: 春 · 节气: 清明 · 月相: 🌒蛾眉月 · 心情倾向: 喜悦↑1.5
+    """环境注入文本（骨架缩写，示例）：
+    [环境] ☀️晴 24℃ · 春 · 清明 · 🌒蛾眉月 · 心情: 喜悦↑1.5
     """
     parts = []
     weather = env.get("weather")
     if weather:
         emoji = env.get("weather_emoji", "")
-        parts.append(f"天气: {emoji}{weather}" if emoji else f"天气: {weather}")
+        parts.append(f"{emoji}{weather}" if emoji else weather)
     temp = env.get("temperature")
     if temp is not None:
-        band = env.get("temp_band")
-        parts.append(f"温度: {temp}℃" + (f"（{band}）" if band else ""))
+        parts.append(f"{temp}℃")
     season = env.get("season")
     if season:
-        parts.append(f"季节: {season}")
+        parts.append(season)
     term = env.get("solar_term")
     if term:
-        parts.append(f"节气: {term}" + ("（今日）" if env.get("solar_term_today") else ""))
+        parts.append(term + ("今" if env.get("solar_term_today") else ""))
     moon = env.get("moon_phase")
     if moon:
-        parts.append(f"月相: {env.get('moon_emoji', '')}{moon}")
+        parts.append(f"{env.get('moon_emoji', '')}{moon}")
     if not parts:
         return ""
     text = " · ".join(parts)
     tendency = build_mood_tendency_text(deltas)
-    return f"[环境] {text}{tendency}" if tendency else f"[环境] {text}"
+    if tendency:
+        tendency = tendency.replace(" · 心情倾向: ", " · 心情: ")
+    return f"[环境] {text}{tendency}"

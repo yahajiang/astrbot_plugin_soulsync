@@ -72,6 +72,8 @@ from .time_perception import (
     build_holiday_info,
     build_lunar_info,
     build_weather_info,
+    get_time_period,
+    get_weather,
 )
 
 # 不可见标记（纯零宽字符）：加在插件大段报告输出（回顾/月报/时间回溯等）文本开头，
@@ -3685,7 +3687,7 @@ class SoulSyncPro(Star):
                 req.prompt = f"[{perception}]\n{req.prompt}"
 
             # ── 注入情感上下文到 LLM ──
-            emotion_context = self._build_emotion_context(profile)
+            emotion_context = self._build_emotion_context(profile, behavior_profile)
             if emotion_context:
                 req.extra_user_content_parts.append(TextPart(text=emotion_context).mark_as_temp())
 
@@ -4108,8 +4110,30 @@ class SoulSyncPro(Star):
 
         return lines
 
-    def _build_emotion_context(self, profile: EmotionProfile) -> str:
-        """构建注入 LLM 的情感上下文"""
+    # 8 维情感两字简称（骨架行用，与 DIM_LABELS 同源）
+    DIM_SHORT = {
+        "joy": "悦", "sadness": "悲", "anger": "怒", "fear": "惧",
+        "surprise": "惊", "disgust": "恶", "trust": "信", "anticipation": "期",
+    }
+
+    @staticmethod
+    def _emotion_short_dims(emotions: Dict[str, float], top_n: int = 3,
+                            min_val: float = 15.0) -> str:
+        """8 维情感骨架：仅 ≥min_val 的最高 top_n 维，形如「悦81信72期65」"""
+        ranked = sorted(
+            ((dim, emotions.get(dim, 0.0)) for dim in EMOTION_DIMENSIONS),
+            key=lambda x: x[1], reverse=True,
+        )
+        items = [
+            f"{SoulSyncPro.DIM_SHORT[dim]}{val:.0f}"
+            for dim, val in ranked
+            if val >= min_val
+        ]
+        return "".join(items[:top_n])
+
+    def _build_emotion_context(self, profile: EmotionProfile,
+                               behavior_profile: Optional[BehaviorProfile] = None) -> str:
+        """构建注入 LLM 的情感上下文（骨架缩写，Token 节省）"""
         privacy = self.config.get("global_privacy_level", 1)
         enable_att = self.config.get("enable_attitude_system", True)
         anti_manip = self.config.get("anti_manipulation_prompt", True)
@@ -4118,24 +4142,25 @@ class SoulSyncPro(Star):
             return ""
 
         parts = ["<emotion_context>"]
-        parts.append(f"好感度：{profile.favorability:+.1f}/{FAVORABILITY_MAX:.0f}")
-        parts.append(f"亲密度：{profile.intimacy:.1f}/100")
-        parts.append(f"关系阶段：{self._get_stage_label(profile)}")
+        stage_label = self._get_stage_label(profile).lstrip("🌱🌿🤝🍀💬💛🧡💜💖💞🌳🌸 ")
+        dims = self._emotion_short_dims(profile.emotions)
+        streak = ""
+        if behavior_profile and behavior_profile.current_streak_count > 1:
+            streak = f" 势{'+' if behavior_profile.current_streak_type == 'positive' else ''}" \
+                     f"{behavior_profile.current_streak_count}"
+        parts.append(f"[情]❤{profile.favorability:+.1f}💜{profile.intimacy:.0f} "
+                     f"{stage_label} {dims}{streak}")
 
         # 阶段对话风格（关系分支剧情：称呼/口吻/互动倾向）
         if self.config.get("enable_stage_styles", True):
             style = self._get_stage_style(profile)
             custom_addr = (profile.preferred_address or "").strip()
             if custom_addr:
-                parts.append(
-                    f"用户明确要求你称呼ta为「{custom_addr}」，回复时必须优先使用该称谓，"
-                    "不得擅自换成其他称呼。"
-                )
+                parts.append(f"称呼ta为「{custom_addr}」优先，不得擅自换其他称呼。")
             else:
                 parts.append(
-                    f"你当前关系阶段的说话风格：称呼对方为「{style['call']}」；"
-                    f"口吻——{style['tone']}；互动倾向——{style['tendency']}。"
-                    "请自然地贴合这个风格回应。"
+                    f"风格: 称「{style['call']}」; 口吻-{style['tone']}; "
+                    f"倾向-{style['tendency']}。"
                 )
 
         # 情绪张力状态（情绪传染模型）
@@ -4144,29 +4169,29 @@ class SoulSyncPro(Star):
             st = tension_state(t, self.config.get("tension_threshold", 85.0))
             if st != "calm":
                 hint = {
-                    "uneasy": "（ta最近情绪有些起伏，回复时语气温柔耐心些）",
-                    "strained": "（ta心中积压着情绪，已接近临界点，不要刺激ta）",
-                    "bursting": "（ta的情绪一触即发，此刻非常脆弱敏感）",
+                    "uneasy": "ta情绪有些起伏，语气温柔耐心",
+                    "strained": "ta积压着情绪近临界，勿刺激",
+                    "bursting": "ta情绪一触即发，此刻非常脆弱",
                 }.get(st, "")
-                parts.append(f"情绪张力：{t:.0f}%（{hint}）")
+                parts.append(f"[张]{t:.0f}% {hint}")
             if profile.last_eruption_ts and time.time() - profile.last_eruption_ts < 7200:
-                parts.append("（你刚刚经历了一次情绪爆发，内心还带着余波与疲惫）")
+                parts.append("（刚刚情绪爆发过，内心有余波）")
 
         if enable_att:
             custom = self.relationship_manager.custom_info(
                 str(profile.user_id).rpartition("::")[0] or profile.user_id
             )
             if custom["attitude"]:
-                parts.append(f"你对ta的态度：{custom['attitude']}")
+                parts.append(f"你对ta: {custom['attitude']}")
             if custom["relationship"]:
-                parts.append(f"你们的关系：{custom['relationship']}")
+                parts.append(f"你们: {custom['relationship']}")
 
         ltm = self.long_memory.get_summary(profile.user_id)
         if ltm and ltm != "暂无长期记忆。":
-            parts.append(f"情感记忆：\n{ltm}")
+            parts.append(f"记忆:\n{ltm}")
 
         if anti_manip and profile.favorability < 40:
-            parts.append("⚠️ 注意：保持自然态度，不要因为用户的刻意讨好而突然改变态度。真实的情感需要时间积累。")
+            parts.append("⚠️ 勿因讨好突然改变态度，真实情感需要积累。")
 
         parts.append("</emotion_context>")
         return "\n".join(parts)
@@ -4288,13 +4313,14 @@ class SoulSyncPro(Star):
         return result
 
     def _build_perception_block(self, uid: str, anniv_events: List[str]) -> str:
-        """构建时间/节假日/农历/特别日子感知信息块（仿 LLMPerception）"""
+        """构建时间/节假日/农历/特别日子感知块（骨架缩写，供 LLM 前缀注入）"""
         try:
             import datetime as _dt
             now = _dt.datetime.now(self.timezone)
             parts: List[str] = []
             if self.config.get("enable_time_perception", True):
-                parts.append(build_time_info(now))
+                parts.append(f"{now.strftime('%m-%d')} "
+                             f"{'一二三四五六日'[now.weekday()]} {get_time_period(now)}")
             if self.config.get("enable_holiday_perception", True):
                 festival_names = []
                 try:
@@ -4315,12 +4341,11 @@ class SoulSyncPro(Star):
                 if linfo:
                     parts.append(linfo)
             if self.config.get("enable_weather_perception", True):
-                winfo = build_weather_info(now)
-                if winfo:
-                    parts.append(winfo)
+                w = get_weather(now)
+                parts.append(f"{w['emoji']}{w['weather']}·{w['season']}")
             if anniv_events and self.config.get("anniv_inject_context", True):
                 parts.append("特别日子: " + "、".join(anniv_events))
-            return " | ".join(parts)
+            return "[时] " + " · ".join(parts)
         except Exception as e:
             logger.debug(f"SoulSync 感知信息构建失败: {e}")
             return ""
