@@ -1,6 +1,6 @@
-# 心旅知音 (SoulSync) v2.20 - 融合版情感智能插件（轻量化重构）
+# 心旅知音 (SoulSync) - 融合版情感智能插件
 
-> 融合 EmotionAI 与 FavourPro 精华的情感智能插件：关键词+LLM 双通道情感分析 · 8 维情感 · 好感/亲密度 · 十二阶段演进 · 惩罚奖励 · 四层记忆 · 关系角色 · 纪念日节日 · 时间感知深化 · 个性化训练（人格/知识/风格/记忆）· RDE 关系深度演进 · 图片输出 · WebUI 控制台。v2.20 完成轻量化重构：70 命令收敛为 10 父命令、事件总线解耦、人格护栏、意图识别静默命令、前后置钩子。
+> 融合 EmotionAI 与 FavourPro 精华的情感智能插件：关键词+LLM 双通道情感分析 · 8 维情感 · 好感/亲密度 · 十二阶段演进 · 惩罚奖励 · 四层记忆 · 关系角色 · 纪念日节日 · 时间感知深化 · 个性化训练（人格/知识/风格/记忆）· RDE 关系深度演进 · 图片输出 · WebUI 控制台。v2.20 完成轻量化重构：70 命令收敛为 10 父命令、事件总线解耦、人格护栏、意图识别静默命令、前后置钩子。v2.21：RDE 阶段叙事频控注入（间隔 3 轮/跃迁强制）+ WebUI 配置板块 16 模块组 141 项全量可视化。
 
 ---
 
@@ -25,7 +25,7 @@
 | 🎂 纪念日节日 | 农历换算 + 认识里程碑 + 生日 + 27+ 传统节日，当天奖励与氛围注入 |
 | ⏰ 时间感知深化（TPD） | 天气×节气×月相→心情映射 + 倒计时六阶段叙事 + 时间跳跃（告别/回归/被动离开） |
 | 🖼️ 图片输出 | 信息命令渲染 Pillow 图片卡片（含趋势图），三级开关，未装自动降级 |
-| 🎮 WebUI 控制台 | 仪表盘 / 自画像 / 137 项配置热更新 / 排行榜 / 管理员工具 / 各模块面板 |
+| 🎮 WebUI 控制台 | 仪表盘 / 自画像 / 141 项配置 · 16 模块组热更新 / 排行榜 / 管理员工具 / 各模块面板 |
 | 🎯 个性化训练 | 人格微调（20 参数+护栏）/ 知识库（6 类）/ 语言风格（三阶段+快照）/ 私人记忆（4 类型） |
 | 🌐 RDE 关系深度演进 | 十二阶段叙事注入 / 关系危机系统（7 类型 14 事件）/ 多角色关系网 |
 | 🔌 v2.20 轻量化重构 | 命令路由（10 父命令+`/admin`）· 事件总线 EventBus · 人格护栏（自动锁定/回滚/极端解锁）· 意图识别静默命令 · 前后置钩子 HookBus |
@@ -263,6 +263,8 @@ tpd_weather_api_city: 北京
 
 **每轮流程**（`rde/rde_orchestrator.py`）：危机检测（超时自动解决+新触发）→ 跨角色好感传导 → 阶段跃迁叙事 → 三段上下文注入。性能实测单轮 **<0.01ms**。
 
+**v2.21 叙事频控**：阶段叙事（含称谓/禁忌等行为指导）由每轮注入改为按 `rde_stage_inject_every_n`（默认 3 轮）间隔注入，阶段跃迁轮强制注入；阶段跃迁时强制重新注入静态层（人设/知识）；危机叙事与关系感知不受间隔限制。
+
 **子开关**：`enable_crisis_system`（危机系统）/ `enable_network`（关系网）。阶段定义见 `rde/narrative/stage_definitions.py`（`STAGE_DEFINITIONS` + `NEGATIVE_STAGE_DEFINITIONS`）；危机事件池见 `rde/crisis/crisis_definitions.py` 的 `CRISIS_EVENTS`（追加条目即可自定义）；默认关系网见 `rde/network/relation_definitions.py`，自定义关系写在角色卡 `relations` 字段（`type`：bestie/partner/senior_junior/rival_love/opponent/cold/sworn_enemy/stranger；`cross_coefficient` 传导系数；`description` 感知描述），与默认网叠加生效。
 
 ---
@@ -271,7 +273,7 @@ tpd_weather_api_city: 北京
 
 ## 🎮 WebUI 控制台
 
-AstrBot 插件详情页进入：概览仪表盘（档案数/平均好感/平均亲密/最高阶段）、用户列表（好感排序）、用户自画像、137 项配置分组可视化编辑（保存即热更新）、正/负排行榜 TOP15、管理员工具、系统状态。
+AstrBot 插件详情页进入：概览仪表盘（档案数/平均好感/平均亲密/最高阶段）、用户列表（好感排序）、用户自画像、141 项配置 · 16 个模块组分组可视化编辑（保存即热更新）、正/负排行榜 TOP15、管理员工具、系统状态。
 
 各模块面板：**🎯 个性化训练**（四标签页：人格 20 参数实时生效/锁定/重置 · 知识库 · 语言风格 · 私人记忆）· **🌐 RDE 关系演进**（当前阶段叙事/危机状态与历史/角色关系网/阶段配置）· **🌤️ 时间感知**（环境感知/倒计时/跳跃历史）。
 
@@ -283,24 +285,26 @@ AstrBot 插件详情页进入：概览仪表盘（档案数/平均好感/平均�
 
 ## ⚙️ 配置说明
 
-全部 137 项配置均在 WebUI 插件管理页可视化编辑（数值类带滑块），保存后**无需重载插件，下次对话自动生效**。主要分组：
+全部 141 项配置均在 WebUI 插件管理页可视化编辑（数值类带滑块），保存后**无需重载插件，下次对话自动生效**。16 个模块组：
 
 | 分组 | 关键配置 |
 |------|---------|
-| ⚡ 功能开关 | `enable_attitude_system` `enable_ai_text_generation` `enable_secondary_llm` `enable_smart_update` `show_status_default` `enable_multi_role` `enable_intent_router` `enable_hooks` |
-| 💝 情感参数 | `default_favorability` `keyword_sensitivity` `fav_growth_rate`（0.5 放缓）`micro_change_favorability` `micro_change_intimacy` |
+| ⚡ 功能开关 | `enable_attitude_system` `enable_ai_text_generation` `enable_secondary_llm` `enable_smart_update` `show_status_default` `enable_multi_role` `enable_intent_router` `enable_hooks` `enable_stage_styles` `enable_s12_forced_address` |
+| 🌐 RDE 深度演进 | `enable_rde` `rde_stage_inject_every_n`（3）`enable_crisis_system` `enable_network` `crisis_trigger_probability`（0.02）`crisis_max_probability`（0.10）`crisis_min_stage` `crisis_min_cold_penalties` `crisis_min_rounds_secret` `crisis_protection_hours` `network_transmission_delay_turns` `social_event_cooldown_rounds` `jealousy_gap_threshold` `assist_min_fav` `competition_gap_threshold` |
+| 💝 情感参数 | `default_favorability` `keyword_sensitivity` `fav_growth_rate`（0.5 放缓）`micro_change_favorability` `micro_change_intimacy` `enable_emotion_contagion` `tension_*`（张力积累/释放/阈值）`eruption_fav_penalty` |
 | 🧠 智能更新 | `force_update_interval` `keyword_update_threshold` `time_update_threshold_sec` |
 | 🤖 辅助 LLM | `llm_provider_id` `llm_weight`（0.4）`llm_call_timeout_sec` `llm_recent_messages_count` |
-| 💾 记忆 | `emotional_significance_threshold` `max_long_term_events` `auto_save_interval_sec` |
+| 💾 记忆 | `emotional_significance_threshold` `max_long_term_events` `auto_save_interval_sec` `enable_memory_recall` `memory_half_life_days` `memory_recall_bonus` |
+| 🧬 个性化训练 | `enable_personalization` `personalization_static_every_n` `persona_implicit_training` `persona_explicit_panel` `persona_stability_enabled` `knowledge_enabled` `style_training_enabled` `private_memory_enabled` `personalization_total_token_budget`（450）等 |
 | 🔒 隐私 | `global_privacy_level` `session_based` `anti_manipulation_prompt` `admin_ids` |
-| 🎯 惩罚奖励 | `pr_enable_*`（6 开关）`pr_cold_threshold_hours` `pr_comeback_threshold_hours` `pr_decay_half_life_hours` `pr_momentum_reward_per_level` `pr_weight`（0.6） |
-| 📅 纪念日/节日 | `enable_anniversary_system` `anniv_fav_bonus` `anniv_int_bonus` `festival_fav_bonus` `festival_int_bonus` `anniv_inject_context` |
-| ⏰ 时间感知 | `timezone` `enable_time_perception` `enable_holiday_perception` `enable_lunar_perception` `holiday_country` |
-| 🌤️ 时间感知深化（TPD） | `tpd_enabled` `tpd_weather_*`（provider/key/city/cache/mood_strength）`tpd_season_mood_strength` `tpd_moonphase_*` `tpd_countdown_*` `tpd_skip_*` `tpd_passive_gap_threshold_hours` `tpd_return_narrative_enabled` |
+| 🎯 惩罚奖励 | `pr_enable_*`（6 开关）`pr_cold_threshold_hours` `pr_comeback_threshold_hours` `pr_decay_half_life_hours` `pr_momentum_reward_per_level` `pr_weight`（0.6）`crisis_*`（事件开关/阈值/概率/冷却/奖励惩罚） |
+| 📅 纪念日/节日 | `enable_anniversary_system` `anniv_fav_bonus` `anniv_int_bonus` `festival_fav_bonus` `festival_int_bonus` `anniv_inject_context` `enable_countdown_events` `report_*`（月报/角色报告） |
+| ⏰ 时间感知 | `timezone` `enable_time_perception` `enable_holiday_perception` `enable_lunar_perception` `enable_weather_perception` `holiday_country` `time_jump_*` |
+| 🌦️ TPD 环境深化 | `tpd_enabled` `tpd_env_inject_every_n` `tpd_weather_*`（provider/key/city/cache/mood_strength）`tpd_season_mood_strength` `tpd_moonphase_*` `tpd_aqi_enabled` |
+| ⏳ TPD 倒计时/跳跃 | `tpd_countdown_*`（开关/提及窗口/频率/去重/自动问候）`tpd_skip_*`（跳跃上限/冻结惩罚/情感漂移）`tpd_passive_gap_threshold_hours` `tpd_return_narrative_enabled` |
 | 📈 数据统计 | `enable_stats_tracking` `stats_history_days` `trend_default_days` |
-| 🎭 关系角色/图片 | `enable_relationship_roles` `relationship_auto_assign` `enable_image_output` `image_output_default` `image_output_global` |
-| 🎯 个性化训练 | `enable_personalization` `personalization_total_token_budget`（450）`persona_implicit_training` `persona_explicit_panel` `persona_stability_enabled` `knowledge_enabled` `style_training_enabled` `private_memory_enabled` 等 |
-| 🌐 RDE | `enable_rde` `enable_crisis_system` `enable_network` `crisis_trigger_probability`（0.02）`crisis_max_probability`（0.10）`crisis_min_stage` `crisis_min_cold_penalties` `crisis_min_rounds_secret` `crisis_protection_hours` `network_transmission_delay_turns` `social_event_cooldown_rounds` 等 |
+| 🎭 关系角色 | `enable_relationship_roles` `relationship_auto_assign` |
+| 🖼️ 图片输出 | `enable_image_output` `image_output_default` `image_output_global` |
 
 ---
 
@@ -337,7 +341,7 @@ astrbot_plugin_soulsync/
 ├── rde/                   # 关系深度演进（v2.18）：narrative/ crisis/ network/
 ├── tpd/                   # 时间感知深化（v2.19）：天气/倒计时/跳跃/环境注入
 ├── pages/dashboard/       # WebUI 控制台
-└── tests/                 # 127 组测试（pytest）
+└── tests/                 # 26 个测试文件全量断言回归
 ```
 
 ---
@@ -350,7 +354,8 @@ astrbot_plugin_soulsync/
 
 | 版本 | 摘要 |
 |------|------|
-| **v2.20**（当前） | 轻量化重构：70 命令收敛为 10 父命令+`/admin` · 事件总线 EventBus 解耦 · 人格护栏（50 轮稳定自动锁定/24h 3 次剧变回滚/背叛·冷落72h+自动解锁/管理员 2h 临时锁定）· 意图识别静默命令 · 前后置钩子机制 · 127 组测试 |
+| **v2.21**（当前） | RDE 阶段叙事频控注入（间隔 3 轮/跃迁强制，危机感知不受限）· 阶段跃迁静态层重注 · WebUI 配置板块 16 模块组 141 键全量可视化（.cs 玻璃卡片化）· schema `_section_rde` 分组 · 插件名称定为「心旅知音 (SoulSync) - 融合版情感智能插件」 |
+| **v2.20** | 轻量化重构：70 命令收敛为 10 父命令+`/admin` · 事件总线 EventBus 解耦 · 人格护栏（50 轮稳定自动锁定/24h 3 次剧变回滚/背叛·冷落72h+自动解锁/管理员 2h 临时锁定）· 意图识别静默命令 · 前后置钩子机制 |
 | **v2.19** | 时间感知深化（TPD）：三级降级天气+8维心情映射 · 倒计时六阶段叙事 · 时间跳跃（告别/回归/被动离开）· 冷落惩罚冻结 · 22 项配置 · WebUI 时间感知面板 · 74 组测试 |
 | **v2.18** | 关系深度演进（RDE）：十二阶段叙事 · 关系危机系统（7 类型 14 事件）· 多角色关系网 · WebUI RDE 面板 |
 | **v2.17** | 个性化训练模块：人格微调（20 参数）/ 知识库 / 语言风格 / 私人记忆 · 四模块联动 · WebUI 个性化面板 |
