@@ -52,6 +52,12 @@ def test_memory_subcommands():
     assert resolve_parent("记忆", "忘记") == "cmd_forget"
 
 
+def test_role_subcommands():
+    assert resolve_parent("角色", "称谓") == "cmd_set_preferred_address"
+    assert resolve_parent("角色", "列表") == "cmd_character_list"
+    assert resolve_parent("角色", "创建") == "cmd_character_create"
+
+
 def test_environment_subcommands():
     assert resolve_parent("环境", "天气") == "cmd_tpd_weather"
     assert resolve_parent("环境", "跳跃") == "cmd_tpd_skip"

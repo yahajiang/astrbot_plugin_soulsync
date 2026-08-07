@@ -76,13 +76,14 @@ class RDEOrchestrator:
         stage_id: str,
         context: Optional[dict] = None,
     ) -> str:
-        """生成注入 LLM 的阶段叙事上下文；context 可含 user_name"""
+        """生成注入 LLM 的阶段叙事上下文；context 可含 user_name / preferred_address"""
         ctx = context or {}
         recent = self._recent_transitions.get(stage_id)
         return self.injector.generate_stage_context(
             stage_id,
             user_name=ctx.get("user_name"),
             recent_transition=recent,
+            preferred_address=ctx.get("preferred_address"),
         )
 
     def check_transition(
@@ -172,7 +173,8 @@ class RDEOrchestrator:
         # Step 5 上下文生成（阶段叙事 + 危机叙事 + 关系网感知）
         ctx["crisis_active"] = st.active is not None
         stage_ctx = self.generate_stage_context(
-            stage_id, {"user_name": ctx.get("user_name")}
+            stage_id, {"user_name": ctx.get("user_name"),
+                       "preferred_address": ctx.get("preferred_address")}
         )
         crisis_ctx = self.generate_crisis_context(user_id)
         perc_ctx = dict(ctx)

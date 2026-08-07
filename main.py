@@ -964,6 +964,7 @@ class SoulSyncPro(Star):
                 extra.get("text", "") or "", raw_uid, current_role),
             "favorabilities": self._rde_favorabilities(raw_uid),
             "user_name": profile.user_name or "",
+            "preferred_address": profile.preferred_address or "",
         })
 
         resolved = result.get("crisis_resolved")
@@ -3067,6 +3068,35 @@ class SoulSyncPro(Star):
         ok, msg = self.character_manager.remove(uid, cid)
         yield event.plain_result(msg)
 
+    async def cmd_set_preferred_address(self, event: AstrMessageEvent):
+        """设置角色对你的专属称谓。用法：/角色 称谓 [称呼|无]"""
+        uid = self._get_user_id(event)
+        profile = self._get_or_create_profile_by_id(uid)
+        parts = self._sub_parts(event, maxsplit=1)
+        if len(parts) < 2:
+            cur = profile.preferred_address or ""
+            if cur:
+                yield event.plain_result(
+                    f"📌 当前称谓：角色叫你「{cur}」\n用法：/角色 称谓 <新称呼>（输入「无」清除）"
+                )
+            else:
+                yield event.plain_result(
+                    "📌 尚未设置专属称谓。用法：/角色 称谓 <称呼>（如：哥哥）"
+                )
+            return
+        word = parts[1].strip()
+        if word in {"无", "清除", "取消"}:
+            profile.preferred_address = ""
+            self._save_all()
+            yield event.plain_result("🗑️ 已清除专属称谓，恢复阶段默认称呼")
+            return
+        if not word or len(word) > 12:
+            yield event.plain_result("❌ 称呼应为 1~12 字")
+            return
+        profile.preferred_address = word
+        self._save_all()
+        yield event.plain_result(f"✅ 已设置：角色今后优先叫你「{word}」")
+
     async def cmd_debug_event(self, event: AstrMessageEvent):
         """管理员：输出事件结构（排障用）。用法：/admin 调试事件"""
         if not self._is_admin(event):
@@ -3907,7 +3937,9 @@ class SoulSyncPro(Star):
                     self._get_negative_stage_label(profile.favorability)
                     if profile.favorability < 0 else None,
                 )
-                rde_ctx_text = rde_orch.generate_stage_context(rde_sid, {"user_name": ""})
+                rde_ctx_text = rde_orch.generate_stage_context(
+                    rde_sid, {"user_name": "", "preferred_address": profile.preferred_address or ""}
+                )
             except Exception:
                 pass
 
@@ -4093,11 +4125,18 @@ class SoulSyncPro(Star):
         # 阶段对话风格（关系分支剧情：称呼/口吻/互动倾向）
         if self.config.get("enable_stage_styles", True):
             style = self._get_stage_style(profile)
-            parts.append(
-                f"你当前关系阶段的说话风格：称呼对方为「{style['call']}」；"
-                f"口吻——{style['tone']}；互动倾向——{style['tendency']}。"
-                "请自然地贴合这个风格回应。"
-            )
+            custom_addr = (profile.preferred_address or "").strip()
+            if custom_addr:
+                parts.append(
+                    f"用户明确要求你称呼ta为「{custom_addr}」，回复时必须优先使用该称谓，"
+                    "不得擅自换成其他称呼。"
+                )
+            else:
+                parts.append(
+                    f"你当前关系阶段的说话风格：称呼对方为「{style['call']}」；"
+                    f"口吻——{style['tone']}；互动倾向——{style['tendency']}。"
+                    "请自然地贴合这个风格回应。"
+                )
 
         # 情绪张力状态（情绪传染模型）
         if self.config.get("enable_emotion_contagion", True):

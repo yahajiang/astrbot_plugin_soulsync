@@ -27,6 +27,7 @@ class StageInjector:
         stage_id: str,
         user_name: Optional[str] = None,
         recent_transition: Optional[dict] = None,
+        preferred_address: Optional[str] = None,
     ) -> str:
         """生成注入 LLM 的完整阶段叙事上下文（空串表示不注入）"""
         if not self.enabled:
@@ -39,6 +40,11 @@ class StageInjector:
         lines.append("【当前关系阶段】")
         if user_name:
             lines.append(f"对方姓名：{user_name}（可用作称呼，未确认的场合不要强加昵称）")
+        if preferred_address:
+            lines.append(
+                f"对方明确要求：称呼ta为「{preferred_address}」，回复时必须优先使用该称谓，"
+                "不得擅自换成其他称呼（阶段称谓仅作辅助，不可替代）"
+            )
         directive = stage.style_directive
         if stage_id == "s12" and self.s12_forced_address:
             directive = directive.replace(self._SOFT_ADDRESS, self._FORCED_ADDRESS)

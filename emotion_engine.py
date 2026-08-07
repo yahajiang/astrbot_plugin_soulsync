@@ -225,6 +225,9 @@ class EmotionProfile:
     # 自上次智能更新后的轮数
     turns_since_update: int = 0
 
+    # 用户指定称谓（角色对用户的称呼，如"哥哥"）；设置后注入优先使用
+    preferred_address: str = ""
+
     def to_dict(self) -> dict:
         return asdict(self)
 

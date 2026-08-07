@@ -52,6 +52,14 @@ unknown = orch.generate_stage_context("s99", {})
 assert unknown == "", "未知阶段应返回空注入"
 print("PASS: 阶段上下文注入（含姓名/模板/禁忌/未知兜底）")
 
+# ── 4.1 自定义称谓优先注入 ────────────────────────────────
+ctx_addr = orch.generate_stage_context("s12", {"preferred_address": "哥哥"})
+assert "称呼ta为「哥哥」" in ctx_addr, "自定义称谓应注入优先使用指令"
+assert "不得擅自换成其他称呼" in ctx_addr
+ctx_no = orch.generate_stage_context("s12", {})
+assert "「哥哥」" not in ctx_no, "未设置时不应出现自定义称谓"
+print("PASS: 自定义称谓优先注入（设置注入/未设置不注入）")
+
 # ── 5. 称谓体系 ──────────────────────────────────────────
 addr = orch.address
 assert addr.get_address("s1", {}) == "你"
