@@ -294,7 +294,7 @@
     "description": "张力积累倍率",
     "hint": "每轮负面情感上升量 × 该倍率 = 张力增加",
     "type": "float",
-    "default": 2.0,
+    "default": 4.0,
     "slider": {
       "min": 0.0,
       "max": 6.0,
@@ -316,7 +316,7 @@
     "description": "爆发阈值（张力）",
     "hint": "张力达到该值触发情绪爆发（张力归零+好感惩罚+爆发记忆事件）",
     "type": "float",
-    "default": 85.0,
+    "default": 70.0,
     "slider": {
       "min": 40,
       "max": 100,
@@ -327,7 +327,7 @@
     "description": "每日张力自然缓解",
     "hint": "每日结算时张力自动降低的量（情绪随时间平复）",
     "type": "float",
-    "default": 10.0,
+    "default": 6.0,
     "slider": {
       "min": 0.0,
       "max": 50.0,

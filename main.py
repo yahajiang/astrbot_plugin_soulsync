@@ -210,7 +210,7 @@ class SoulSyncPro(Star):
 
         # ── 情绪传染参数（张力积累→延迟爆发，动态读取支持热更新）──
         self.enable_emotion_contagion: bool = config.get("enable_emotion_contagion", True)
-        self.tension_accumulate_rate: float = float(config.get("tension_accumulate_rate", 2.0))
+        self.tension_accumulate_rate: float = float(config.get("tension_accumulate_rate", 4.0))
         self.tension_release_rate: float = float(config.get("tension_release_rate", 3.0))
         self.tension_threshold: float = float(config.get("tension_threshold", 85.0))
         self.tension_release_per_day: float = float(config.get("tension_release_per_day", 10.0))
@@ -2174,7 +2174,7 @@ class SoulSyncPro(Star):
                 lines.append(f"  🎯 复合情绪：{' · '.join(compound)}")
             if self.config.get("enable_emotion_contagion", True):
                 tension = profile.tension
-                tstate = tension_state(tension, self.config.get("tension_threshold", 85.0))
+                tstate = tension_state(tension, self.config.get("tension_threshold", 70.0))
                 tlabel = {"calm": "平静", "uneasy": "阴郁", "strained": "临界", "bursting": "即将爆发"}.get(tstate, tstate)
                 lines.append(f"  🌋 情绪张力：{tension:.0f}/100（{tlabel}）")
             if self.config.get("enable_stage_styles", True):
@@ -3611,11 +3611,11 @@ class SoulSyncPro(Star):
             if self.config.get("enable_emotion_contagion", True):
                 self.emotion_engine.accumulate_tension(
                     profile, emotion_deltas,
-                    accumulate_rate=self.config.get("tension_accumulate_rate", 2.0),
+                    accumulate_rate=self.config.get("tension_accumulate_rate", 4.0),
                     release_rate=self.config.get("tension_release_rate", 3.0),
                 )
                 if self.emotion_engine.check_eruption(
-                    profile, self.config.get("tension_threshold", 85.0)
+                    profile, self.config.get("tension_threshold", 70.0)
                 ):
                     eruption_fav = self.config.get("eruption_fav_penalty", -2.0)
                     profile.favorability = max(-100.0, min(FAVORABILITY_MAX, profile.favorability + eruption_fav))
@@ -4156,7 +4156,7 @@ class SoulSyncPro(Star):
                 lines.append(f"  🎯 复合情绪：{' · '.join(compound)}")
             if self.config.get("enable_emotion_contagion", True):
                 tension = profile.tension
-                tstate = tension_state(tension, self.config.get("tension_threshold", 85.0))
+                tstate = tension_state(tension, self.config.get("tension_threshold", 70.0))
                 tlabel = {"calm": "平静", "uneasy": "阴郁", "strained": "临界", "bursting": "即将爆发"}.get(tstate, tstate)
                 lines.append(f"  🌋 情绪张力：{tension:.0f}/100（{tlabel}）")
 
@@ -4231,7 +4231,7 @@ class SoulSyncPro(Star):
         # 情绪张力状态（情绪传染模型）
         if self.config.get("enable_emotion_contagion", True):
             t = profile.tension
-            st = tension_state(t, self.config.get("tension_threshold", 85.0))
+            st = tension_state(t, self.config.get("tension_threshold", 70.0))
             if st != "calm":
                 hint = {
                     "uneasy": "ta情绪有些起伏，语气温柔耐心",
@@ -4765,7 +4765,7 @@ class SoulSyncPro(Star):
 
         # 情绪传染：每日张力自然缓解
         if self.config.get("enable_emotion_contagion", True):
-            release = float(self.config.get("tension_release_per_day", 10.0))
+            release = float(self.config.get("tension_release_per_day", 6.0))
             for profile in self.profiles.values():
                 if profile.tension > 0:
                     profile.tension = max(0.0, profile.tension - release)
