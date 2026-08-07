@@ -403,6 +403,7 @@ class EmotionEngine:
         effective_delta = fav_delta * self.fav_growth_rate if fav_delta > 0 else fav_delta
 
         # 好感度变更（上限 200，下限 -100）
+        old_fav = profile.favorability
         profile.favorability = max(
             FAVORABILITY_MIN, min(FAVORABILITY_MAX, profile.favorability + effective_delta)
         )
@@ -441,6 +442,15 @@ class EmotionEngine:
 
         profile.stage_index = new_stage
         profile.stage_progress = self.calc_stage_progress(profile)
+
+        # ── 事件总线埋点（v2.20 模块解耦）──
+        from .event_bus import Events, get_event_bus
+
+        bus = get_event_bus()
+        if profile.favorability != old_fav:
+            bus.publish(Events.FAVOR_CHANGED, old_fav, profile.favorability, profile)
+        if new_stage != old_stage:
+            bus.publish(Events.STAGE_ADVANCED, old_stage, new_stage, profile)
 
         return profile
 
