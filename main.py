@@ -65,6 +65,7 @@ from .image_renderer import ImageRenderer
 from .trainer.trainer_orchestrator import PersonalizationOrchestrator
 from .trainer.trainer_storage import TrainerStorage
 from .intent_router import IntentRouter, dispatch_intent_query
+from .hook_bus import HookBus
 from .time_perception import (
     load_calendar_dependencies,
     build_time_info,
@@ -110,6 +111,11 @@ class SoulSyncPro(Star):
 
         # ── v2.20 意图识别（自然语言静默命令路由）──
         self.intent_router = IntentRouter()
+
+        # ── v2.20 钩子机制：前置（意图识别）+ 后置（prompt 泄漏清理）──
+        self.hook_bus = HookBus()
+        self.hook_bus.register_before("intent_query", self._intent_query_hook, priority=0)
+        self.hook_bus.register_after("prompt_leak_scrub", self._prompt_leak_scrub_hook, priority=0)
 
         # ── RDE 关系深度演进（每用户调度器缓存）──
         self.rde_orchestrators: Dict[str, RDEOrchestrator] = {}
@@ -3126,13 +3132,13 @@ class SoulSyncPro(Star):
             if await self._try_intercept_command_in_llm(event):
                 return
 
-            # ── v2.20 意图识别：静默命令路由（自然语言查询 → 卡片输出 + 阻断聊天）──
-            if self.config.get("enable_intent_router", True):
+            # ── v2.20 钩子机制：前置钩子（意图识别等；任一返回 True 即阻断聊天）──
+            if self.config.get("enable_hooks", True):
                 try:
-                    if await dispatch_intent_query(self, event, self.intent_router):
+                    if await self.hook_bus.run_before(event):
                         return
                 except Exception as e:
-                    logger.debug(f"SoulSync 意图识别失败，跳过: {e}")
+                    logger.debug(f"SoulSync 前置钩子失败，跳过: {e}")
 
             uid = self._get_user_id(event)
             profile = self._get_or_create_profile(event)
@@ -3784,14 +3790,29 @@ class SoulSyncPro(Star):
 
     @filter.on_llm_response()
     async def on_llm_response(self, event, response):
-        """LLM 回复兜底：若回复直接复述了角色设定 prompt 原文，予以清理"""
+        """LLM 回复后置钩子调度：回复修饰、主动提示等（异常隔离）"""
+        try:
+            await self.hook_bus.run_after(event, response)
+        except Exception as e:
+            logger.debug(f"SoulSync 后置钩子调度失败，跳过: {e}")
+
+    # ── v2.20 钩子实现 ──
+
+    async def _intent_query_hook(self, event) -> bool:
+        """前置钩子：自然语言查询意图 → 静默卡片输出 + 阻断聊天"""
+        if not self.config.get("enable_intent_router", True):
+            return False
+        return await dispatch_intent_query(self, event, self.intent_router)
+
+    async def _prompt_leak_scrub_hook(self, event, response) -> bool:
+        """后置钩子：清理回复中泄漏的角色设定 prompt 原文"""
         try:
             chain = getattr(response, "result_chain", None)
             if not chain:
-                return
+                return False
             chain = getattr(chain, "chain", None)
             if not chain:
-                return
+                return False
             for comp in chain:
                 text = getattr(comp, "text", None)
                 if not isinstance(text, str) or not text:
@@ -3801,6 +3822,7 @@ class SoulSyncPro(Star):
                     comp.text = new
         except Exception:
             logger.debug("SoulSync 防泄漏清理失败，跳过", exc_info=True)
+        return False
 
     @staticmethod
     def _scrub_prompt_leak(text: str) -> str:
