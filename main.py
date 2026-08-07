@@ -3704,6 +3704,8 @@ class SoulSyncPro(Star):
                 perception = tpd_perception
                 if legacy_parts:
                     perception = perception + " · " + " · ".join(legacy_parts)
+                if anniv_events and self.config.get("anniv_inject_context", True):
+                    perception = perception + " · 特别日子: " + "、".join(anniv_events)
             else:
                 perception = self._build_perception_block(uid, anniv_events)
             if perception and req.prompt and should_inject_env(

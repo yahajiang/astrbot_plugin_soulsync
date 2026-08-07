@@ -40,7 +40,7 @@ class StageInjector:
         lines: List[str] = []
         lines.append("【当前关系阶段】")
         if user_name:
-            lines.append(f"对方姓名：{user_name}（可用作称呼，未确认的场合不要强加昵称）")
+            lines.append(f"对方姓名：{user_name}（可作称呼，未确认场合勿强加昵称）")
         if preferred_address:
             lines.append(
                 f"对方明确要求：称呼ta为「{preferred_address}」，回复时必须优先使用该称谓，"
