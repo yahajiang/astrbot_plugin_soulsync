@@ -160,7 +160,7 @@ assert growth < 50, f"1000轮内存增长 {growth:.1f}MB"
 ok(f"内存 1000轮增长 {growth:.1f}MB <50MB")
 
 # ── 命令区回归: v2.20 10父命令 + 独立命令 + admin 存在 ───────
-cmds = re.findall(r'@filter\.command\("([^"]+)"\)', main_src)
+cmds = re.findall(r'@filter\.command\("([^"]+)"', main_src)
 counts = {}
 for c in cmds:
     counts[c] = counts.get(c, 0) + 1

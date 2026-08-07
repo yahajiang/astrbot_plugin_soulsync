@@ -1123,63 +1123,63 @@ class SoulSyncPro(Star):
         async for res in cmd(event):
             yield res
 
-    @filter.command("心助")
+    @filter.command("心助", desc="命令总览：显示全部父命令与子命令提示")
     async def cmd_commands(self, event: AstrMessageEvent):
         """查看 SoulSync 命令总览（10 父命令）"""
         from .command_router import all_parent_help
         yield event.plain_result(all_parent_help())
 
-    @filter.command("心声")
+    @filter.command("心声", desc="[好感|阶段|画像|系统] 核心情感数值、阶段与画像")
     async def cmd_p_status(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "心声"):
             yield res
 
-    @filter.command("回忆")
+    @filter.command("回忆", desc="[趋势 天数|月报|报告|独白|对比|时间线|危机|关系网] 文本版分析报告")
     async def cmd_p_review(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "回忆"):
             yield res
 
-    @filter.command("纪念")
+    @filter.command("纪念", desc="[查看|添加 日期 名称|删除 id|生日 日期|节日|节日添加|节日删除] 特殊日期管理")
     async def cmd_p_anniversary(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "纪念"):
             yield res
 
-    @filter.command("角色")
+    @filter.command("角色", desc="[列表|创建|切换|删除|称谓 称呼|关系|解锁|关系切换] 多角色管理")
     async def cmd_p_character(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "角色"):
             yield res
 
-    @filter.command("人格")
+    @filter.command("人格", desc="[查看|设置|重置|锁定] 人格画像（设置/重置/锁定仅管理员）")
     async def cmd_p_persona(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "人格"):
             yield res
 
-    @filter.command("知识")
+    @filter.command("知识", desc="[查看|添加|删除] 知识库管理")
     async def cmd_p_knowledge(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "知识"):
             yield res
 
-    @filter.command("风格")
+    @filter.command("风格", desc="[状态|保存 名称|恢复 名称|锁定] 语言风格控制")
     async def cmd_p_style(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "风格"):
             yield res
 
-    @filter.command("记忆")
+    @filter.command("记忆", desc="[查看|添加|删除|星标|重要|忘记] 私人记忆库")
     async def cmd_p_memory(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "记忆"):
             yield res
 
-    @filter.command("天象")
+    @filter.command("天象", desc="[天气|倒计时|跳跃|回溯] 环境感知查询")
     async def cmd_p_environment(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "天象"):
             yield res
 
-    @filter.command("排行")
+    @filter.command("排行", desc="[好感 n|负好感 n] 好感度排行榜")
     async def cmd_p_rank(self, event: AstrMessageEvent):
         async for res in self._dispatch_parent(event, "排行"):
             yield res
 
-    @filter.command("图片模式")
+    @filter.command("图片模式", desc="指令输出图片/文本切换（零参数）")
     async def cmd_image_mode(self, event: AstrMessageEvent):
         """切换指令输出是否渲染为图片"""
         if not self.image_renderer.available:
@@ -1192,7 +1192,7 @@ class SoulSyncPro(Star):
         state = "开启 ✅（图片输出）" if self.image_mode[uid] else "关闭 ❌（文本输出）"
         yield event.plain_result(f"指令图片输出已{state}")
 
-    @filter.command("设置")
+    @filter.command("设置", desc="状态显示开关（零参数）")
     async def cmd_toggle_status(self, event: AstrMessageEvent):
         """切换是否在对话后显示情感状态"""
         uid = self._get_user_id(event)
@@ -1202,7 +1202,7 @@ class SoulSyncPro(Star):
         state = "开启 ✅" if self.show_status[uid] else "关闭 ❌"
         yield event.plain_result(f"情感状态显示已{state}")
 
-    @filter.command("心管")
+    @filter.command("心管", desc="管理员后台操作：好感|亲密|态度|关系|重置|备份|导出 等（仅管理员）")
     async def cmd_admin(self, event: AstrMessageEvent):
         async for res in self._dispatch_admin(event):
             yield res
