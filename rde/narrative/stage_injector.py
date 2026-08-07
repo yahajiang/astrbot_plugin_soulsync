@@ -50,6 +50,10 @@ class StageInjector:
         if stage_id == "s12" and self.s12_forced_address:
             directive = directive.replace(self._SOFT_ADDRESS, self._FORCED_ADDRESS)
         directive = self._compact_directive(directive)
+        if preferred_address:
+            # 用户已设置专属称谓：剔除阶段称谓段，避免阶段称谓与用户称谓并存导致混淆
+            directive = re.sub(r"称谓：[^｜。]+(?:｜)?", "", directive)
+            directive = re.sub(r"｜\s*｜", "｜", directive).strip("｜ ")
         lines.append(directive)
         if stage.taboo:
             lines.append("禁忌：" + "；".join(stage.taboo))
