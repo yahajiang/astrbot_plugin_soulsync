@@ -260,6 +260,18 @@
     "type": "bool",
     "default": true
   },
+  "tpd_env_inject_every_n": {
+    "description": "环境感知注入间隔（轮）",
+    "hint": "Token 节省：环境/时间感知每 N 轮注入一次；用户提及天气/时间或特殊日子时强制注入；填 0 表示每轮都注入",
+    "type": "int",
+    "default": 5
+  },
+  "personalization_static_every_n": {
+    "description": "人设/知识库静态层注入间隔（轮）",
+    "hint": "Token 节省：角色人设与知识库概要每 N 轮注入一次；用户提到身份信息（如「我叫…」）时强制注入；填 0 表示每轮都注入",
+    "type": "int",
+    "default": 20
+  },
   "enable_s12_forced_address": {
     "description": "满分之爱阶段强制称谓（每句都带称呼）",
     "hint": "关闭（默认）：s12 每轮回复深情称呼 1~2 次即可，不每句复读；开启：恢复「唯一的你」100% 每句都带",

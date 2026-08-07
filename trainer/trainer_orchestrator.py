@@ -186,25 +186,34 @@ class PersonalizationOrchestrator:
             self._cached_results["memories"] = memories
 
     # ── 注入组装 + token 预算裁剪 ──
-    def get_full_injection(self) -> str:
+    def get_full_injection(self, include_static: bool = True,
+                           include_dynamic: bool = True) -> str:
+        """分层注入组装。
+
+        - static（人设/知识库概要）：低频注入（首次/每 N 轮/跃迁），见 main.py 轮次控制
+        - dynamic（记忆摘要/风格）：每轮注入
+        返回裁剪后的文本（空串表示无内容）。
+        """
         sections: list = []
-        if self._persona_params:
-            text = self._injector.generate(self._persona_params)
-            if text:
-                sections.append(("persona", text))
-        if self._knowledge:
-            text = self._knowledge_injector.generate(self._knowledge)
-            if text:
-                sections.append(("knowledge", text))
-        memories = self._cached_results.get("memories")
-        if memories:
-            text = self._memory_retriever.format_for_llm(memories)
-            if text:
-                sections.append(("memory", text))
-        if self._style:
-            text = self._style_injector.generate(self._style)
-            if text:
-                sections.append(("style", text))
+        if include_static:
+            if self._persona_params:
+                text = self._injector.generate(self._persona_params)
+                if text:
+                    sections.append(("persona", text))
+            if self._knowledge:
+                text = self._knowledge_injector.generate(self._knowledge)
+                if text:
+                    sections.append(("knowledge", text))
+        if include_dynamic:
+            memories = self._cached_results.get("memories")
+            if memories:
+                text = self._memory_retriever.format_for_llm(memories)
+                if text:
+                    sections.append(("memory", text))
+            if self._style:
+                text = self._style_injector.generate(self._style)
+                if text:
+                    sections.append(("style", text))
         trimmed = self._trim_to_budget(sections)
         return "\n\n".join(t for _, t in trimmed)
 

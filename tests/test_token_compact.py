@@ -74,6 +74,7 @@ from astrbot_plugin_soulsync.emotion_engine import EmotionProfile
 from astrbot_plugin_soulsync.penalty_reward import BehaviorProfile
 from astrbot_plugin_soulsync.tpd.env_injector import build_environment_info
 from astrbot_plugin_soulsync import main as main_mod
+from astrbot_plugin_soulsync.main import should_inject_env, should_inject_static
 
 
 def make_owner(config=None):
@@ -179,6 +180,26 @@ def test_perception_skeleton():
     assert "发送时间" not in block, "时间行应骨架化"
     assert "特别日子: 我的生日" in block
     assert "心情" not in block, "天气行不应带 mood 描述"
+
+
+# ── 7. 按需注入判定（P1 相关性过滤）─────────────────────
+def test_should_inject_env():
+    assert should_inject_env("你好", 0, [], 5) is True, "首次轮次应注入"
+    assert should_inject_env("你好", 3, [], 5) is False, "非命中轮不注入"
+    assert should_inject_env("你好", 5, [], 5) is True, "每 5 轮注入"
+    assert should_inject_env("今天天气怎么样", 3, [], 5) is True, "提及天气强制注入"
+    assert should_inject_env("随便聊聊", 4, ["生日"], 5) is True, "特殊日子强制注入"
+    assert should_inject_env("你好", 2, [], 0) is True, "every_n=0 表示每轮注入"
+    assert should_inject_env("你好", 2, [], 7) is False
+
+
+def test_should_inject_static():
+    assert should_inject_static("你好", 0, 20) is True, "首次应注入静态层"
+    assert should_inject_static("你好", 10, 20) is False, "中间轮不注入"
+    assert should_inject_static("你好", 20, 20) is True, "每 20 轮注入"
+    assert should_inject_static("我叫小明", 10, 20) is True, "身份信息强制注入"
+    assert should_inject_static("记得我吗", 10, 20) is True, "身份类关键词强制注入"
+    assert should_inject_static("你好", 10, 0) is True, "every_n=0 表示每轮注入"
 
 
 print("ALL PASS: Token 节省 P0 骨架压缩 6 组断言")
