@@ -118,6 +118,9 @@ class BehaviorProfile:
     # 时间跳跃叙事（v2.16 P13：回忆关键时刻，跨越时间线）
     time_jump_last_ts: float = 0.0         # 上次时间跳跃叙事的 ts
 
+    # RDE 阶段叙事注入频控（v2.21：阶段叙事按轮次间隔注入，跃迁轮强制注入）
+    rde_stage_ctx_last_round: int = 0      # 上次注入 RDE 阶段叙事的轮次
+
     # 待衰减的奖惩队列 [(apply_ts, delta_fav, delta_int, reason), ...]
     pending_effects: List[Tuple[float, float, float, str]] = field(default_factory=list)
 

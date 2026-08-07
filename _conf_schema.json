@@ -29,6 +29,12 @@
     "type": "bool",
     "default": false
   },
+  "rde_stage_inject_every_n": {
+    "description": "RDE 阶段叙事注入间隔（轮）",
+    "hint": "v2.21：阶段叙事（含称谓/禁忌等行为指导）由每轮注入改为按间隔注入；阶段跃迁轮强制注入；危机叙事与关系感知不受此限制。设为 0 则每轮注入",
+    "type": "int",
+    "default": 3
+  },
   "enable_crisis_system": {
     "description": "启用关系危机系统（RDE）",
     "hint": "高阶段关系随机触发误会/冷落/信任/成长/外部/秘密/嫉妒七类危机事件，用户回应选择决定结果（好感变化/阶段倒退）",

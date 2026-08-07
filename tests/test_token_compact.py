@@ -74,7 +74,7 @@ from astrbot_plugin_soulsync.emotion_engine import EmotionProfile
 from astrbot_plugin_soulsync.penalty_reward import BehaviorProfile
 from astrbot_plugin_soulsync.tpd.env_injector import build_environment_info
 from astrbot_plugin_soulsync import main as main_mod
-from astrbot_plugin_soulsync.main import should_inject_env, should_inject_static
+from astrbot_plugin_soulsync.main import should_inject_env, should_inject_static, should_inject_stage_ctx
 
 
 def make_owner(config=None):
@@ -203,6 +203,26 @@ def test_should_inject_static():
     assert should_inject_static("你好", 10, 20, transitioned=True) is True, "阶段跃迁强制注入静态层"
 
 
+# ── 9. RDE 阶段叙事频控（P2-8 补全）──────────────────────
+def test_should_inject_stage_ctx():
+    assert should_inject_stage_ctx(0, 0, 3) is True, "首轮注入"
+    assert should_inject_stage_ctx(1, 0, 3) is True, "从未注入过则注入"
+    assert should_inject_stage_ctx(2, 1, 3) is False, "间隔未到不注入"
+    assert should_inject_stage_ctx(4, 1, 3) is True, "达到间隔注入"
+    assert should_inject_stage_ctx(10, 1, 0) is True, "every_n=0 每轮注入"
+
+
+def test_behavior_profile_roundtrip():
+    from astrbot_plugin_soulsync.penalty_reward import BehaviorProfile
+    bp = BehaviorProfile(user_id="u1", rde_stage_ctx_last_round=42)
+    d = bp.to_dict()
+    assert d["rde_stage_ctx_last_round"] == 42
+    back = BehaviorProfile.from_dict(d)
+    assert back.rde_stage_ctx_last_round == 42
+    old = BehaviorProfile.from_dict({"user_id": "u2"})
+    assert old.rde_stage_ctx_last_round == 0, "旧数据缺失字段回退默认"
+
+
 # ── 8. P2 动态裁剪（trainer 注入器 + RDE 叙事瘦身）────────
 def test_persona_relevance_cut():
     from astrbot_plugin_soulsync.trainer.persona.persona_injector import PersonaInjector
@@ -275,4 +295,4 @@ def test_stage_ctx_compact():
     assert "100% 使用最深情的称呼" in ctx12h, "强制措辞开关仍生效"
 
 
-print("ALL PASS: Token 节省 P0 骨架压缩 + P1 按需注入 + P2 动态裁剪 8 组断言")
+print("ALL PASS: Token 节省 P0 骨架压缩 + P1 按需注入 + P2 动态裁剪 + RDE频控 10 组断言")

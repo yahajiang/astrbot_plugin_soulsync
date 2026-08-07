@@ -125,6 +125,15 @@ def should_inject_static(text: str, interactions: int, every_n: int = 20,
     return every_n <= 0 or interactions % every_n == 0
 
 
+def should_inject_stage_ctx(round_no: int, last_round: int, every_n: int = 3) -> bool:
+    """RDE 阶段叙事注入频控：首轮/距上次注入达间隔时注入（0=每轮注入）"""
+    if every_n <= 0:
+        return True
+    if last_round <= 0:
+        return True
+    return round_no - last_round >= every_n
+
+
 class SoulSyncPro(Star):
     """心旅知音 (SoulSync) v2.16 - 融合版情感智能插件（含惩罚奖励机制、关系角色、情感深化）"""
 
@@ -3780,11 +3789,29 @@ class SoulSyncPro(Star):
             if eruption_ctx:
                 req.extra_user_content_parts.append(TextPart(text=eruption_ctx).mark_as_temp())
 
-            # ── 注入 RDE 关系演进上下文（阶段叙事/危机/关系感知）──
-            if rde_result and rde_result.get("context_text"):
-                req.extra_user_content_parts.append(
-                    TextPart(text=rde_result["context_text"]).mark_as_temp()
+            # ── 注入 RDE 关系演进上下文（阶段叙事按轮次频控，危机/关系感知每轮保留）──
+            if rde_result:
+                stage_due = bool(rde_result.get("transition")) or should_inject_stage_ctx(
+                    profile.total_interactions,
+                    behavior_profile.rde_stage_ctx_last_round,
+                    int(self.config.get("rde_stage_inject_every_n", 3)),
                 )
+                if stage_due:
+                    behavior_profile.rde_stage_ctx_last_round = profile.total_interactions
+                    rde_parts = [p for p in (
+                        rde_result.get("stage_ctx", ""),
+                        rde_result.get("crisis_ctx", ""),
+                        rde_result.get("perception_ctx", ""),
+                    ) if p]
+                else:
+                    rde_parts = [p for p in (
+                        rde_result.get("crisis_ctx", ""),
+                        rde_result.get("perception_ctx", ""),
+                    ) if p]
+                if rde_parts:
+                    req.extra_user_content_parts.append(
+                        TextPart(text="\n\n".join(rde_parts)).mark_as_temp()
+                    )
 
             # ── 注入惩罚奖励事件提示 ──
             if pr_events:
