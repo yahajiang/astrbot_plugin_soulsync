@@ -62,7 +62,7 @@ print(f"PASS: 关系网数据形状（{net['relation_count']} 条，edge 字段�
 
 # ── 4. main.py 命令与路由静态接线（E.2 / E.3 / v2.20 父命令路由）──
 main_src = (PKG / "main.py").read_text(encoding="utf-8")
-for cmd, fn in [("回顾", "cmd_rde_stage"), ("回顾", "cmd_rde_crisis_log"), ("回顾", "cmd_rde_network")]:
+for cmd, fn in [("回忆", "cmd_rde_stage"), ("回忆", "cmd_rde_crisis_log"), ("回忆", "cmd_rde_network")]:
     assert f"def {fn}" in main_src, f"缺少处理函数 {fn}"
     assert "def _build_rde_panel" in main_src and "def _rde_target" in main_src
 router_src = (PKG / "command_router.py").read_text(encoding="utf-8")
@@ -72,7 +72,7 @@ assert "rde/data" in main_src and "self._web_rde_data" in main_src, "缺少 rde/
 assert "def _web_rde_data" in main_src, "缺少 _web_rde_data 处理函数"
 assert "def _web_trainer_data" in main_src, "既有 trainer 路由被破坏"
 assert "_build_rde_panel(key)" in main_src, "_web_rde_data 未调用面板构建"
-print("PASS: main.py 静态接线（RDE 命令经 /回顾 路由 + rde/data 路由 + handler）")
+print("PASS: main.py 静态接线（RDE 命令经 /回忆 路由 + rde/data 路由 + handler）")
 
 # ── 5. 面板组合（模拟 _build_rde_panel 的拼装语义）────────
 rel = {"小雪": {"type": "bestie", "cross_coefficient": 0.1, "description": "好友"}}

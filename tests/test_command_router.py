@@ -1,6 +1,6 @@
 """SoulSync v2.20 - P2 父命令路由器测试
 
-覆盖：10 父命令子命令解析、/admin 子命令解析、参数归一化、帮助文本。
+覆盖：10 父命令子命令解析、/心管 子命令解析、参数归一化、帮助文本。
 """
 
 import sys
@@ -24,26 +24,26 @@ from astrbot_plugin_soulsync.command_router import (
 
 def test_ten_parent_commands():
     assert set(PARENT_COMMANDS.keys()) == {
-        "状态", "回顾", "纪念", "角色", "人格", "知识",
-        "风格", "记忆", "环境", "排行",
+        "心声", "回忆", "纪念", "角色", "人格", "知识",
+        "风格", "记忆", "天象", "排行",
     }
 
 
 def test_status_subcommands():
-    assert resolve_parent("状态", "") == "cmd_favorability"
-    assert resolve_parent("状态", "好感") == "cmd_favorability"
-    assert resolve_parent("状态", "阶段") == "cmd_relationship_stage"
-    assert resolve_parent("状态", "画像") == "cmd_my_portrait"
-    assert resolve_parent("状态", "系统") == "cmd_cache_stats"
+    assert resolve_parent("心声", "") == "cmd_favorability"
+    assert resolve_parent("心声", "好感") == "cmd_favorability"
+    assert resolve_parent("心声", "阶段") == "cmd_relationship_stage"
+    assert resolve_parent("心声", "画像") == "cmd_my_portrait"
+    assert resolve_parent("心声", "系统") == "cmd_cache_stats"
 
 
 def test_review_subcommands():
-    assert resolve_parent("回顾", "趋势") == "cmd_trend"
-    assert resolve_parent("回顾", "月报") == "cmd_monthly_report"
-    assert resolve_parent("回顾", "对比") == "cmd_radar"
-    assert resolve_parent("回顾", "时间线") == "cmd_rde_stage"
-    assert resolve_parent("回顾", "危机") == "cmd_rde_crisis_log"
-    assert resolve_parent("回顾", "关系网") == "cmd_rde_network"
+    assert resolve_parent("回忆", "趋势") == "cmd_trend"
+    assert resolve_parent("回忆", "月报") == "cmd_monthly_report"
+    assert resolve_parent("回忆", "对比") == "cmd_radar"
+    assert resolve_parent("回忆", "时间线") == "cmd_rde_stage"
+    assert resolve_parent("回忆", "危机") == "cmd_rde_crisis_log"
+    assert resolve_parent("回忆", "关系网") == "cmd_rde_network"
 
 
 def test_memory_subcommands():
@@ -59,13 +59,13 @@ def test_role_subcommands():
 
 
 def test_environment_subcommands():
-    assert resolve_parent("环境", "天气") == "cmd_tpd_weather"
-    assert resolve_parent("环境", "跳跃") == "cmd_tpd_skip"
-    assert resolve_parent("环境", "回溯") == "cmd_time_jump"
+    assert resolve_parent("天象", "天气") == "cmd_tpd_weather"
+    assert resolve_parent("天象", "跳跃") == "cmd_tpd_skip"
+    assert resolve_parent("天象", "回溯") == "cmd_time_jump"
 
 
 def test_unknown_subcommand_returns_none():
-    assert resolve_parent("状态", "不存在的子命令") is None
+    assert resolve_parent("心声", "不存在的子命令") is None
     assert resolve_parent("不存在", "x") is None
     assert resolve_admin("不存在的子命令") is None
 
@@ -82,8 +82,8 @@ def test_normalize_args_strips_subcommand():
     assert parts == ["/排行", "10"]
     parts = normalize_args("/纪念 添加 2026-08-08 认识纪念日")
     assert parts == ["/纪念", "2026-08-08", "认识纪念日"]
-    parts = normalize_args("/状态 好感")
-    assert parts == ["/状态"]
+    parts = normalize_args("/心声 好感")
+    assert parts == ["/心声"]
 
 
 def test_normalize_args_no_subcommand():
@@ -98,16 +98,16 @@ def test_keep_sub_methods():
 
 def test_help_texts_contain_parents():
     help_text = all_parent_help()
-    for parent in ("状态", "回顾", "纪念", "角色", "人格", "知识",
-                   "风格", "记忆", "环境", "排行"):
+    for parent in ("心声", "回忆", "纪念", "角色", "人格", "知识",
+                   "风格", "记忆", "天象", "排行"):
         assert parent in help_text
-    assert "admin" in admin_help()
+    assert "心管" in admin_help()
 
 
 def test_no_legacy_command_names_in_tables():
     """10 父命令子命令中不允许残留复合旧命令名（如 '好感度'、'人格微调'）。
 
-    /admin 与单义词子命令（天气/倒计时/跳跃等）是方案明确的迁移形态，不受限。
+    /心管 与单义词子命令（天气/倒计时/跳跃等）是方案明确的迁移形态，不受限。
     """
     legacy = {"好感度", "关系阶段", "人格微调", "知识添加", "我的画像",
               "添加纪念日", "月度报告", "角色回顾", "时间回溯", "天气调试",

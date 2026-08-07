@@ -1066,7 +1066,7 @@ class SoulSyncPro(Star):
     #  用户命令
     # ═══════════════════════════════════════════════════════════════
 
-    # ── v2.20 父命令路由器（命令极简化：10 父命令 + /admin）──
+    # ── v2.20 父命令路由器（命令极简化：10 父命令 + /心管）──
 
     def _sub_parts(self, event, maxsplit: int = -1, keep_sub: bool = False) -> list:
         """把 '/父命令 子命令 参数...' 归一化为 '命令 参数...'（剥离子命令 token）。
@@ -1108,7 +1108,7 @@ class SoulSyncPro(Star):
             yield res
 
     async def _dispatch_admin(self, event):
-        """/admin 分发器：管理员集中管理入口"""
+        """/心管 分发器：管理员集中管理入口"""
         from .command_router import admin_help, resolve_admin
         parts = event.message_str.split()
         sub = parts[1] if len(parts) >= 2 else ""
@@ -1123,20 +1123,20 @@ class SoulSyncPro(Star):
         async for res in cmd(event):
             yield res
 
-    @filter.command("命令")
+    @filter.command("心助")
     async def cmd_commands(self, event: AstrMessageEvent):
         """查看 SoulSync 命令总览（10 父命令）"""
         from .command_router import all_parent_help
         yield event.plain_result(all_parent_help())
 
-    @filter.command("状态")
+    @filter.command("心声")
     async def cmd_p_status(self, event: AstrMessageEvent):
-        async for res in self._dispatch_parent(event, "状态"):
+        async for res in self._dispatch_parent(event, "心声"):
             yield res
 
-    @filter.command("回顾")
+    @filter.command("回忆")
     async def cmd_p_review(self, event: AstrMessageEvent):
-        async for res in self._dispatch_parent(event, "回顾"):
+        async for res in self._dispatch_parent(event, "回忆"):
             yield res
 
     @filter.command("纪念")
@@ -1169,9 +1169,9 @@ class SoulSyncPro(Star):
         async for res in self._dispatch_parent(event, "记忆"):
             yield res
 
-    @filter.command("环境")
+    @filter.command("天象")
     async def cmd_p_environment(self, event: AstrMessageEvent):
-        async for res in self._dispatch_parent(event, "环境"):
+        async for res in self._dispatch_parent(event, "天象"):
             yield res
 
     @filter.command("排行")
@@ -1202,7 +1202,7 @@ class SoulSyncPro(Star):
         state = "开启 ✅" if self.show_status[uid] else "关闭 ❌"
         yield event.plain_result(f"情感状态显示已{state}")
 
-    @filter.command("admin")
+    @filter.command("心管")
     async def cmd_admin(self, event: AstrMessageEvent):
         async for res in self._dispatch_admin(event):
             yield res
@@ -1368,7 +1368,7 @@ class SoulSyncPro(Star):
     # ═══════════════════════════════════════════════════════════════
 
     async def cmd_global_image_mode(self, event: AstrMessageEvent):
-        """管理员：全局开启/关闭图片输出。用法：/admin 图片模式"""
+        """管理员：全局开启/关闭图片输出。用法：/心管 图片模式"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -1990,7 +1990,7 @@ class SoulSyncPro(Star):
                         lines.append(f"解锁条件：{'、'.join(need)}")
             lines.append("")
             lines.append("💡 /角色 解锁 <角色>；/角色 关系切换 <角色>（一次且不可逆）")
-            lines.append("💡 管理员：/admin 关系角色 <用户ID> <角色> 可强制调整并解除锁定")
+            lines.append("💡 管理员：/心管 关系角色 <用户ID> <角色> 可强制调整并解除锁定")
             path = self._try_render_image(event, f"{r['name']} · 关系角色", lines)
             if path:
                 yield event.image_result(path)
@@ -2033,7 +2033,7 @@ class SoulSyncPro(Star):
             lines.append(f"{mark} {row['emoji']} {row['name']}{progress}")
         lines.append("")
         lines.append("💡 /角色 解锁 <角色>；/角色 关系切换 <角色>（一次且不可逆）")
-        lines.append("💡 管理员：/admin 关系角色 <用户ID> <角色> 可强制调整并解除锁定")
+        lines.append("💡 管理员：/心管 关系角色 <用户ID> <角色> 可强制调整并解除锁定")
         path = self._try_render_image(event, "关系角色解锁", lines)
         if path:
             yield event.image_result(path)
@@ -2276,13 +2276,13 @@ class SoulSyncPro(Star):
     # ═══════════════════════════════════════════════════════════════
 
     async def cmd_set_relationship_role(self, event: AstrMessageEvent):
-        """管理员：强制调整指定用户的关系角色（绕过锁定与解锁条件）。用法：/admin 关系角色 <ID> <角色>"""
+        """管理员：强制调整指定用户的关系角色（绕过锁定与解锁条件）。用法：/心管 关系角色 <ID> <角色>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
         parts = self._sub_parts(event, maxsplit=2)
         if len(parts) < 3:
-            yield event.plain_result("用法：/admin 关系角色 <用户ID> <角色>\n例如：/设置关系角色 123456 恋人、/设置关系角色 123456 陌生人")
+            yield event.plain_result("用法：/心管 关系角色 <用户ID> <角色>\n例如：/设置关系角色 123456 恋人、/设置关系角色 123456 陌生人")
             return
         key = resolve_relationship_key(parts[2])
         if not key:
@@ -2294,13 +2294,13 @@ class SoulSyncPro(Star):
         yield event.plain_result(msg)
 
     async def cmd_set_favorability(self, event: AstrMessageEvent):
-        """管理员：设置指定用户好感度。用法：/admin 好感 <ID> <值>"""
+        """管理员：设置指定用户好感度。用法：/心管 好感 <ID> <值>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
         parts = self._sub_parts(event)
         if len(parts) < 3:
-            yield event.plain_result("用法：/admin 好感 <用户ID> <-100~200的数值>")
+            yield event.plain_result("用法：/心管 好感 <用户ID> <-100~200的数值>")
             return
         user_id = parts[1]
         try:
@@ -2312,16 +2312,16 @@ class SoulSyncPro(Star):
         yield event.plain_result(f"✅ 已将 {user_id} 好感度从 {old:+.1f} 设置为 {value:+.1f}")
 
     async def cmd_set_intimacy(self, event: AstrMessageEvent):
-        """管理员：设置指定用户亲密度。用法：/admin 亲密 <ID> <值>"""
+        """管理员：设置指定用户亲密度。用法：/心管 亲密 <ID> <值>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
         parts = self._sub_parts(event)
         if len(parts) < 3:
-            yield event.plain_result("用法：/admin 亲密 <用户ID> <0~100的数值>")
+            yield event.plain_result("用法：/心管 亲密 <用户ID> <0~100的数值>")
             return
         user_id = parts[1]
-        yield event.plain_result(f"ℹ️ 亲密度已改为按好感度百分比派生（亲密度=(好感+100)/3），请使用 /admin 好感 调整")
+        yield event.plain_result(f"ℹ️ 亲密度已改为按好感度百分比派生（亲密度=(好感+100)/3），请使用 /心管 好感 调整")
         return
 
     def _set_profile_value(self, user_id: str, fav: Optional[float] = None,
@@ -2342,7 +2342,7 @@ class SoulSyncPro(Star):
         return old, ""
 
     async def cmd_set_attitude(self, event: AstrMessageEvent):
-        """管理员：自定义用户态度描述（合并进关系角色人设）。用法：/admin 态度 <ID> <文本>"""
+        """管理员：自定义用户态度描述（合并进关系角色人设）。用法：/心管 态度 <ID> <文本>"""
         for res in self._set_user_text(event, "attitude", "态度"):
             yield res
 
@@ -2359,18 +2359,18 @@ class SoulSyncPro(Star):
         yield event.plain_result(msg)
 
     async def cmd_set_relationship(self, event: AstrMessageEvent):
-        """管理员：自定义用户关系描述（合并进关系角色人设）。用法：/admin 关系 <ID> <文本>"""
+        """管理员：自定义用户关系描述（合并进关系角色人设）。用法：/心管 关系 <ID> <文本>"""
         for res in self._set_user_text(event, "relationship", "关系"):
             yield res
 
     async def cmd_reset(self, event: AstrMessageEvent):
-        """管理员：重置指定用户情感数据。用法：/admin 重置好感 <ID>"""
+        """管理员：重置指定用户情感数据。用法：/心管 重置好感 <ID>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
         parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/admin 重置好感 <用户ID>")
+            yield event.plain_result("用法：/心管 重置好感 <用户ID>")
             return
         user_id = parts[1]
         key = self._state_key(user_id)
@@ -2381,13 +2381,13 @@ class SoulSyncPro(Star):
         yield event.plain_result(f"✅ 已重置 {user_id} 的所有情感数据（含行为档案）")
 
     async def cmd_view_detail(self, event: AstrMessageEvent):
-        """管理员：查看完整情感档案。用法：/admin 查看好感 <ID>"""
+        """管理员：查看完整情感档案。用法：/心管 查看好感 <ID>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
         parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/admin 查看好感 <用户ID>")
+            yield event.plain_result("用法：/心管 查看好感 <用户ID>")
             return
         user_id = parts[1]
         profile = self._get_or_create_profile_by_id(user_id)
@@ -2458,7 +2458,7 @@ class SoulSyncPro(Star):
         }
 
     async def cmd_rde_stage(self, event: AstrMessageEvent):
-        """查看 RDE 关系阶段详情。用法：/回顾 时间线 [ID]（管理员可查看他人）"""
+        """查看 RDE 关系阶段详情。用法：/回忆 时间线 [ID]（管理员可查看他人）"""
         uid, key = self._rde_target(event)
         try:
             data = self._build_rde_panel(key)
@@ -2487,7 +2487,7 @@ class SoulSyncPro(Star):
             yield event.plain_result("\n".join(lines))
 
     async def cmd_rde_crisis_log(self, event: AstrMessageEvent):
-        """查看 RDE 危机记录。用法：/回顾 危机 [ID]"""
+        """查看 RDE 危机记录。用法：/回忆 危机 [ID]"""
         uid, key = self._rde_target(event)
         try:
             data = self._build_rde_panel(key)
@@ -2520,7 +2520,7 @@ class SoulSyncPro(Star):
             yield event.plain_result("\n".join(lines))
 
     async def cmd_rde_network(self, event: AstrMessageEvent):
-        """查看 RDE 角色关系网。用法：/回顾 关系网 [ID]"""
+        """查看 RDE 角色关系网。用法：/回忆 关系网 [ID]"""
         uid, key = self._rde_target(event)
         try:
             data = self._build_rde_panel(key)
@@ -2557,13 +2557,13 @@ class SoulSyncPro(Star):
             yield event.plain_result("\n".join(lines))
 
     async def cmd_privacy_level(self, event: AstrMessageEvent):
-        """管理员：设置全局隐私级别。用法：/admin 隐私 <0-2>"""
+        """管理员：设置全局隐私级别。用法：/心管 隐私 <0-2>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
         parts = self._sub_parts(event)
         if len(parts) < 2:
-            yield event.plain_result("用法：/admin 隐私 <0|1|2>")
+            yield event.plain_result("用法：/心管 隐私 <0|1|2>")
             return
         try:
             level = int(parts[1])
@@ -2576,7 +2576,7 @@ class SoulSyncPro(Star):
         yield event.plain_result(f"✅ 全局隐私级别已设置为 {level}（0=保密 1=基础 2=详细）")
 
     async def cmd_reset_plugin(self, event: AstrMessageEvent):
-        """管理员：清空所有情感数据。用法：/admin 重置"""
+        """管理员：清空所有情感数据。用法：/心管 重置"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2587,7 +2587,7 @@ class SoulSyncPro(Star):
         yield event.plain_result("✅ 所有情感数据已清空（含行为档案）")
 
     async def cmd_backup(self, event: AstrMessageEvent):
-        """管理员：创建数据快照。用法：/admin 备份"""
+        """管理员：创建数据快照。用法：/心管 备份"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2609,7 +2609,7 @@ class SoulSyncPro(Star):
         yield event.plain_result(f"✅ 数据已备份到：{backup_path.name}")
 
     async def cmd_fix_stats(self, event: AstrMessageEvent):
-        """管理员：依据好感/亲密度自动修正正负互动次数。用法：/admin 修复统计"""
+        """管理员：依据好感/亲密度自动修正正负互动次数。用法：/心管 修复统计"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2712,7 +2712,7 @@ class SoulSyncPro(Star):
         return count - n
 
     async def cmd_monthly_report(self, event: AstrMessageEvent):
-        """用户：查看本月（或上月）关系月报。用法：/回顾 月报 [上月]"""
+        """用户：查看本月（或上月）关系月报。用法：/回忆 月报 [上月]"""
         uid = self._state_key(self._get_user_id(event))
         from datetime import date as _rdate
         today_r = _rdate.today()
@@ -2734,7 +2734,7 @@ class SoulSyncPro(Star):
             yield event.plain_result(REPORT_MARK + format_report(stats))
 
     async def cmd_role_report(self, event: AstrMessageEvent):
-        """用户：以角色口吻总结最近一段时间的相处。用法：/回顾 报告 [天数]（默认14）"""
+        """用户：以角色口吻总结最近一段时间的相处。用法：/回忆 报告 [天数]（默认14）"""
         uid = self._state_key(self._get_user_id(event))
         kw = event.message_str.strip()
         days = int(self.config.get("report_window_days", 14))
@@ -2760,7 +2760,7 @@ class SoulSyncPro(Star):
             yield event.plain_result(REPORT_MARK + text)
 
     async def cmd_radar(self, event: AstrMessageEvent):
-        """用户：对比最近两段各 N 天的关系维度。用法：/回顾 对比 [天数]（默认7）"""
+        """用户：对比最近两段各 N 天的关系维度。用法：/回忆 对比 [天数]（默认7）"""
         uid = self._state_key(self._get_user_id(event))
         kw = event.message_str.strip()
         days = 7
@@ -2956,13 +2956,13 @@ class SoulSyncPro(Star):
             yield event.plain_result("\n".join(lines))
 
     async def cmd_tpd_force_skip(self, event: AstrMessageEvent):
-        """管理员：强制指定用户时间跳跃。用法：/admin 强制跳跃 <用户ID> <N天>"""
+        """管理员：强制指定用户时间跳跃。用法：/心管 强制跳跃 <用户ID> <N天>"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
         parts = self._sub_parts(event)
         if len(parts) < 3:
-            yield event.plain_result("用法：/admin 强制跳跃 <用户ID> <天数>\n例如：/强制跳跃 123456 7")
+            yield event.plain_result("用法：/心管 强制跳跃 <用户ID> <天数>\n例如：/强制跳跃 123456 7")
             return
         target_uid = parts[1]
         try:
@@ -2984,7 +2984,7 @@ class SoulSyncPro(Star):
         yield event.plain_result(f"✅ 已强制跳跃 {target_uid} {days} 天")
 
     async def cmd_tpd_reset_skip(self, event: AstrMessageEvent):
-        """管理员：重置指定用户的跳跃状态。用法：/admin 重置跳跃 [用户ID]"""
+        """管理员：重置指定用户的跳跃状态。用法：/心管 重置跳跃 [用户ID]"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -2999,7 +2999,7 @@ class SoulSyncPro(Star):
         yield event.plain_result(f"✅ 已重置 {target_uid} 的跳跃状态")
 
     async def cmd_tpd_weather_debug(self, event: AstrMessageEvent):
-        """管理员：查看天气获取调试信息。用法：/admin 天气调试"""
+        """管理员：查看天气获取调试信息。用法：/心管 天气调试"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return
@@ -3135,7 +3135,7 @@ class SoulSyncPro(Star):
         yield event.plain_result(f"✅ 已设置：角色今后优先叫你「{word}」")
 
     async def cmd_debug_event(self, event: AstrMessageEvent):
-        """管理员：输出事件结构（排障用）。用法：/admin 调试事件"""
+        """管理员：输出事件结构（排障用）。用法：/心管 调试事件"""
         if not self._is_admin(event):
             yield event.plain_result("⛔ 权限不足，仅管理员可用")
             return

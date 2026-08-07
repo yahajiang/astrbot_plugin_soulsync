@@ -166,8 +166,8 @@ for c in cmds:
     counts[c] = counts.get(c, 0) + 1
 dups = {c: n for c, n in counts.items() if n > 1}
 assert not dups, f"命令重复注册: {dups}"
-parent_cmds = ["状态", "回顾", "纪念", "角色", "人格", "知识",
-               "风格", "记忆", "环境", "排行", "admin", "图片模式", "设置", "命令"]
+parent_cmds = ["心声", "回忆", "纪念", "角色", "人格", "知识",
+               "风格", "记忆", "天象", "排行", "心管", "图片模式", "设置", "心助"]
 missing = [c for c in parent_cmds if c not in counts]
 assert not missing, f"缺失父命令: {missing}"
 legacy_cmds = ["好感度", "人格微调", "知识添加", "记忆添加", "添加纪念日",

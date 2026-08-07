@@ -98,7 +98,7 @@ def test_chat_not_matched():
 def test_command_and_empty_not_matched():
     assert router.match("") is None
     assert router.match("  ") is None
-    assert router.match("/状态") is None
+    assert router.match("/心声") is None
     assert router.match("／状态 好感") is None
     assert router.match("你好") is None
 

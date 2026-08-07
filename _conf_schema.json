@@ -49,7 +49,7 @@
   },
   "show_status_default": {
     "description": "默认显示情感状态行",
-    "hint": "新用户默认是否在每次对话后显示情感状态摘要，用户可自行用 /状态显示 切换",
+    "hint": "新用户默认是否在每次对话后显示情感状态摘要，用户可自行用 /设置 切换",
     "type": "bool",
     "default": false
   },
@@ -833,7 +833,7 @@
   },
   "report_window_days": {
     "description": "回顾窗口（天）",
-    "hint": "/回顾 报告 默认回顾最近多少天（也可在命令后直接指定天数）",
+    "hint": "/回忆 报告 默认回顾最近多少天（也可在命令后直接指定天数）",
     "type": "int",
     "default": 14,
     "slider": {

@@ -1,6 +1,6 @@
 """SoulSync - 父命令路由器（v2.20 命令极简化）
 
-将 70 个扁平命令收敛为 10 个父命令 + 子命令 + /admin 集中管理。
+将 70 个扁平命令收敛为 10 个父命令 + 子命令 + /心管 集中管理。
 纯逻辑模块，不依赖 AstrBot，可独立单测。
 
 路由表：父命令 → {子命令: 方法名}
@@ -12,14 +12,14 @@ from __future__ import annotations
 
 # ─── 10 父命令路由表 ───────────────────────────────────────────
 PARENT_COMMANDS = {
-    "状态": {
+    "心声": {
         "": "cmd_favorability",              # 默认输出状态卡片
         "好感": "cmd_favorability",
         "阶段": "cmd_relationship_stage",
         "画像": "cmd_my_portrait",
         "系统": "cmd_cache_stats",
     },
-    "回顾": {
+    "回忆": {
         "趋势": "cmd_trend",                 # [天数]
         "月报": "cmd_monthly_report",        # [上月]
         "报告": "cmd_role_report",           # [天数] 角色回顾
@@ -80,7 +80,7 @@ PARENT_COMMANDS = {
         "重要": "cmd_mark_important",        # [序号]
         "忘记": "cmd_forget",                # [序号]
     },
-    "环境": {
+    "天象": {
         "": "cmd_tpd_weather",               # 默认环境感知
         "天气": "cmd_tpd_weather",
         "倒计时": "cmd_tpd_countdown",
@@ -100,7 +100,7 @@ STANDALONE_COMMANDS = {
     "设置": "cmd_toggle_status",             # 状态显示开关
 }
 
-# ─── /admin 管理员集中入口 ─────────────────────────────────────
+# ─── /心管 管理员集中入口 ─────────────────────────────────────
 ADMIN_COMMANDS = {
     "图片模式": "cmd_global_image_mode",
     "好感": "cmd_set_favorability",          # <用户ID> <值>
@@ -127,19 +127,19 @@ ADMIN_COMMANDS = {
 KEEP_SUB_METHODS = {"cmd_style_snapshot"}
 
 PARENT_HELP = {
-    "状态": "/状态 [好感|阶段|画像|系统] — 核心情感数值、阶段、画像",
-    "回顾": "/回顾 [趋势 天数|月报|报告|独白|对比|时间线|危机|关系网] — 文本版分析报告",
+    "心声": "/心声 [好感|阶段|画像|系统] — 核心情感数值、阶段、画像",
+    "回忆": "/回忆 [趋势 天数|月报|报告|独白|对比|时间线|危机|关系网] — 文本版分析报告",
     "纪念": "/纪念 [查看|添加 日期 名称|删除 id|生日 日期|节日|节日添加|节日删除] — 特殊日期管理",
     "角色": "/角色 [列表|创建|切换|删除|查看|称谓 称呼|关系|解锁|关系切换] — 多角色管理（称谓=角色叫你的专属称呼）",
     "人格": "/人格 [查看|设置 参数 值|重置|锁定] — 查看全员只读，设置/重置/锁定仅管理员",
     "知识": "/知识 [查看|添加|删除] — 知识库管理",
     "风格": "/风格 [状态|保存 名称|恢复 名称|锁定] — 语言风格控制",
     "记忆": "/记忆 [查看|添加|删除|星标|重要|忘记] — 私人记忆库",
-    "环境": "/环境 [天气|倒计时|跳跃|回溯] — 环境感知查询",
+    "天象": "/天象 [天气|倒计时|跳跃|回溯] — 环境感知查询",
     "排行": "/排行 [好感 n|负好感 n] — 好感/负好感排行榜",
 }
 
-ADMIN_HELP = "/admin [图片模式|好感|亲密|态度|关系|关系角色|重置好感|查看好感|隐私|重置|备份|修复统计|强制跳跃|重置跳跃|天气调试|导出|人格锁定|调试事件|调试记忆] — 全部后台操作"
+ADMIN_HELP = "/心管 [图片模式|好感|亲密|态度|关系|关系角色|重置好感|查看好感|隐私|重置|备份|修复统计|强制跳跃|重置跳跃|天气调试|导出|人格锁定|调试事件|调试记忆] — 全部后台操作"
 
 
 def resolve_parent(parent: str, sub: str) -> str | None:
@@ -151,7 +151,7 @@ def resolve_parent(parent: str, sub: str) -> str | None:
 
 
 def resolve_admin(sub: str) -> str | None:
-    """解析 /admin 子命令 → 方法名"""
+    """解析 /心管 子命令 → 方法名"""
     return ADMIN_COMMANDS.get(sub)
 
 
@@ -182,13 +182,13 @@ def admin_help() -> str:
 
 def all_parent_help() -> str:
     lines = ["🎛️ SoulSync 命令总览", "━" * 24]
-    for parent in ("状态", "回顾", "纪念", "角色", "人格", "知识",
-                   "风格", "记忆", "环境", "排行"):
+    for parent in ("心声", "回忆", "纪念", "角色", "人格", "知识",
+                   "风格", "记忆", "天象", "排行"):
         lines.append(PARENT_HELP[parent])
     lines.append("")
     lines.append("/图片模式 — 指令输出图片/文本切换（零参数）")
     lines.append("/设置 — 状态显示开关（零参数）")
-    lines.append("/admin ... — 管理员后台操作")
+    lines.append("/心管 ... — 管理员后台操作")
     lines.append("")
     lines.append("💡 95% 场景无需输入命令：查询意图会自动识别（如\"我们什么关系？\"）")
     return "\n".join(lines)
