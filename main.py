@@ -1798,6 +1798,44 @@ class SoulSyncPro(Star):
             lines.append("💝 我的纪念日：暂无")
             lines.append("  用 /纪念 添加 <MM-DD> <名称> 记录一个吧！")
             lines.append("")
+
+        # ── 记忆联动：知识库中的生日与带日期的约定/节日（v2.21）──
+        import re as _md_re
+        _date_pat = _md_re.compile(r"(\d{1,2})[月\-./](\d{1,2})日?")
+        try:
+            _orch = self._get_orchestrator(uid)
+            _kb = _orch.get_knowledge()
+            _mem_bday = None
+            _mem_dates = []
+            for _item in list(_kb.profile):
+                _hay = f"{_item.key or ''} {_item.value or ''}"
+                if "生日" in _hay:
+                    _m = _date_pat.search(_item.value or "")
+                    if _m:
+                        _mem_bday = (int(_m.group(1)), int(_m.group(2)), _item.value.strip()[:24])
+            for _item in list(_kb.promises):
+                _m = _date_pat.search(_item.value or "")
+                if _m:
+                    _mem_dates.append((int(_m.group(1)), int(_m.group(2)), _item.value.strip()[:28]))
+            if _mem_bday and not any(a.get("kind") == "birthday" for a in my):
+                _b = _mem_bday
+                _left = (_dt.date(today.year, _b[0], _b[1]) - today).days
+                if _left < 0:
+                    _left = (_dt.date(today.year + 1, _b[0], _b[1]) - today).days
+                lines.append(f"🎂 记忆中的生日：{_b[0]:02d}-{_b[1]:02d} · 还有 {_left} 天（来自知识库：{_b[2]}）")
+                lines.append("")
+            if _mem_dates:
+                lines.append("📌 记忆约定（知识库）：")
+                for _mm, _dd, _val in sorted(_mem_dates):
+                    _d0 = _dt.date(today.year, _mm, _dd)
+                    _left = (_d0 - today).days
+                    if _left < 0:
+                        _left = (_dt.date(today.year + 1, _mm, _dd) - today).days
+                    lines.append(f"  {_mm:02d}-{_dd:02d} · {_val} · 还有 {_left} 天")
+                lines.append("")
+        except Exception:
+            pass
+
         fest = self.anniversary_manager.list_festivals_with_dates(today)
         up = [f for f in fest if not f["is_today"]][:8]
         td = [f for f in fest if f["is_today"]]
