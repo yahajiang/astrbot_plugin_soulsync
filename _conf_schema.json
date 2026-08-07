@@ -803,7 +803,7 @@
   },
   "report_window_days": {
     "description": "回顾窗口（天）",
-    "hint": "/角色回顾 默认回顾最近多少天（也可在命令后直接指定天数）",
+    "hint": "/回顾 报告 默认回顾最近多少天（也可在命令后直接指定天数）",
     "type": "int",
     "default": 14,
     "slider": {
@@ -1161,7 +1161,7 @@
   },
   "persona_explicit_panel": {
     "description": "人格参数面板",
-    "hint": "开启后用户可通过 /人格微调 命令查看和调整20个人格参数",
+    "hint": "开启后用户可通过 /人格 查看 命令查看20个人格参数（设置/重置/锁定仅管理员）",
     "type": "bool",
     "default": true
   },

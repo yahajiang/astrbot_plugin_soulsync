@@ -1,6 +1,15 @@
 # 心旅知音 (SoulSync) 更新日志
 
-### v2.19 时间感知深化（当前版本）
+### v2.20 轻量化重构（当前版本）
+- **命令面重构**：70 个旧命令收敛为 10 父命令 + `/admin`（`command_router.py` 路由表：状态/回顾/纪念/角色/人格/知识/风格/记忆/环境/排行 + 独立命令 图片模式/设置）；删除全部旧命令装饰器（方法体复用），`_sub_parts` 参数归一化，`_resolve_llm_command` 按父命令路由；Agent 模式指令拦截兼容新命令
+- **事件总线（EventBus）**：`event_bus.py` 轻量事件系统（订阅/取消/异常隔离/单例），`emotion_engine.apply_change` 埋点发布 `favor.changed`/`stage.advanced`
+- **人格护栏（PersonaGuard）**：`trainer/persona/persona_guard.py` 四重护栏——连续 50 轮无显著波动且稳定度 ≥70% 自动锁定；24h 内 ≥3 次剧变回滚至最近稳定快照；背叛/连续冷落 72h+（≥3 天）极端事件自动解锁；`/人格 设置` 后管理员 2h 临时锁定暂停自动化微调；`/人格 设置/重置/锁定` 全部仅管理员
+- **意图识别（IntentRouter）**：`intent_router.py` 正则意图分类器（view_status/view_memory/view_environment/view_ranking/view_anniversary），查询类自然语言（如"我们之间现在算什么关系？"）直接输出卡片并阻断聊天，无需输入命令；强查询词规则防闲聊误杀
+- **钩子机制（HookBus）**：`hook_bus.py` 前后置钩子注册表（优先级排序/异常隔离/启停，支持同步异步），意图识别挂前置钩子、prompt 泄漏清理挂后置钩子；新增 `enable_hooks`/`enable_intent_router` 配置
+- **测试**：新增 `test_event_bus.py` 8 组 + `test_command_router.py` + `test_persona_guard.py` 10 组 + `test_intent_router.py` 12 组 + `test_hook_bus.py` 10 组；移除 19 个测试文件的 sys.stdout hack；全量 127 组断言通过
+- **修复**：PersonaGuard 首轮不建立稳定快照导致震荡回滚失效的 bug；测试执行编码环境（PYTHONIOENCODING=utf-8 + 重定向输出）
+
+### v2.19 时间感知深化（上一版本）
 - **环境感知**：`tpd/` 子系统，三级降级天气获取（API → 本地节气推算 → 纯时间兜底）+ 60 分钟缓存；10 天气 × 6 温度 × 4 季节 × 8 月相 → 8 维心情映射（强度缩放 + 钳制 ±5）；太阳黄经法节气 + 朔望月月相（纯数学公式，零依赖）
 - **倒计时事件**：事件源扫描（认识周年/生日/自定义纪念日/节日含农历）+ 优先级排序（权重×1/距离×关注度）+ T-7~T+7 六阶段叙事模板 + 24h 去重 + 状态持久化
 - **时间跳跃叙事**：中文指令解析（直接/模糊/告知/指定日期/提前回归）+ 虚拟时钟（offset_days 永久偏移）+ 冷落惩罚冻结（penalty_frozen_until）+ 情感漂移（约定+5期待，长跳≥14天 trust-0.4/joy-0.2/30天）+ 迟到庆祝扫描 + 被动离开 6 级分级检测 + 告别/回归叙事生成

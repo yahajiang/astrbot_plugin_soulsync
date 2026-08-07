@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v2.19 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v2.20 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -2722,7 +2722,7 @@ class SoulSyncPro(Star):
             yield event.plain_result(REPORT_MARK + text)
 
     async def cmd_radar(self, event: AstrMessageEvent):
-        """用户：对比最近两段各 N 天的关系维度。用法：/雷达图 [天数]（默认7）"""
+        """用户：对比最近两段各 N 天的关系维度。用法：/回顾 对比 [天数]（默认7）"""
         uid = self._state_key(self._get_user_id(event))
         kw = event.message_str.strip()
         days = 7
