@@ -44,4 +44,52 @@ b, d = extract_kb_dates([], [f"7.7 {long_t}"])
 assert len(d[0][2]) <= 28, len(d[0][2])
 ok("长文本截断")
 
+# ── 6. promise_due 完整日期格式（YYYY-MM-DD 截断 → MM-DD）──
+from astrbot_plugin_soulsync.anniversary import parse_month_day
+
+def _due_parse(due_text):
+    due = (due_text or "").strip()
+    if len(due) == 10 and due[4] == "-":
+        due = due[5:]
+    return parse_month_day(due)
+
+assert _due_parse("2026-09-15") == (9, 15)
+assert _due_parse("9-15") == (9, 15)
+assert _due_parse("") is None
+ok("promise_due 日期解析（YYYY-MM-DD 截断 / MM-DD）")
+
+# ── 7. 自动落库：'.' 分隔提取 + 生日 kind 区分 ─────────────
+import re as _re
+_pat = r"(\d{1,2})[-/月.](\d{1,2})(?:日|号)?"
+
+class _FakeMgr:
+    def __init__(self):
+        self.calls = []
+    def add_external_anniversary(self, uid, name, date, kind):
+        self.calls.append((date, kind))
+
+class _FakeItem:
+    def __init__(self, v):
+        self.value = v
+
+def promise_to_ann(manager, item, config):
+    if not config.get("enable_personalization", False):
+        return
+    m = _re.search(_pat, item.value)
+    if not m:
+        return
+    date_str = f"{m.group(1)}-{m.group(2)}"
+    kind = "birthday" if "生日" in item.value else "anniversary"
+    manager.add_external_anniversary("u1", item.value[:20], date_str, kind)
+
+mgr = _FakeMgr()
+promise_to_ann(mgr, _FakeItem("8.8 一起吃饭"), {"enable_personalization": True})
+promise_to_ann(mgr, _FakeItem("6月1日 是对方的生日"), {"enable_personalization": True})
+promise_to_ann(mgr, _FakeItem("下个月8号 见面"), {"enable_personalization": True})
+promise_to_ann(mgr, _FakeItem("9-15 见"), {"enable_personalization": False})
+assert ("8-8", "anniversary") in mgr.calls, mgr.calls
+assert ("6-1", "birthday") in mgr.calls, mgr.calls
+assert len(mgr.calls) == 2, f"无日期/关闭个性化不应落库: {mgr.calls}"
+ok("自动落库：8.8 提取、6月1日生日→birthday、个性化关闭不落库")
+
 print(f"=== 纪念日记忆联动 {PASS} 组全部通过 ===")

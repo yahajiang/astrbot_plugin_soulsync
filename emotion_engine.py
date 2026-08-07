@@ -26,7 +26,7 @@ DIM_LABELS = {
 }
 DIM_ICONS = {
     "joy": "😊", "sadness": "😢", "anger": "😠", "fear": "😨",
-    "surprise": "😲", "disgust": "🤢", "trust": "🤗", "anticipation": "✨",
+    "surprise": "😲", "disgust": "🤢", "trust": "🤗", "anticipation": "🌟",
 }
 
 # ─── 复合情绪标签（双维达到阈值即激活）────────────────────────────

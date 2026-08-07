@@ -1036,17 +1036,18 @@ class SoulSyncPro(Star):
         return result
 
     def _promise_to_anniversary(self, user_id: str, item):
-        """promises 类知识自动关联纪念日系统（知识→纪念日联动）。"""
+        """promises 知识自动写入纪念日系统（知识内容含日期时触发）"""
         try:
             if not self.config.get("enable_personalization", False):
                 return
             import re as _re
-            m = _re.search(r"(\d{1,2})[-/月](\d{1,2})(?:日|号)?", item.value)
+            m = _re.search(r"(\d{1,2})[-/月.](\d{1,2})(?:日|号)?", item.value)
             if not m:
                 return
             date_str = f"{m.group(1)}-{m.group(2)}"
+            kind = "birthday" if "生日" in item.value else "anniversary"
             self.anniversary_manager.add_external_anniversary(
-                user_id, item.value[:20], date_str, "anniversary"
+                user_id, item.value[:20], date_str, kind
             )
         except Exception:
             pass
@@ -1813,9 +1814,21 @@ class SoulSyncPro(Star):
         try:
             _orch = self._get_orchestrator(uid)
             _kb = _orch.get_knowledge()
+            _promise_texts = [_i.value or "" for _i in _kb.promises]
+            # 私人记忆：promise 内容 + 约定截止日期（promise_due）一并纳入扫描
+            _mem = _orch.get_private_memory()
+            for _pm in list(_mem.promises):
+                _promise_texts.append(_pm.content or "")
+                if _pm.promise_due:
+                    _due = (_pm.promise_due or "").strip()
+                    if len(_due) == 10 and _due[4] == "-":
+                        _due = _due[5:]
+                    _pd = parse_month_day(_due)
+                    if _pd:
+                        _promise_texts.append(f"{_pd[0]:02d}-{_pd[1]:02d} {(_pm.content or '')[:20]}")
             _mem_bday, _mem_dates = extract_kb_dates(
                 [f"{_i.key or ''} {_i.value or ''}" for _i in _kb.profile],
-                [_i.value or "" for _i in _kb.promises],
+                _promise_texts,
             )
             if _mem_bday and not any(a.get("kind") == "birthday" for a in my):
                 _b = _mem_bday
@@ -1825,7 +1838,7 @@ class SoulSyncPro(Star):
                 lines.append(f"🎂 记忆中的生日：{_b[0]:02d}-{_b[1]:02d} · 还有 {_left} 天（来自知识库：{_b[2]}）")
                 lines.append("")
             if _mem_dates:
-                lines.append("📌 记忆约定（知识库）：")
+                lines.append("📌 记忆约定：")
                 for _mm, _dd, _val in sorted(_mem_dates):
                     try:
                         _d0 = _dt.date(today.year, _mm, _dd)
@@ -3309,7 +3322,18 @@ class SoulSyncPro(Star):
             if fav_delta == 0 and int_delta == 0:
                 fav_delta = dyn_micro_fav
                 int_delta = dyn_micro_int
-                emotion_deltas = {"trust": 0.1, "anticipation": 0.1}
+                # 张力种子：压抑的负面情绪（愤怒/悲伤/厌恶/恐惧偏高、喜悦偏低）
+                # 在普通聊天中持续微积累张力（情绪传染），正面情绪自然释放
+                _e = profile.emotions
+                _seed = 0.0
+                for _dim in ("anger", "sadness", "disgust", "fear"):
+                    _seed += max(0.0, (_e.get(_dim, 50.0) - 60.0)) * 0.02
+                if _e.get("joy", 50.0) < 40.0:
+                    _seed += (40.0 - _e["joy"]) * 0.01
+                emotion_deltas = {
+                    "trust": 0.1, "anticipation": 0.1,
+                    "anger": round(min(1.0, _seed), 3) if _seed > 0 else 0.0,
+                }
 
             # ── TPD 时间感知深化（统一处理：环境+倒计时+时间跳跃）──
             tpd_result = self._process_tpd_turn(uid, text, profile)
