@@ -50,7 +50,7 @@ from .memory_manager import LongTermMemory
 from .llm_analyzer import LLMAnalyzer
 from .penalty_reward import PenaltyRewardEngine, BehaviorProfile, MILESTONES
 from .relationship_crisis import CrisisManager
-from .anniversary import AnniversaryManager, parse_month_day
+from .anniversary import AnniversaryManager, extract_kb_dates, parse_month_day
 from .stats_tracker import StatsTracker
 from .character_manager import CharacterManager
 from .rde import RDEOrchestrator
@@ -1810,23 +1810,13 @@ class SoulSyncPro(Star):
             lines.append("")
 
         # ── 记忆联动：知识库中的生日与带日期的约定/节日（v2.21）──
-        import re as _md_re
-        _date_pat = _md_re.compile(r"(\d{1,2})[月\-./](\d{1,2})日?")
         try:
             _orch = self._get_orchestrator(uid)
             _kb = _orch.get_knowledge()
-            _mem_bday = None
-            _mem_dates = []
-            for _item in list(_kb.profile):
-                _hay = f"{_item.key or ''} {_item.value or ''}"
-                if "生日" in _hay:
-                    _m = _date_pat.search(_item.value or "")
-                    if _m:
-                        _mem_bday = (int(_m.group(1)), int(_m.group(2)), _item.value.strip()[:24])
-            for _item in list(_kb.promises):
-                _m = _date_pat.search(_item.value or "")
-                if _m:
-                    _mem_dates.append((int(_m.group(1)), int(_m.group(2)), _item.value.strip()[:28]))
+            _mem_bday, _mem_dates = extract_kb_dates(
+                [f"{_i.key or ''} {_i.value or ''}" for _i in _kb.profile],
+                [_i.value or "" for _i in _kb.promises],
+            )
             if _mem_bday and not any(a.get("kind") == "birthday" for a in my):
                 _b = _mem_bday
                 _left = (_dt.date(today.year, _b[0], _b[1]) - today).days
@@ -1837,7 +1827,10 @@ class SoulSyncPro(Star):
             if _mem_dates:
                 lines.append("📌 记忆约定（知识库）：")
                 for _mm, _dd, _val in sorted(_mem_dates):
-                    _d0 = _dt.date(today.year, _mm, _dd)
+                    try:
+                        _d0 = _dt.date(today.year, _mm, _dd)
+                    except ValueError:
+                        continue
                     _left = (_d0 - today).days
                     if _left < 0:
                         _left = (_dt.date(today.year + 1, _mm, _dd) - today).days

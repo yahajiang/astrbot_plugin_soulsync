@@ -17,6 +17,46 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+_DATE_PAT = re.compile(r"(\d{1,2})[月\-./](\d{1,2})日?")
+_VERSION_PAT = re.compile(r"[vV]?\d{1,2}\.\d{1,2}\.\d+")
+
+
+def _valid_md(month: int, day: int) -> bool:
+    try:
+        date(2000, month, day)
+        return True
+    except ValueError:
+        return False
+
+
+def extract_kb_dates(profile_texts: List[str],
+                     promise_texts: List[str]) -> Tuple[Optional[Tuple[int, int, str]], List[Tuple[int, int, str]]]:
+    """知识库生日/带日期约定提取（脏数据容错）。
+
+    - profile_texts: 知识库 profile 条目文本（key + value）
+    - promise_texts: 知识库 promises 条目文本（value）
+    返回 (记忆生日 (mm,dd,原文), 带日期条目 [(mm,dd,原文), ...])；
+    非法日期（如 2月30日、v2.6.1 误匹配）自动跳过。
+    """
+    mem_bday = None
+    mem_dates = []
+    for text in profile_texts:
+        if "生日" in text:
+            text = _VERSION_PAT.sub(" ", text)
+            m = _DATE_PAT.search(text)
+            if m:
+                mm, dd = int(m.group(1)), int(m.group(2))
+                if _valid_md(mm, dd):
+                    mem_bday = (mm, dd, text.strip()[:24])
+    for text in promise_texts:
+        text = _VERSION_PAT.sub(" ", text)
+        m = _DATE_PAT.search(text)
+        if m:
+            mm, dd = int(m.group(1)), int(m.group(2))
+            if _valid_md(mm, dd):
+                mem_dates.append((mm, dd, text.strip()[:28]))
+    return mem_bday, mem_dates
+
 # ─── 农历数据表（1900-2100）─────────────────────────────────────
 # 每个 int 的二进制位编码了该农历年的信息：
 #   0x8000 起 12 位：每月（1-12 月）天数，1 = 30 天，0 = 29 天
