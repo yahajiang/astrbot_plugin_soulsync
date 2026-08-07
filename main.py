@@ -64,6 +64,7 @@ from .relationship_roles import (
 from .image_renderer import ImageRenderer
 from .trainer.trainer_orchestrator import PersonalizationOrchestrator
 from .trainer.trainer_storage import TrainerStorage
+from .intent_router import IntentRouter, dispatch_intent_query
 from .time_perception import (
     load_calendar_dependencies,
     build_time_info,
@@ -106,6 +107,9 @@ class SoulSyncPro(Star):
         self.enable_secondary_llm: bool = config.get("enable_secondary_llm", True)
         self.enable_smart_update: bool = config.get("enable_smart_update", True)
         self.enable_rde: bool = config.get("enable_rde", False)
+
+        # ── v2.20 意图识别（自然语言静默命令路由）──
+        self.intent_router = IntentRouter()
 
         # ── RDE 关系深度演进（每用户调度器缓存）──
         self.rde_orchestrators: Dict[str, RDEOrchestrator] = {}
@@ -3121,6 +3125,14 @@ class SoulSyncPro(Star):
             # 直接执行插件命令并发送结果（图片/文本），同时 stop 事件阻止 LLM 生成。
             if await self._try_intercept_command_in_llm(event):
                 return
+
+            # ── v2.20 意图识别：静默命令路由（自然语言查询 → 卡片输出 + 阻断聊天）──
+            if self.config.get("enable_intent_router", True):
+                try:
+                    if await dispatch_intent_query(self, event, self.intent_router):
+                        return
+                except Exception as e:
+                    logger.debug(f"SoulSync 意图识别失败，跳过: {e}")
 
             uid = self._get_user_id(event)
             profile = self._get_or_create_profile(event)
