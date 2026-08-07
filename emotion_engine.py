@@ -345,6 +345,11 @@ class EmotionEngine:
         ) / 3.0
         return avg / 100.0 * EMOTION_BONUS_MAX
 
+    @staticmethod
+    def composite_percent(composite: float) -> float:
+        """复合评分归一化 0~100（仅展示层）：composite -100~215 → 0~100"""
+        return max(0.0, min(100.0, (composite + 100.0) / 315.0 * 100.0))
+
     # ── 阶段判定（带滞后带保护）──
     def evaluate_stage(self, profile: EmotionProfile) -> int:
         """返回应处于的阶段索引 (0~11)，负好感返回 -1"""

@@ -1321,7 +1321,7 @@ class SoulSyncPro(Star):
             f"📊 关系阶段详情", f"━" * 24,
             f"当前阶段：{stage.label}",
             f"阶段进度：{profile.stage_progress:.1f}%",
-            f"复合评分：{profile.composite_score:.1f}（阶段阈值 {stage.composite_threshold:.0f}）",
+            f"复合评分：{profile.composite_score:.1f}（综合契合度 {self.emotion_engine.composite_percent(profile.composite_score):.0f}/100，阶段阈值 {stage.composite_threshold:.0f}）",
             f"亲密度（按好感度派生）：{profile.intimacy:.1f}",
         ]
         if self.config.get("enable_stage_styles", True):
@@ -2150,7 +2150,7 @@ class SoulSyncPro(Star):
         int_bar = self._progress_bar(profile.intimacy, 0, 100, 16)
         lines.append(f"💜 亲密度：{profile.intimacy:.1f}  {int_bar}")
 
-        lines.append(f"📊 复合评分：{profile.composite_score:.1f}")
+        lines.append(f"📊 复合评分：{profile.composite_score:.1f}（综合契合度 {self.emotion_engine.composite_percent(profile.composite_score):.0f}/100）")
         lines.append("")
 
         # ── 关系阶段 ──
@@ -4171,7 +4171,7 @@ class SoulSyncPro(Star):
         lines.append(f"阶段进度：{profile.stage_progress:.1f}%")
 
         if privacy >= 2 or detail:
-            lines.append(f"复合评分：{profile.composite_score:.1f}")
+            lines.append(f"复合评分：{profile.composite_score:.1f}（综合契合度 {self.emotion_engine.composite_percent(profile.composite_score):.0f}/100）")
             lines.append(f"互动：总{profile.total_interactions} 正{profile.positive_interactions} 负{profile.negative_interactions}")
 
         # 惩罚奖励摘要
