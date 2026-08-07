@@ -56,15 +56,18 @@ class PrivateMemoryRetriever:
             mem.last_accessed = now
         return results
 
-    def format_for_llm(self, memories: list) -> str:
+    def format_for_llm(self, memories: list, starred_ids: set = None) -> str:
         if not memories:
             return ""
+        starred = set(starred_ids or ())
         lines = ["[私人记忆·相关片段]"]
         for mem in memories[:3]:
-            star = "⭐ " if getattr(mem, 'id', '') in getattr(mem, '_starred_ids', []) else ""
+            mem_id = getattr(mem, 'id', '')
+            star = "⭐ " if mem_id in starred else ""
             tag_str = f" [{', '.join(mem.tags[:3])}]" if mem.tags else ""
             mood_str = f" ({mem.mood})" if mem.mood else ""
-            lines.append(f"  {star}{mem.date}: {mem.content[:60]}{mood_str}{tag_str}")
+            content = (mem.content or "") if mem_id in starred else (mem.content or "")[:60]
+            lines.append(f"  {star}{mem.date}: {content}{mood_str}{tag_str}")
         return "\n".join(lines)
 
     @staticmethod

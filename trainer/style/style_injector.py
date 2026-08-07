@@ -13,6 +13,9 @@ class StyleInjector:
     def generate(self, state: StyleState) -> str:
         if not state or not state.profile:
             return ""
+        # v2.21 融合度≥90%：风格已内化，不再注入（节省每轮 token）
+        if state.fusion_ratio >= 0.9:
+            return ""
         p = state.profile
         phase_desc = PHASE_DESC.get(state.phase, "").format(fusion_ratio=state.fusion_ratio * 100)
         lock_tag = " · 🔒 已锁定" if state.locked else ""

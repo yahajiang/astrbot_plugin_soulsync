@@ -65,6 +65,7 @@ class PersonalizationOrchestrator:
         self._memory_mgr = PrivateMemoryManager(storage, user_id)
         self._memory_retriever = PrivateMemoryRetriever()
         self._memory_auditor = MemoryAuditor(storage, user_id)
+        self._last_text: str = ""
 
     # ── 存取 ──
     def get_persona(self) -> PersonaParams:
@@ -147,6 +148,7 @@ class PersonalizationOrchestrator:
 
     # ── 每轮处理 ──
     def on_each_turn(self, message: str, context: dict) -> None:
+        self._last_text = (message or "").strip()
         params = self.get_persona()
         # v2.20 人格护栏：自动锁定 / 震荡回滚（每轮先跑，护栏事件进 context）
         guard_events = self._guard.on_turn(params)
@@ -184,6 +186,7 @@ class PersonalizationOrchestrator:
             }
             memories = self._memory_retriever.retrieve(mem_store, {"keywords": message[:50] if message else "", "persona": persona}, max_items=3)
             self._cached_results["memories"] = memories
+            self._cached_results["starred"] = set(mem_store.starred)
 
     # ── 注入组装 + token 预算裁剪 ──
     def get_full_injection(self, include_static: bool = True,
@@ -197,17 +200,18 @@ class PersonalizationOrchestrator:
         sections: list = []
         if include_static:
             if self._persona_params:
-                text = self._injector.generate(self._persona_params)
+                text = self._injector.generate(self._persona_params, self._last_text)
                 if text:
                     sections.append(("persona", text))
             if self._knowledge:
-                text = self._knowledge_injector.generate(self._knowledge)
+                text = self._knowledge_injector.generate(self._knowledge, text=self._last_text)
                 if text:
                     sections.append(("knowledge", text))
         if include_dynamic:
             memories = self._cached_results.get("memories")
             if memories:
-                text = self._memory_retriever.format_for_llm(memories)
+                text = self._memory_retriever.format_for_llm(
+                    memories, starred_ids=self._cached_results.get("starred"))
                 if text:
                     sections.append(("memory", text))
             if self._style:
