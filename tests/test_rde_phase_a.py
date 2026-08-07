@@ -66,6 +66,18 @@ assert addr.get_address("n3", {}) == "那个人"
 assert addr.get_address("n4", {}) == "（不愿提及名字，生硬地省略称呼）"
 print("PASS: 称谓体系（低阶用你/中阶昵称/高阶专属/负向疏远化）")
 
+# ── 5.1 s12 满分之爱：默认降频 + 强制开关 ────────────────
+s12 = get_stage_definition("s12")
+assert s12 and "每轮回复 1~2 次即可" in s12.address_changes, "默认应降频，不每句复读"
+assert "我的挚爱" in s12.address_config["examples"], "应提供多称呼备选"
+ctx12 = orch.generate_stage_context("s12", {"user_name": "小雅"})
+assert "每轮回复 1~2 次即可" in ctx12, "默认注入应包含降频措辞"
+assert "100% 使用最深情的称呼" not in ctx12, "默认不应强制每句带称呼"
+orch_forced = RDEOrchestrator({"enable_rde": True, "enable_s12_forced_address": True})
+ctx12f = orch_forced.generate_stage_context("s12", {})
+assert "100% 使用最深情的称呼" in ctx12f, "开关开启时应恢复 100% 每句带称呼"
+print("PASS: s12 称谓降频（默认 1~2 次/开关恢复 100%）")
+
 # ── 6. 跃迁/退行 ─────────────────────────────────────────
 ev = orch.check_transition("s5", "s6")
 assert isinstance(ev, TransitionEvent) and ev.kind == "upgrade"

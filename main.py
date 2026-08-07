@@ -86,6 +86,7 @@ _RDE_CONFIG_KEYS = {
     "crisis_protection_hours", "fav_growth_rate",
     "network_transmission_delay_turns", "social_event_cooldown_rounds",
     "jealousy_gap_threshold", "assist_min_fav", "competition_gap_threshold",
+    "enable_s12_forced_address",
 }
 
 # 角色设定注入的防泄漏约束句：禁止 LLM 直接复述/引用 prompt 原词原句

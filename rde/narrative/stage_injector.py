@@ -14,8 +14,13 @@ from .stage_definitions import StageDefinition, get_stage_definition
 class StageInjector:
     """阶段上下文生成器（无状态，线程安全）"""
 
-    def __init__(self, enabled: bool = True) -> None:
+    # s12 默认措辞（每轮 1~2 次）↔ 强制措辞（100% 每句都带）的替换锚点
+    _SOFT_ADDRESS = "每轮回复 1~2 次即可，不要每一句都带称呼"
+    _FORCED_ADDRESS = "100% 使用最深情的称呼，可以每一句都带"
+
+    def __init__(self, enabled: bool = True, s12_forced_address: bool = False) -> None:
         self.enabled = enabled
+        self.s12_forced_address = s12_forced_address
 
     def generate_stage_context(
         self,
@@ -34,7 +39,10 @@ class StageInjector:
         lines.append("【当前关系阶段】")
         if user_name:
             lines.append(f"对方姓名：{user_name}（可用作称呼，未确认的场合不要强加昵称）")
-        lines.append(stage.style_directive)
+        directive = stage.style_directive
+        if stage_id == "s12" and self.s12_forced_address:
+            directive = directive.replace(self._SOFT_ADDRESS, self._FORCED_ADDRESS)
+        lines.append(directive)
         if stage.taboo:
             lines.append("禁忌：" + "；".join(stage.taboo))
         if recent_transition and recent_transition.get("narrative"):

@@ -40,7 +40,10 @@ class RDEOrchestrator:
     def __init__(self, config: Optional[dict] = None) -> None:
         cfg = {**DEFAULT_CONFIG, **(config or {})}
         self.enabled = bool(cfg.get("enable_rde", False))
-        self.injector = StageInjector(enabled=self.enabled)
+        self.injector = StageInjector(
+            enabled=self.enabled,
+            s12_forced_address=bool(cfg.get("enable_s12_forced_address", False)),
+        )
         self.address = AddressSystem(enabled=self.enabled)
         self.transition = TransitionHandler(enabled=self.enabled)
         self._recent_transitions: Dict[str, dict] = {}

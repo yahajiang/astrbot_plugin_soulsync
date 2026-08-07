@@ -260,6 +260,12 @@
     "type": "bool",
     "default": true
   },
+  "enable_s12_forced_address": {
+    "description": "满分之爱阶段强制称谓（每句都带称呼）",
+    "hint": "关闭（默认）：s12 每轮回复深情称呼 1~2 次即可，不每句复读；开启：恢复「唯一的你」100% 每句都带",
+    "type": "bool",
+    "default": false
+  },
   "tension_accumulate_rate": {
     "description": "张力积累倍率",
     "hint": "每轮负面情感上升量 × 该倍率 = 张力增加",
