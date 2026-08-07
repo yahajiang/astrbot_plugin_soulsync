@@ -200,6 +200,7 @@ def test_should_inject_static():
     assert should_inject_static("我叫小明", 10, 20) is True, "身份信息强制注入"
     assert should_inject_static("记得我吗", 10, 20) is True, "身份类关键词强制注入"
     assert should_inject_static("你好", 10, 0) is True, "every_n=0 表示每轮注入"
+    assert should_inject_static("你好", 10, 20, transitioned=True) is True, "阶段跃迁强制注入静态层"
 
 
 # ── 8. P2 动态裁剪（trainer 注入器 + RDE 叙事瘦身）────────

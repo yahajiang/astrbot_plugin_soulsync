@@ -115,8 +115,11 @@ def should_inject_env(text: str, interactions: int, anniv_events: list,
     return every_n <= 0 or interactions % every_n == 0
 
 
-def should_inject_static(text: str, interactions: int, every_n: int = 20) -> bool:
-    """静态层（人设/知识库）分层注入：身份类关键词命中或每 N 轮一次（0=每轮）"""
+def should_inject_static(text: str, interactions: int, every_n: int = 20,
+                         transitioned: bool = False) -> bool:
+    """静态层（人设/知识库）分层注入：身份类关键词命中/阶段跃迁或每 N 轮一次（0=每轮）"""
+    if transitioned:
+        return True
     if any(k in text for k in IDENTITY_KEYWORDS):
         return True
     return every_n <= 0 or interactions % every_n == 0
@@ -3726,6 +3729,7 @@ class SoulSyncPro(Star):
                     include_static = should_inject_static(
                         text, profile.total_interactions,
                         int(self.config.get("personalization_static_every_n", 20)),
+                        transitioned=bool(rde_result and rde_result.get("transition")),
                     )
                     personalization_context = orch.get_full_injection(
                         include_static=include_static, include_dynamic=True
