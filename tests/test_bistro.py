@@ -7,6 +7,7 @@
 3. main 插件：on_llm_response 钩子缓存情绪快照、命令处理、TTL 过期
 """
 
+import re
 import sys
 import tempfile
 import time
@@ -421,7 +422,14 @@ def test_command_status():
 
 
 def test_eat_what_bare():
-    """群聊纯文本含「吃点啥」无斜杠触发；斜杠/@/私聊场景不重复触发"""
+    """群聊纯文本含「吃点啥/吃什么/吃啥」无斜杠触发；斜杠/@/私聊场景不重复触发"""
+    from astrbot_plugin_soulsync_bistro_心旅小馆.main import EAT_WHAT_BARE_PATTERN
+
+    assert re.search(EAT_WHAT_BARE_PATTERN, "咱们晚上吃点啥")
+    assert re.search(EAT_WHAT_BARE_PATTERN, "吃什么好呢"), "「吃什么」应匹配"
+    assert re.search(EAT_WHAT_BARE_PATTERN, "吃啥")
+    assert re.search(EAT_WHAT_BARE_PATTERN, "今天吃什么"), "「今天吃什么」也应匹配"
+
     with tempfile.TemporaryDirectory() as td:
         plugin = _make_plugin(td)
         plugin._mood_cache["last"] = ("期待", 0.9, "好期待", time.time())
@@ -430,6 +438,14 @@ def test_eat_what_bare():
             ev = _MsgEvent("咱们晚上吃点啥")
             out = [x async for x in plugin.eat_what_bare(ev)]
             assert len(out) == 1 and "为你推荐" in out[0], f"群聊纯文本应触发: {out}"
+
+            ev_what = _MsgEvent("吃什么好呢")
+            out = [x async for x in plugin.eat_what_bare(ev_what)]
+            assert len(out) == 1 and "为你推荐" in out[0], f"无前缀「吃什么」应触发: {out}"
+
+            ev_ha = _MsgEvent("吃啥")
+            out = [x async for x in plugin.eat_what_bare(ev_ha)]
+            assert len(out) == 1 and "为你推荐" in out[0], f"无前缀「吃啥」应触发: {out}"
 
             ev_slash = _MsgEvent("/吃点啥", first_text="/吃点啥")
             out = [x async for x in plugin.eat_what_bare(ev_slash)]

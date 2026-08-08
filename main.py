@@ -29,6 +29,8 @@ EMOTION_EMOJI = {
     "平静": "😌",
 }
 
+EAT_WHAT_BARE_PATTERN = r"吃点啥|吃啥|吃什么"
+
 HELP_TEXT = """🍽️ 心旅小馆 · 情绪美食推荐
 
 /吃点啥 [分类]      推荐一份套餐（或指定分类的单菜）
@@ -195,9 +197,9 @@ class SoulSyncBistroPlugin(Star):
             return False
         return True
 
-    @filter.regex(r"吃点啥")
+    @filter.regex(EAT_WHAT_BARE_PATTERN)
     async def eat_what_bare(self, event: AstrMessageEvent):
-        """群聊中不带斜杠、不 @ 机器人时说「吃点啥」也能触发推荐。"""
+        """群聊中不带斜杠、不 @ 机器人时说「吃点啥/吃什么/吃啥」也能触发推荐。"""
         logger.info(
             f"心旅小馆: 无前缀触发命中 | 私聊={event.is_private_chat()} "
             f"消息={event.get_message_str()!r} 组件={getattr(event.get_messages()[0], 'type', '?') if event.get_messages() else '?'}"
