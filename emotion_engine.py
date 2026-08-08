@@ -276,15 +276,15 @@ class EmotionEngine:
         # 情感维度微调（正面下调 15%，负面上调 8%）
         emotion_deltas = {}
         if any(kw in text for kw in ["开心", "高兴", "哈哈", "嘻嘻", "太好了"]):
-            emotion_deltas["joy"] = min(3, abs(fav_delta) * 0.6)       # 正面 -15%
+            emotion_deltas["joy"] = min(6, abs(fav_delta) * 0.6)       # 正面 -15%
         if any(kw in text for kw in ["难过", "伤心", "失望", "哭"]):
-            emotion_deltas["sadness"] = min(4, abs(fav_delta) * 0.76)  # 负面 +8%
+            emotion_deltas["sadness"] = min(8, abs(fav_delta) * 0.76)  # 负面 +8%
         if any(kw in text for kw in ["生气", "愤怒", "烦", "恨"]):
-            emotion_deltas["anger"] = min(4, abs(fav_delta) * 0.76)    # 负面 +8%
+            emotion_deltas["anger"] = min(8, abs(fav_delta) * 0.76)    # 负面 +8%
         if any(kw in text for kw in ["信任", "相信", "依靠"]):
-            emotion_deltas["trust"] = min(3, abs(fav_delta) * 0.4)     # 正面 -15%
+            emotion_deltas["trust"] = min(6, abs(fav_delta) * 0.4)     # 正面 -15%
         if any(kw in text for kw in ["期待", "希望", "盼"]):
-            emotion_deltas["anticipation"] = min(3, abs(fav_delta) * 0.34)  # 正面 -15%
+            emotion_deltas["anticipation"] = min(6, abs(fav_delta) * 0.34)  # 正面 -15%
 
         return {
             "fav_delta": round(fav_delta, 2),
