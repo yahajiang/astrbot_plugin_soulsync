@@ -31,7 +31,9 @@ EMOTION_EMOJI = {
 
 HELP_TEXT = """🍽️ 心旅小馆 · 情绪美食推荐
 
-/吃点啥 [分类]      根据最近情绪推荐一道菜
+/吃点啥 [分类]      推荐一份套餐（或指定分类的单菜）
+/喝点啥             推荐一杯饮品
+/解馋               推荐解馋小食（小吃/甜品/炸鸡）
 /菜谱搜索 关键词    搜索菜谱库，标出「❤️此刻适配」
 /怎么做 菜名        查看详细做法步骤
 /随机推荐 [数量]    随机推荐，至少一道情绪特调
@@ -124,7 +126,7 @@ class SoulSyncBistroPlugin(Star):
 
     @filter.command("吃点啥", alias={"吃啥", "吃什么", "今天吃什么"})
     async def eat_what(self, event: AstrMessageEvent, category: str = ""):
-        """根据 SoulSync 最近情绪推荐一道菜。用法：/吃点啥 [素菜|荤菜|主食|汤|甜品]"""
+        """按最近情绪推荐套餐（或指定分类的单菜）。用法：/吃点啥 [素菜|荤菜|主食|汤|甜品]"""
         mood = self._current_mood() if self.enable_mood else None
         emotion = mood["emotion"] if mood else "平静"
         category = category.strip()
@@ -135,26 +137,46 @@ class SoulSyncBistroPlugin(Star):
             )
             return
 
-        recipe = self.engine.recommend_for_mood(emotion, category or None)
-        if recipe is None:
-            yield event.plain_result("菜谱库好像空了，请检查插件数据。")
-            return
-
         mood_cfg = self.engine.mood_mapping.get(emotion, {})
         emoji = EMOTION_EMOJI.get(emotion, "")
         lines = [f"{emoji} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"]
         if mood and mood["snippet"]:
             lines.append(f"  SoulSync 说：「{mood['snippet'][:50]}…」")
         lines.append("")
-        lines.append(f"🍽️ 为你推荐：{recipe['name']}")
-        lines.append(f"  分类：{recipe['category']} | 难度：{recipe['difficulty']}")
-        ingredients = "、".join(recipe.get("ingredients", [])[:8])
-        lines.append(f"  食材：{ingredients}")
-        if recipe.get("spicy"):
-            lines.append("  🌶️ 这道有点辣，正好")
+
+        if category:
+            recipe = self.engine.recommend_for_mood(emotion, category)
+            if recipe is None:
+                yield event.plain_result("菜谱库好像空了，请检查插件数据。")
+                return
+            lines.append(f"🍽️ 为你推荐：{recipe['name']}")
+            lines.append(f"  分类：{recipe['category']} | 难度：{recipe['difficulty']}")
+            ingredients = "、".join(recipe.get("ingredients", [])[:8])
+            lines.append(f"  食材：{ingredients}")
+            if recipe.get("spicy"):
+                lines.append("  🌶️ 这道有点辣，正好")
+            lines.append(f"  想看做法？发送 /怎么做 {recipe['name']}")
+            yield event.plain_result("\n".join(lines))
+            return
+
+        meal = self.engine.recommend_meal(emotion)
+        if meal is None:
+            yield event.plain_result("菜谱库好像空了，请检查插件数据。")
+            return
+
+        lines.append("🍽️ 为你推荐套餐：")
+        main = meal["main"]
+        spicy = " 🌶️" if main.get("spicy") else ""
+        lines.append(f"  主菜：{main['name']}（{main['category']}）{spicy}")
+        if meal.get("staple"):
+            lines.append(f"  主食：{meal['staple']['name']}（{meal['staple']['category']}）")
+        if meal.get("side"):
+            lines.append(f"  配菜：{meal['side']['name']}（{meal['side']['category']}）")
+        if meal.get("dessert"):
+            lines.append(f"  甜品：{meal['dessert']['name']}（{meal['dessert']['category']}）")
         if mood_cfg.get("reply"):
             lines.append(f"  {mood_cfg['reply']}")
-        lines.append(f"  想看做法？发送 /怎么做 {recipe['name']}")
+        lines.append("  想看做法？发送 /怎么做 菜名")
         yield event.plain_result("\n".join(lines))
 
     def _bare_group_text(self, event: AstrMessageEvent) -> bool:
@@ -185,6 +207,73 @@ class SoulSyncBistroPlugin(Star):
             return
         logger.info("心旅小馆: 无前缀触发放行，执行推荐")
         async for r in self.eat_what(event):
+            yield r
+
+    @filter.command("喝点啥", alias={"喝啥", "喝什么", "喝点什么", "想喝点啥"})
+    async def drink_what(self, event: AstrMessageEvent):
+        """按最近情绪推荐一杯饮品。用法：/喝点啥"""
+        mood = self._current_mood() if self.enable_mood else None
+        emotion = mood["emotion"] if mood else "平静"
+        drink = self.engine.recommend_drink(emotion if emotion != "平静" else None)
+        if drink is None:
+            yield event.plain_result("饮品库好像空了，请检查插件数据。")
+            return
+
+        mood_cfg = self.engine.mood_mapping.get(emotion, {})
+        emoji = EMOTION_EMOJI.get(emotion, "")
+        lines = [f"{emoji} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"]
+        if mood and mood["snippet"]:
+            lines.append(f"  SoulSync 说：「{mood['snippet'][:50]}…」")
+        lines.append("")
+        lines.append(f"🥤 为你推荐饮品：{drink['name']}")
+        ingredients = "、".join(drink.get("ingredients", [])[:8])
+        lines.append(f"  食材：{ingredients}")
+        if mood_cfg.get("reply"):
+            lines.append(f"  {mood_cfg['reply']}")
+        lines.append(f"  想看做法？发送 /怎么做 {drink['name']}")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.regex(r"喝点啥|喝什么|喝啥")
+    async def drink_what_bare(self, event: AstrMessageEvent):
+        """群聊纯文本说「喝点啥/喝什么」也能触发饮品推荐。"""
+        if not self._bare_group_text(event):
+            return
+        async for r in self.drink_what(event):
+            yield r
+
+    @filter.command("解馋", alias={"馋了", "嘴馋", "解解馋", "想吃零食"})
+    async def snack_craving(self, event: AstrMessageEvent, count: int = 2):
+        """按最近情绪推荐解馋小食（小吃/甜品/炸鸡）。用法：/解馋 [数量]"""
+        mood = self._current_mood() if self.enable_mood else None
+        emotion = mood["emotion"] if mood else "平静"
+        picks = self.engine.recommend_snacks(
+            count, emotion if emotion != "平静" else None
+        )
+        if not picks:
+            yield event.plain_result("零食库好像空了，请检查插件数据。")
+            return
+
+        mood_cfg = self.engine.mood_mapping.get(emotion, {})
+        emoji = EMOTION_EMOJI.get(emotion, "")
+        lines = [f"{emoji} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"]
+        if mood and mood["snippet"]:
+            lines.append(f"  SoulSync 说：「{mood['snippet'][:50]}…」")
+        lines.append("")
+        lines.append(f"🍟 解馋推荐 {len(picks)} 样：")
+        for r in picks:
+            spicy = " 🌶️" if r.get("spicy") else ""
+            lines.append(f"  · {r['name']}（{r['category']}）{spicy}")
+        if mood_cfg.get("reply"):
+            lines.append(f"  {mood_cfg['reply']}")
+        lines.append("  想吃哪个？发送 /怎么做 名字")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.regex(r"解馋|馋了|嘴馋")
+    async def snack_craving_bare(self, event: AstrMessageEvent):
+        """群聊纯文本说「解馋/馋了/嘴馋」也能触发小食推荐。"""
+        if not self._bare_group_text(event):
+            return
+        async for r in self.snack_craving(event):
             yield r
 
     @filter.command("菜谱搜索", alias={"找菜"})

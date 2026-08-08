@@ -131,6 +131,17 @@ NON_FOOD_KEYWORDS = (
     "做法步骤", "详细做法", "最正宗",
 )
 
+# 饮品名称关键词（用于识别未打「饮品」tag 的存量菜谱）
+DRINK_KEYWORDS = (
+    "奶茶", "咖啡", "奶昔", "果汁", "豆浆", "酸梅汤", "凉茶", "冰沙",
+    "莫吉托", "mojito", "气泡水", "水果茶", "热巧克力", "姜撞奶",
+    "双皮奶", "酒酿", "杨枝甘露", "糖水", "果茶", "花茶", "冬瓜茶",
+    "酸奶饮料", "绿豆汤", "红豆汤", "蜂蜜柠檬", "抹茶拿铁",
+)
+
+# 解馋（零食/小吃）标签判定
+SNACK_TAGS = ("小吃", "零食", "炸物", "甜品", "烧烤", "糖水", "糕点", "面包")
+
 
 class RecipeEngine:
     """菜谱加载、检索与推荐引擎"""
@@ -324,6 +335,84 @@ class RecipeEngine:
         picks = self._rng.sample(others, min(count - (1 if mood_pick else 0), len(others)))
         result = ([mood_pick] if mood_pick else []) + picks
         return result[:count]
+
+    # ────────────────────── 饮品 / 解馋 / 套餐 ──────────────────────
+
+    def is_drink(self, recipe: Dict) -> bool:
+        """判断是否饮品：优先「饮品」tag，兜底按名称关键词。"""
+        if any(str(t) == "饮品" for t in recipe.get("tags") or []):
+            return True
+        name = str(recipe.get("name", "")).lower()
+        return any(kw in name for kw in DRINK_KEYWORDS)
+
+    def drink_pool(self) -> List[Dict]:
+        """全部饮品候选（分类限甜品零食类，排除主食/菜肴误判）。"""
+        return [r for r in self.recipes if self.is_drink(r)]
+
+    def recommend_drink(self, emotion: Optional[str] = None) -> Optional[Dict]:
+        """按情绪推荐饮品；无情绪或未命中时回退随机饮品。"""
+        pool = self.drink_pool()
+        if not pool:
+            return None
+        if emotion:
+            mood_pool = [r for r in pool if self.is_mood_match(r, emotion)]
+            if mood_pool:
+                return self._rng.choice(mood_pool)
+        return self._rng.choice(pool)
+
+    def is_snack(self, recipe: Dict) -> bool:
+        """判断是否解馋零食：甜品零食分类或命中零食标签。"""
+        if recipe.get("category") == "甜品零食":
+            return True
+        tags = [str(t).lower() for t in recipe.get("tags") or []]
+        return any(t in SNACK_TAGS for t in tags)
+
+    def snack_pool(self) -> List[Dict]:
+        return [r for r in self.recipes if self.is_snack(r)]
+
+    def recommend_snacks(
+        self, count: int, emotion: Optional[str] = None
+    ) -> List[Dict]:
+        """随机推荐 count 样解馋零食；给定情绪时优先情绪适配。"""
+        pool = self.snack_pool()
+        if not pool:
+            return []
+        count = max(1, min(int(count), 6))
+        if emotion:
+            mood_pool = [r for r in pool if self.is_mood_match(r, emotion)]
+            if mood_pool:
+                first = self._rng.choice(mood_pool)
+                rest = [r for r in pool if r is not first]
+                picks = self._rng.sample(rest, min(count - 1, len(rest)))
+                return [first] + picks
+        return self._rng.sample(pool, min(count, len(pool)))
+
+    def recommend_meal(self, emotion: Optional[str] = None) -> Optional[Dict]:
+        """推荐套餐：情绪主菜 + 主食 + 配菜（汤/凉菜）+ 甜品。"""
+        meal = {}
+        main = self.recommend_for_mood(emotion or "平静")
+        if main is None:
+            return None
+        meal["main"] = main
+
+        staple_pool = [r for r in self.recipes if r.get("category") == "主食"]
+        if staple_pool:
+            meal["staple"] = self._rng.choice(staple_pool)
+
+        side_pool = [
+            r for r in self.recipes
+            if r.get("category") in ("汤羹", "凉菜") and r is not main
+        ]
+        if side_pool:
+            meal["side"] = self._rng.choice(side_pool)
+
+        dessert_pool = [
+            r for r in self.recipes
+            if r.get("category") == "甜品零食" and r is not main
+        ]
+        if dessert_pool:
+            meal["dessert"] = self._rng.choice(dessert_pool)
+        return meal
 
     # ────────────────────── 辅助 ──────────────────────
 

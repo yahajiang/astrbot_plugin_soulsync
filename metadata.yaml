@@ -1,6 +1,6 @@
 name: astrbot_plugin_soulsync_bistro
 display_name: 心旅小馆
-desc: 根据 SoulSync 检测到的聊天情绪（喜悦/悲伤/愤怒/焦虑/期待）推荐本地 933 道菜谱。自动截取 LLM 回复分析情绪并缓存快照，支持 /吃点啥、/菜谱搜索、/怎么做、/随机推荐、/心馆 状态。全部数据本地存储，运行时零网络。
-version: v1.0.4
+desc: 根据 SoulSync 检测到的聊天情绪（喜悦/悲伤/愤怒/焦虑/期待）推荐本地 1804 道菜谱（含套餐/饮品/解馋推荐）。自动截取 LLM 回复分析情绪并缓存快照，支持 /吃点啥、/喝点啥、/解馋、/菜谱搜索、/怎么做、/随机推荐、/心馆 状态。全部数据本地存储，运行时零网络。
+version: v1.1.0
 author: Yahajiang
 repo: https://github.com/yahajiang/astrbot_plugin_soulsync/tree/soulsync-bistro

@@ -1,4 +1,4 @@
-"""astrbot_plugin_soulsync_bistro 测试
+"""astrbot_plugin_soulsync_bistro_心旅小馆 测试
 
 不依赖真实 AstrBot：通过 sys.modules 注入桩模块后导入插件 main.py。
 覆盖：
@@ -28,8 +28,8 @@ def _make_logger():
 def install_stubs():
     """注入 AstrBot 桩模块"""
     for mod in list(sys.modules):
-        if mod == "astrbot_plugin_soulsync_bistro" or mod.startswith(
-            "astrbot_plugin_soulsync_bistro."
+        if mod == "astrbot_plugin_soulsync_bistro_心旅小馆" or mod.startswith(
+            "astrbot_plugin_soulsync_bistro_心旅小馆."
         ) or mod == "astrbot" or mod.startswith("astrbot."):
             sys.modules.pop(mod, None)
 
@@ -105,7 +105,7 @@ class _FakeResponse:
 
 
 def test_emotion_detection():
-    from astrbot_plugin_soulsync_bistro.emotion_analyzer import analyze
+    from astrbot_plugin_soulsync_bistro_心旅小馆.emotion_analyzer import analyze
 
     cases = {
         "今天太开心了，哈哈哈哈！": "喜悦",
@@ -120,7 +120,7 @@ def test_emotion_detection():
 
 
 def test_emotion_negation():
-    from astrbot_plugin_soulsync_bistro.emotion_analyzer import analyze
+    from astrbot_plugin_soulsync_bistro_心旅小馆.emotion_analyzer import analyze
 
     r = analyze("我不难过，只是有点累")
     assert r.emotion != "悲伤", f"否定词应抵消: {r.emotion}"
@@ -130,7 +130,7 @@ def test_emotion_negation():
 
 
 def test_emotion_confidence():
-    from astrbot_plugin_soulsync_bistro.emotion_analyzer import analyze
+    from astrbot_plugin_soulsync_bistro_心旅小馆.emotion_analyzer import analyze
 
     r = analyze("我好开心好开心好开心！")
     assert r.emotion == "喜悦"
@@ -139,7 +139,7 @@ def test_emotion_confidence():
 
 
 def test_emotion_empty_text():
-    from astrbot_plugin_soulsync_bistro.emotion_analyzer import analyze
+    from astrbot_plugin_soulsync_bistro_心旅小馆.emotion_analyzer import analyze
 
     assert analyze("").emotion == "平静"
     assert analyze(None).emotion == "平静"
@@ -149,7 +149,7 @@ def test_emotion_empty_text():
 
 
 def test_engine_loads_recipes():
-    from astrbot_plugin_soulsync_bistro.recipe_engine import RecipeEngine
+    from astrbot_plugin_soulsync_bistro_心旅小馆.recipe_engine import RecipeEngine
 
     engine = RecipeEngine()
     assert engine.total() >= 900, f"菜谱应 >= 900 道，实际 {engine.total()}"
@@ -160,7 +160,7 @@ def test_engine_loads_recipes():
 
 
 def test_engine_search_and_category():
-    from astrbot_plugin_soulsync_bistro.recipe_engine import RecipeEngine
+    from astrbot_plugin_soulsync_bistro_心旅小馆.recipe_engine import RecipeEngine
 
     engine = RecipeEngine()
     hits = engine.search("番茄炒蛋")
@@ -177,7 +177,7 @@ def test_engine_search_and_category():
 
 
 def test_engine_mood_recommend():
-    from astrbot_plugin_soulsync_bistro.recipe_engine import RecipeEngine
+    from astrbot_plugin_soulsync_bistro_心旅小馆.recipe_engine import RecipeEngine
 
     engine = RecipeEngine()
     r = engine.recommend_for_mood("悲伤")
@@ -193,7 +193,7 @@ def test_engine_mood_recommend():
 
 
 def test_engine_format_steps():
-    from astrbot_plugin_soulsync_bistro.recipe_engine import RecipeEngine
+    from astrbot_plugin_soulsync_bistro_心旅小馆.recipe_engine import RecipeEngine
 
     engine = RecipeEngine()
     r = engine.find_by_name("番茄炒蛋")
@@ -202,12 +202,33 @@ def test_engine_format_steps():
     assert "\n2." in text, "应有多步"
 
 
+def test_engine_drink_snack_meal():
+    from astrbot_plugin_soulsync_bistro_心旅小馆.recipe_engine import RecipeEngine
+
+    engine = RecipeEngine()
+    drinks = engine.drink_pool()
+    assert len(drinks) >= 10, f"饮品池应 >= 10，实际 {len(drinks)}"
+    assert all(engine.is_drink(r) for r in drinks)
+    d = engine.recommend_drink("悲伤")
+    assert d is not None and engine.is_drink(d)
+
+    snacks = engine.snack_pool()
+    assert len(snacks) >= 50, f"解馋池应 >= 50，实际 {len(snacks)}"
+    picks = engine.recommend_snacks(3, emotion="愤怒")
+    assert len(picks) == 3 and all(engine.is_snack(r) for r in picks)
+
+    meal = engine.recommend_meal("愤怒")
+    assert meal is not None and "main" in meal
+    assert meal["main"]["name"] and meal["staple"]["name"], "套餐应含主菜与主食"
+    assert meal["side"]["name"] and meal["dessert"]["name"], "套餐应含配菜与甜品"
+
+
 # ────────────────────── main 插件 ──────────────────────
 
 
 def _make_plugin(tmp_dir):
     install_stubs()
-    from astrbot_plugin_soulsync_bistro.main import SoulSyncBistroPlugin
+    from astrbot_plugin_soulsync_bistro_心旅小馆.main import SoulSyncBistroPlugin
 
     return SoulSyncBistroPlugin(None, {})
 
@@ -431,6 +452,98 @@ def test_eat_what_bare():
         asyncio.run(run())
 
 
+def test_command_eat_what_meal():
+    """/吃点啥 无分类应推荐套餐；指定分类仍推荐单菜"""
+    with tempfile.TemporaryDirectory() as td:
+        plugin = _make_plugin(td)
+        plugin._mood_cache["last"] = ("期待", 0.9, "好期待", time.time())
+
+        async def run():
+            ev = _MsgEvent("/吃点啥")
+            out = [x async for x in plugin.eat_what(ev, "")]
+            text = out[0]
+            assert "为你推荐套餐" in text, f"应推荐套餐: {text}"
+            assert "主菜" in text and "主食" in text, "套餐应含主菜与主食"
+
+            out = [x async for x in plugin.eat_what(ev, "甜品")]
+            assert "为你推荐" in out[0] and "甜品" in out[0]
+
+        import asyncio
+
+        asyncio.run(run())
+
+
+def test_command_drink_what():
+    """/喝点啥 应推荐饮品，含情绪信息"""
+    with tempfile.TemporaryDirectory() as td:
+        plugin = _make_plugin(td)
+        plugin._mood_cache["last"] = ("悲伤", 0.9, "好难过", time.time())
+
+        async def run():
+            ev = _MsgEvent("/喝点啥")
+            out = [x async for x in plugin.drink_what(ev)]
+            assert len(out) == 1
+            text = out[0]
+            assert "为你推荐饮品" in text, f"应推荐饮品: {text}"
+            assert "悲伤" in text, "应带情绪信息"
+            name = text.split("饮品：")[1].split("\n")[0]
+            r = plugin.engine.find_by_name(name)
+            assert r is not None and plugin.engine.is_drink(r)
+
+        import asyncio
+
+        asyncio.run(run())
+
+
+def test_command_snack_craving():
+    """/解馋 应推荐零食小吃"""
+    with tempfile.TemporaryDirectory() as td:
+        plugin = _make_plugin(td)
+        plugin._mood_cache["last"] = ("愤怒", 0.9, "气死了", time.time())
+
+        async def run():
+            ev = _MsgEvent("/解馋 3")
+            out = [x async for x in plugin.snack_craving(ev, 3)]
+            assert len(out) == 1
+            text = out[0]
+            assert "解馋推荐 3 样" in text, f"应推荐 3 样零食: {text}"
+
+        import asyncio
+
+        asyncio.run(run())
+
+
+def test_drink_snack_bare():
+    """群聊纯文本「喝点啥/解馋」无斜杠触发；斜杠/私聊不重复触发"""
+    with tempfile.TemporaryDirectory() as td:
+        plugin = _make_plugin(td)
+
+        async def run():
+            ev = _MsgEvent("晚上喝点啥好呢")
+            out = [x async for x in plugin.drink_what_bare(ev)]
+            assert len(out) == 1 and "饮品" in out[0], f"群聊纯文本应触发饮品: {out}"
+
+            ev_slash = _MsgEvent("/喝点啥", first_text="/喝点啥")
+            out = [x async for x in plugin.drink_what_bare(ev_slash)]
+            assert len(out) == 0, "带斜杠不应重复触发"
+
+            ev_private = _MsgEvent("喝点啥", private=True)
+            out = [x async for x in plugin.drink_what_bare(ev_private)]
+            assert len(out) == 0, "私聊不应重复触发"
+
+            ev2 = _MsgEvent("好馋啊想吃零食")
+            out = [x async for x in plugin.snack_craving_bare(ev2)]
+            assert len(out) == 1 and "解馋" in out[0], f"群聊纯文本应触发解馋: {out}"
+
+            ev2_slash = _MsgEvent("/解馋", first_text="/解馋")
+            out = [x async for x in plugin.snack_craving_bare(ev2_slash)]
+            assert len(out) == 0, "带斜杠不应重复触发"
+
+        import asyncio
+
+        asyncio.run(run())
+
+
 def main():
     tests = [
         test_emotion_detection,
@@ -448,10 +561,15 @@ def main():
         test_command_eat_what,
         test_command_eat_what_no_mood,
         test_eat_what_bare,
+        test_command_eat_what_meal,
+        test_command_drink_what,
+        test_command_snack_craving,
+        test_drink_snack_bare,
         test_command_search,
         test_command_how_to_cook,
         test_command_random,
         test_command_status,
+        test_engine_drink_snack_meal,
     ]
     passed = 0
     for t in tests:
