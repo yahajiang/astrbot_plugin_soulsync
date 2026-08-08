@@ -67,10 +67,10 @@ def test_is_complete():
 
 
 def test_random_questions():
-    """测试随机问题选择"""
+    """测试随机问题选择（现在返回1个问题）"""
     manager = IcebreakerManager()
     questions = manager._select_random_questions()
-    assert len(questions) == 3
+    assert len(questions) == 1
 
 
 if __name__ == "__main__":

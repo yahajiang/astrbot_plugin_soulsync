@@ -133,16 +133,15 @@ class AntiInterferenceManager:
         return text.strip()
 
     def _has_external_info(self, response: str, user_input: str) -> bool:
-        """检测是否包含外部信息"""
-        # 简单实现：检查是否有用户输入中没有的实义词
+        """检测是否包含外部信息（新词过多=偏离镜像）"""
         user_words = set(re.findall(r"[\u4e00-\u9fa5]+", user_input))
         response_words = set(re.findall(r"[\u4e00-\u9fa5]+", response))
 
         # 排除功能词
-        function_words = {"你说", "你", "我", "的", "了", "在", "是", "有", "和"}
+        function_words = {"你说", "说", "你", "我", "的", "了", "在", "是", "有", "和"}
         user_words -= function_words
 
-        # 检查是否有新词
+        # 检查是否有过多新词（镜像回复应尽量复用用户原词）
         new_words = response_words - user_words - function_words
         return len(new_words) > 3
 

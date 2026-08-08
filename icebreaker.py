@@ -87,8 +87,8 @@ class IcebreakerManager:
             return self._handle_random_question(session, user_input)
 
     def is_complete(self, session: UserSession) -> bool:
-        """检查破冰是否完成"""
-        return session.icebreaker_stage >= 6
+        """检查破冰是否完成（3固定 + 1随机 = 4问）"""
+        return session.icebreaker_stage >= 4
 
     def get_next_question(self, session: UserSession) -> Optional[str]:
         """获取下一个问题"""
@@ -97,8 +97,8 @@ class IcebreakerManager:
         if stage < 3:
             # 固定三问
             return FIXED_QUESTIONS[stage]
-        elif stage < 6:
-            # 随机三问
+        elif stage < 4:
+            # 随机一问
             if not session.icebreaker_random_questions:
                 session.icebreaker_random_questions = self._select_random_questions()
             return session.icebreaker_random_questions[stage - 3]
@@ -119,7 +119,7 @@ class IcebreakerManager:
         if len(nickname) > 8:
             nickname = nickname[:8]
         session.nickname = nickname
-        return f"好，{nickname}。"
+        return f"{nickname}，我记住了。"
 
     def _handle_one_sentence(self, session: UserSession, user_input: str) -> str:
         """处理一句话"""
@@ -128,7 +128,7 @@ class IcebreakerManager:
         if any(w in user_input for w in skip_words) or len(user_input.strip()) <= 1:
             return "好，下一个。"
 
-        return "嗯，这句话我听见了。"
+        return "这句话我听见了。"
 
     def _handle_three_words(self, session: UserSession, user_input: str) -> str:
         """处理三个词"""
@@ -137,7 +137,7 @@ class IcebreakerManager:
         if any(w in user_input for w in skip_words) or len(user_input.strip()) <= 1:
             return "好，跳过。"
 
-        return "好。"
+        return "三个词，都收到了。"
 
     def _handle_random_question(self, session: UserSession, user_input: str) -> str:
         """处理随机问题"""
@@ -150,18 +150,11 @@ class IcebreakerManager:
         if "算了" in user_input and "不想说" in user_input:
             return "你刚才差点说出来了。"
 
-        return "嗯。"
+        return "嗯，收到了。"
 
     def _select_random_questions(self) -> List[str]:
-        """选择随机三问"""
-        # 至少一个暖区，最多两个冷区
-        warm_count = random.randint(1, 2)
-        cold_count = 3 - warm_count
-
-        warm_questions = random.sample(WARM_QUESTIONS, min(warm_count, len(WARM_QUESTIONS)))
-        cold_questions = random.sample(COLD_QUESTIONS, min(cold_count, len(COLD_QUESTIONS)))
-
-        # 随机排序
-        questions = warm_questions + cold_questions
-        random.shuffle(questions)
-        return questions
+        """选择随机一问（暖区或冷区各50%概率）"""
+        if random.random() < 0.5:
+            return [random.choice(WARM_QUESTIONS)]
+        else:
+            return [random.choice(COLD_QUESTIONS)]
