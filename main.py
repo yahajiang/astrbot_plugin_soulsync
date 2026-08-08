@@ -95,11 +95,12 @@ class SoulMirror(Star):
     #  命令处理
     # ═══════════════════════════════════════════════════════════════
 
-    @filter.regex(r"^/心镜\s*(.*)?$")
+    @filter.regex(r"^心镜\s*(.*)?$")
     async def handle_mirror_command(self, event: AstrMessageEvent):
         """处理 /心镜 命令"""
         user_id = event.get_sender_id()
-        command_text = event.message_str.replace("/心镜", "").strip()
+        # AstrBot 已在 wake_prefix 阶段剥离 "/"，此处按 "心镜" 处理
+        command_text = event.message_str[len("心镜"):].strip()
 
         # 解析命令
         action, args = self.command_router.parse(command_text)
