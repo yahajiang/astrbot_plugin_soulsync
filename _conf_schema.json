@@ -1,0 +1,20 @@
+{
+    "enable_mood_link": {
+        "description": "情绪联动",
+        "type": "bool",
+        "hint": "开启后截取 SoulSync 的 LLM 回复并分析情绪，用于推荐与菜谱标注；关闭则纯随机推荐",
+        "default": true
+    },
+    "mood_ttl_minutes": {
+        "description": "情绪快照有效期（分钟）",
+        "type": "int",
+        "hint": "分析出的情绪快照保留时间，超过后视为过期重新随机（限制 1-1440）",
+        "default": 30
+    },
+    "max_search_results": {
+        "description": "搜索结果显示条数",
+        "type": "int",
+        "hint": "/菜谱搜索 最多返回的条目数（限制 1-20）",
+        "default": 8
+    }
+}
