@@ -1,0 +1,1308 @@
+[
+ {
+  "name": "电饭煲版广式腊肠煲饭",
+  "category": "主食",
+  "ingredients": [
+   "腊肠",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "广式"
+  ],
+  "methods": [
+   "煲"
+  ],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1NE411Q7Jj",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版烧鸡",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉",
+   "洋葱",
+   "菌菇"
+  ],
+  "steps": [],
+  "tags": [
+   "好吃"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1T54y1U7Cu",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲焖面",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "面食"
+  ],
+  "steps": [],
+  "tags": [
+   "筋道"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV14b411q7rM",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版番茄牛腩焖饭",
+  "category": "主食",
+  "ingredients": [
+   "牛肉",
+   "番茄",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "懒人"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Bv411C7X3",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版蜜汁鸡翅",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "懒人"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1dj411f7sR",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "电饭煲版南瓜鸡腿焖饭",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉",
+   "洋葱",
+   "菌菇",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "懒人"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Bv411C7X3",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版土豆排骨焖饭",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "土豆",
+   "米",
+   "腊肠"
+  ],
+  "steps": [],
+  "tags": [
+   "懒人"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Bv411C7X3",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版香菇腊肠焖饭",
+  "category": "主食",
+  "ingredients": [
+   "腊肠",
+   "菌菇",
+   "洋葱",
+   "米",
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "懒人"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Bv411C7X3",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版香卤牛肉",
+  "category": "主食",
+  "ingredients": [
+   "牛肉",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "卤味"
+  ],
+  "methods": [
+   "煮"
+  ],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1dR4y1F7H2",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲叉烧排骨",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "洋葱"
+  ],
+  "steps": [],
+  "tags": [
+   "下饭"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Ab4y1p7dw",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版红烧肉",
+  "category": "主食",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1SW411t7AX",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版可乐鸡翅",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV16J411U79k",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版蛋糕（废手版）",
+  "category": "主食",
+  "ingredients": [
+   "鸡蛋",
+   "面食"
+  ],
+  "steps": [],
+  "tags": [
+   "香软"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1H7411V7Pz",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "电饭煲卤菜（开店级别）",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉",
+   "鸡蛋",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "小吃"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1ZA411E7KT",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲卤肉蛋豆腐",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉",
+   "鸡蛋",
+   "豆腐",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "小吃"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1aM4y1L7QR",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版罗宋汤",
+  "category": "汤羹",
+  "ingredients": [
+   "牛肉",
+   "番茄",
+   "洋葱",
+   "芹菜",
+   "胡萝卜",
+   "土豆",
+   "包菜",
+   "香肠"
+  ],
+  "steps": [],
+  "tags": [
+   "杂烩"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV16Q4y1m7nU",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "电饭煲版一只番茄饭",
+  "category": "主食",
+  "ingredients": [
+   "土豆",
+   "胡萝卜",
+   "香肠",
+   "番茄",
+   "鸡蛋",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "杂烩"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1dj411f7sR",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲茄子烧肉焖饭",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "茄子",
+   "番茄",
+   "土豆",
+   "洋葱",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "杂烩"
+  ],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV18T4y1c7s1",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版茶叶蛋",
+  "category": "主食",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV12W411R7LA",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版番茄炖排骨",
+  "category": "主食",
+  "ingredients": [
+   "番茄",
+   "猪肉",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1av411r7mL",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版番茄牛腩",
+  "category": "主食",
+  "ingredients": [
+   "番茄",
+   "牛肉",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV18i4y1g7sp",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版干妈炒泡面",
+  "category": "主食",
+  "ingredients": [
+   "方便面",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1kW411r7Py",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版胡萝卜腊肠饭",
+  "category": "主食",
+  "ingredients": [
+   "胡萝卜",
+   "腊肠",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1tW411b7LS",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版卤鸡翅",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "卤"
+  ],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1UK4y1Y7aC",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版焖鸡腿土豆",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉",
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1tR4y1g7kv",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版蜜汁叉烧肉",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1ci4y1j7Rz",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "电饭煲版蜜汁鸡腿",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1A4411k7iz",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "电饭煲版牛腩萝卜清汤",
+  "category": "汤羹",
+  "ingredients": [
+   "牛肉",
+   "白萝卜"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV16Q4y1m7nU",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "电饭煲版茄子猪肉焖面",
+  "category": "主食",
+  "ingredients": [
+   "茄子",
+   "猪肉",
+   "面食"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "复杂",
+  "bv": "BV1ib41137ig",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版肉饼蛋",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV13W411a7Ax",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版上海菜饭",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "腊肠",
+   "米",
+   "包菜",
+   "莴笋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1mW411x7F7",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版蒜蓉排骨",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Dv411T7bD",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版土豆香肠焖饭",
+  "category": "主食",
+  "ingredients": [
+   "土豆",
+   "香肠",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Kv411q7BM",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲版吐司（尽量不做，废手）",
+  "category": "主食",
+  "ingredients": [
+   "鸡蛋",
+   "面包"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "困难",
+  "bv": "BV1vY41137F1",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲叉烧肉（叉烧酱版）",
+  "category": "主食",
+  "ingredients": [
+   "猪肉",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV127411W75D",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲温泉蛋",
+  "category": "主食",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1EJ411Y7fU",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭煲窝蛋牛肉饭",
+  "category": "主食",
+  "ingredients": [
+   "牛肉",
+   "鸡蛋",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1aA411q7b9",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "电饭锅酱牛肉",
+  "category": "主食",
+  "ingredients": [
+   "牛肉",
+   "米饭"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "电饭煲"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1sv411C7qW",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "烤箱版M记同款薯条",
+  "category": "素菜",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "同款"
+  ],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1nA411P7aX",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空心小薯片",
+  "category": "甜品零食",
+  "ingredients": [
+   "土豆",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "零食"
+  ],
+  "methods": [
+   "烘"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1N5411D79P",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "气泡小土豆",
+  "category": "甜品零食",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "零食"
+  ],
+  "methods": [
+   "烘"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1sL41137jN",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "烤箱版M记同款麦乐鸡",
+  "category": "荤菜",
+  "ingredients": [
+   "土豆",
+   "鸡肉",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "同款"
+  ],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV19v411J7MG",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "烤箱版KFC同款香辣鸡翅",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "同款"
+  ],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1jA4y197RR",
+  "spicy": true,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦",
+   "愤怒"
+  ]
+ },
+ {
+  "name": "烤箱版M记同款薯饼",
+  "category": "主食",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "同款"
+  ],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1qy4y1y7Mn",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "烤箱烧烤",
+  "category": "荤菜",
+  "ingredients": [
+   "土豆",
+   "胡萝卜",
+   "花菜",
+   "西葫芦",
+   "芹菜",
+   "洋葱",
+   "莴笋",
+   "菌菇",
+   "茄子",
+   "包菜",
+   "午餐肉",
+   "香肠",
+   "鸡肉",
+   "猪肉",
+   "虾",
+   "牛肉",
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "杂烩"
+  ],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV17P4y1W7Ze",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "烤箱迎客菜",
+  "category": "荤菜",
+  "ingredients": [
+   "牛肉",
+   "茄子",
+   "鸡肉",
+   "鸡蛋",
+   "豆腐",
+   "菌菇",
+   "番茄"
+  ],
+  "steps": [],
+  "tags": [
+   "杂烩"
+  ],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1ug4y1B7CR",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "爆浆鸡腿",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烤"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "复杂",
+  "bv": "BV1ju411X7mx",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "BBQ烤鸡腿",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烤"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Zr4y1B7UQ",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "BBQ烟熏手撕猪肉",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烤"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "复杂",
+  "bv": "BV1DV411x7SH",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "馋嘴烤箱版烧烤",
+  "category": "荤菜",
+  "ingredients": [
+   "土豆",
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烤"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1wv411h7d6",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "脆皮五花肉和蜜汁叉烧",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烤"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV17u411i7jF",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦",
+   "悲伤"
+  ]
+ },
+ {
+  "name": "法棍",
+  "category": "素菜",
+  "ingredients": [
+   "面包"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Kc411h7eJ",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "汉堡面包",
+  "category": "主食",
+  "ingredients": [
+   "鸡蛋",
+   "面包"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1ga411h7cw",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "火山熔岩蛋",
+  "category": "荤菜",
+  "ingredients": [
+   "土豆",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烘"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "困难",
+  "bv": "BV1Xy4y1L7ok",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "烤布丁",
+  "category": "甜品零食",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烘"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1TT4y127vu",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦",
+   "悲伤"
+  ]
+ },
+ {
+  "name": "烤箱版爆浆鸡腿",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "复杂",
+  "bv": "BV1ju411X7mx",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "烤箱版橙香鸡翅",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烤"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Mb4y1Q7DU",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "烤箱版脆皮五花肉",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烤"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1VS4y137dE",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "烤箱版黑椒牛肉土豆焖饭",
+  "category": "主食",
+  "ingredients": [
+   "牛肉",
+   "土豆",
+   "胡萝卜",
+   "米",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "普通",
+  "bv": "BV14x411D7uN",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "烤箱版烤串",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉",
+   "花菜"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "烤"
+  ],
+  "tools": [
+   "烤箱"
+  ],
+  "difficulty": "简单",
+  "bv": "BV17P4y1W7Ze",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ }
+]

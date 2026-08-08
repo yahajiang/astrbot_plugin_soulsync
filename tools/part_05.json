@@ -1,0 +1,1407 @@
+[
+ {
+  "name": "葱油黄瓜",
+  "category": "素菜",
+  "ingredients": [
+   "黄瓜"
+  ],
+  "steps": [],
+  "tags": [
+   "国宴菜"
+  ],
+  "methods": [],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1954y1b7dv",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "黄瓜翡翠羹",
+  "category": "粥羹",
+  "ingredients": [
+   "黄瓜",
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "国宴菜"
+  ],
+  "methods": [
+   "煮"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "困难",
+  "bv": "BV1y3411W7Mz",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "烧汁牛肉粒",
+  "category": "荤菜",
+  "ingredients": [
+   "牛肉",
+   "洋葱",
+   "菌菇"
+  ],
+  "steps": [],
+  "tags": [
+   "国宴菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1NU4y1d7ot",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "火烧云油焖鸡",
+  "category": "荤菜",
+  "ingredients": [
+   "土豆",
+   "番茄",
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "好吃"
+  ],
+  "methods": [
+   "煮"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1fY41187Xo",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "蒜香口蘑牛肉粒",
+  "category": "荤菜",
+  "ingredients": [
+   "菌菇",
+   "牛肉"
+  ],
+  "steps": [],
+  "tags": [
+   "荤素搭配"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Nm4y197ev",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "6阶番茄炒蛋",
+  "category": "荤菜",
+  "ingredients": [
+   "番茄",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "困难",
+  "bv": "BV1Py4y1S7EF",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "白萝卜烧鸡块",
+  "category": "荤菜",
+  "ingredients": [
+   "白萝卜",
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "烧"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1U3411e7Jv",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "番茄炒蛋",
+  "category": "荤菜",
+  "ingredients": [
+   "番茄",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1rf4y1872R",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "番茄鸡蛋",
+  "category": "荤菜",
+  "ingredients": [
+   "番茄",
+   "鸡蛋",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV11y4y167Wa",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "番茄土豆炖牛腩",
+  "category": "荤菜",
+  "ingredients": [
+   "番茄",
+   "土豆",
+   "牛肉"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炖"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1344y1n73V",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "回锅肉炒包菜",
+  "category": "荤菜",
+  "ingredients": [
+   "包菜",
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1EK411s75a",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "腊肠蒸蛋",
+  "category": "荤菜",
+  "ingredients": [
+   "腊肠",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "蒸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Zp4y1Q7wu",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "拍辣椒炒午餐肉",
+  "category": "荤菜",
+  "ingredients": [
+   "午餐肉"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1K4411Z7do",
+  "spicy": true,
+  "vegetarian": false,
+  "mood_hint": [
+   "愤怒"
+  ]
+ },
+ {
+  "name": "青椒炒腊肠",
+  "category": "荤菜",
+  "ingredients": [
+   "腊肠",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1ZK4y1L7pp",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "热炒莴笋叶",
+  "category": "素菜",
+  "ingredients": [
+   "莴笋"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1xJ411M7bc",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "素蟹粉",
+  "category": "主食",
+  "ingredients": [
+   "胡萝卜",
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Zu411e7fp",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "酸辣土豆丝",
+  "category": "素菜",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1wq4y1W7QA",
+  "spicy": true,
+  "vegetarian": true,
+  "mood_hint": [
+   "愤怒"
+  ]
+ },
+ {
+  "name": "蒜蓉开背虾",
+  "category": "荤菜",
+  "ingredients": [
+   "虾"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1DR4y1p7j4",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "土豆烧包菜",
+  "category": "素菜",
+  "ingredients": [
+   "包菜",
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "烧"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Ug4y1B7Uj",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "土豆烧红肉",
+  "category": "荤菜",
+  "ingredients": [
+   "土豆",
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炖"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1fY41187Xo",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "莴笋炒蛋",
+  "category": "荤菜",
+  "ingredients": [
+   "莴笋",
+   "鸡蛋",
+   "胡萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1C7411J7cb",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "油焖大虾",
+  "category": "荤菜",
+  "ingredients": [
+   "虾",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "家常菜"
+  ],
+  "methods": [
+   "焖"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1CW411c7kP",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "陈氏醋卤面",
+  "category": "主食",
+  "ingredients": [
+   "面食",
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [
+   "家传秘方"
+  ],
+  "methods": [
+   "拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1tQ4y1M76f",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "白灼西兰花",
+  "category": "素菜",
+  "ingredients": [
+   "花菜"
+  ],
+  "steps": [],
+  "tags": [
+   "健康"
+  ],
+  "methods": [
+   "煮"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1o4411A7dC",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "芹菜牛肉卷",
+  "category": "荤菜",
+  "ingredients": [
+   "芹菜",
+   "牛肉"
+  ],
+  "steps": [],
+  "tags": [
+   "健康餐"
+  ],
+  "methods": [],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Tv411L7V9",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "减脂胡萝卜丝",
+  "category": "素菜",
+  "ingredients": [
+   "胡萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "减脂"
+  ],
+  "methods": [
+   "蒸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1UQ4y1i7JY",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "醋溜西葫芦",
+  "category": "素菜",
+  "ingredients": [
+   "西葫芦"
+  ],
+  "steps": [],
+  "tags": [
+   "开胃"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Rv411G7fD",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "餐蛋面",
+  "category": "主食",
+  "ingredients": [
+   "午餐肉",
+   "鸡蛋",
+   "方便面"
+  ],
+  "steps": [],
+  "tags": [
+   "快手菜"
+  ],
+  "methods": [
+   "煮"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1pT4y1F7p5",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "鸡蛋煎午餐肉",
+  "category": "荤菜",
+  "ingredients": [
+   "午餐肉",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "快手菜"
+  ],
+  "methods": [
+   "煎"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1aK4y177Xm",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "金针菇菜卷",
+  "category": "素菜",
+  "ingredients": [
+   "菌菇",
+   "胡萝卜",
+   "包菜"
+  ],
+  "steps": [],
+  "tags": [
+   "快手菜"
+  ],
+  "methods": [],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1aW411H7fZ",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "口蘑鸡胸肉",
+  "category": "荤菜",
+  "ingredients": [
+   "菌菇",
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "快手菜"
+  ],
+  "methods": [
+   "煎"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1AP4y1w7y6",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "茄汁西葫芦",
+  "category": "素菜",
+  "ingredients": [
+   "西葫芦",
+   "番茄"
+  ],
+  "steps": [],
+  "tags": [
+   "快手菜"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV17W411g71Q",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "番茄浓汤面",
+  "category": "汤羹",
+  "ingredients": [
+   "面食",
+   "番茄",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "懒人"
+  ],
+  "methods": [
+   "煮"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1P54y1H7oG",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "茄汁汤面",
+  "category": "汤羹",
+  "ingredients": [
+   "面食",
+   "番茄",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "懒人"
+  ],
+  "methods": [
+   "煮"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Z7411G7AW",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "清汤面",
+  "category": "汤羹",
+  "ingredients": [
+   "面食",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "懒人"
+  ],
+  "methods": [
+   "煮"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Yb411T7ED",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "鸡蛋拌包菜",
+  "category": "凉菜",
+  "ingredients": [
+   "包菜",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Q64y1B7eq",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "酱萝卜",
+  "category": "凉菜",
+  "ingredients": [
+   "白萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "腌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1BK4y1Z7rF",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "凉拌包菜",
+  "category": "凉菜",
+  "ingredients": [
+   "包菜"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1HY411n7dV",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "凉拌芹菜叶",
+  "category": "凉菜",
+  "ingredients": [
+   "芹菜"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "av976520411",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "凉拌莴笋丝",
+  "category": "凉菜",
+  "ingredients": [
+   "莴笋"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "凉拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Es411j7oy",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "凉拌西葫芦",
+  "category": "凉菜",
+  "ingredients": [
+   "西葫芦"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "凉拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV175411U7LU",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "麻酱拌西葫芦丝",
+  "category": "凉菜",
+  "ingredients": [
+   "西葫芦"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "凉拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Th411U7nW",
+  "spicy": true,
+  "vegetarian": true,
+  "mood_hint": [
+   "愤怒"
+  ]
+ },
+ {
+  "name": "炝拌芹菜",
+  "category": "凉菜",
+  "ingredients": [
+   "芹菜"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "av845641799",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "土豆拌茄子",
+  "category": "凉菜",
+  "ingredients": [
+   "土豆",
+   "茄子"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "蒸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1VT4y1J7Y8",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "香菜拌牛肉",
+  "category": "凉菜",
+  "ingredients": [
+   "牛肉"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "凉拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1144y1n7ZV",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "小菜炝拌萝卜条",
+  "category": "凉菜",
+  "ingredients": [
+   "白萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "凉菜"
+  ],
+  "methods": [
+   "拌"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1nS4y1X7tM",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "海苔虾饼",
+  "category": "主食",
+  "ingredients": [
+   "虾",
+   "胡萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "零食"
+  ],
+  "methods": [
+   "炸",
+   "煎"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "困难",
+  "bv": "BV16T4y1i78D",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "灵魂土豆丸子",
+  "category": "甜品零食",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "零食"
+  ],
+  "methods": [
+   "蒸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Z64y1674r",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "薯塔",
+  "category": "甜品零食",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "零食"
+  ],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1uF411v7SQ",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "盖码莴笋",
+  "category": "荤菜",
+  "ingredients": [
+   "莴笋",
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [
+   "清爽"
+  ],
+  "methods": [
+   "盖浇"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1aV411v7xw",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "大根烧",
+  "category": "素菜",
+  "ingredients": [
+   "白萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "日式"
+  ],
+  "methods": [
+   "烧"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1TW411e7Ln",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "期待"
+  ]
+ },
+ {
+  "name": "名古屋鸡翅",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "日式"
+  ],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1ET4y1A7Xd",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "期待"
+  ]
+ },
+ {
+  "name": "日式炖白萝",
+  "category": "素菜",
+  "ingredients": [
+   "白萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "日式"
+  ],
+  "methods": [
+   "炖"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV17b411B7H1",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "期待"
+  ]
+ },
+ {
+  "name": "炸虾天妇罗",
+  "category": "荤菜",
+  "ingredients": [
+   "虾"
+  ],
+  "steps": [],
+  "tags": [
+   "日式"
+  ],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "困难",
+  "bv": "BV1e5411t7LY",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦",
+   "期待"
+  ]
+ },
+ {
+  "name": "可乐饼",
+  "category": "主食",
+  "ingredients": [
+   "土豆",
+   "洋葱",
+   "肉",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "日式菜"
+  ],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV17x411U75q",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "期待"
+  ]
+ },
+ {
+  "name": "清炒莴笋丝",
+  "category": "素菜",
+  "ingredients": [
+   "莴笋",
+   "胡萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "爽口"
+  ],
+  "methods": [
+   "炒"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1qK411H7RL",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "莴笋泡菜",
+  "category": "素菜",
+  "ingredients": [
+   "莴笋"
+  ],
+  "steps": [],
+  "tags": [
+   "爽口"
+  ],
+  "methods": [
+   "泡菜"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1h741127rS",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "口蘑汤",
+  "category": "汤羹",
+  "ingredients": [
+   "菌菇"
+  ],
+  "steps": [],
+  "tags": [
+   "汤"
+  ],
+  "methods": [
+   "煎",
+   "炖"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1e64y1h776",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "蘑菇浓汤",
+  "category": "汤羹",
+  "ingredients": [
+   "菌菇",
+   "洋葱",
+   "芹菜"
+  ],
+  "steps": [],
+  "tags": [
+   "汤"
+  ],
+  "methods": [
+   "炖"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Ut411C7Cu",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "焦虑"
+  ]
+ },
+ {
+  "name": "KFC同款香辣鸡翅",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [
+   "同款"
+  ],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "一口大锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1A7411u7Ji",
+  "spicy": true,
+  "vegetarian": false,
+  "mood_hint": [
+   "愤怒"
+  ]
+ }
+]

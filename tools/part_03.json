@@ -1,0 +1,1318 @@
+[
+ {
+  "name": "空气炸锅虎皮凤爪",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1VR4y1s7XP",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅鸡蛋豆腐羹",
+  "category": "粥羹",
+  "ingredients": [
+   "鸡蛋",
+   "豆腐",
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Hq4y137Vu",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅减脂餐",
+  "category": "荤菜",
+  "ingredients": [
+   "菌菇",
+   "虾"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1CY4y1p7qP",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤豆腐",
+  "category": "素菜",
+  "ingredients": [
+   "豆腐"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV19L411x7bB",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤鸡腿",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Zr4y1B7UQ",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤鸡胸肉",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1dF411q7of",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤面包",
+  "category": "主食",
+  "ingredients": [
+   "面包"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1T34y1b7FS",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤蘑菇",
+  "category": "素菜",
+  "ingredients": [
+   "菌菇"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Jq4y147oM",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤牛奶",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1ub4y1C7bp",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦",
+   "悲伤"
+  ]
+ },
+ {
+  "name": "空气炸锅烤排骨",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1H3411J7TH",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤茄子",
+  "category": "素菜",
+  "ingredients": [
+   "茄子"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1gP4y1s7GJ",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤肉串",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1WY411G7aX",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤土豆",
+  "category": "素菜",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1E5411D7RE",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤五花肉",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Jq4y147oM",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅烤猪蹄",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV11q4y1Y7hW",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅辣子鸡",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1yL4y1L71E",
+  "spicy": true,
+  "vegetarian": false,
+  "mood_hint": [
+   "愤怒"
+  ]
+ },
+ {
+  "name": "空气炸锅嫩鸡排",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1L3411W7Nr",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅气泡面包",
+  "category": "主食",
+  "ingredients": [
+   "面包"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Lu411z7FK",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅全麦面包",
+  "category": "主食",
+  "ingredients": [
+   "面包"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1VY411E74H",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅肉末豆腐",
+  "category": "素菜",
+  "ingredients": [
+   "豆腐"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Ja411C75G",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅酸奶蛋糕",
+  "category": "甜品零食",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1HL4y177B3",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "空气炸锅蒜香排骨",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1v54y1B7cA",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅糖醋里脊",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1rS4y137gC",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅甜点（没酵母别选）",
+  "category": "甜品零食",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Ja411v7DK",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "空气炸锅新年硬菜",
+  "category": "荤菜",
+  "ingredients": [
+   "虾",
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Mq4y1h78M",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅早餐饼",
+  "category": "主食",
+  "ingredients": [
+   "鸡蛋",
+   "西葫芦",
+   "胡萝卜"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1mu411q715",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸低卡食材",
+  "category": "素菜",
+  "ingredients": [
+   "包菜",
+   "菌菇"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1cF411s7QH",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸豆腐",
+  "category": "素菜",
+  "ingredients": [
+   "豆腐"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1eR4y1j715",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸个荤素搭配",
+  "category": "荤菜",
+  "ingredients": [
+   "土豆",
+   "香肠",
+   "鸡肉",
+   "虾",
+   "鸡蛋",
+   "花菜"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV18q4y117Cm",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅炸鸡",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1S44y1j7YM",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸鸡翅",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV14b4y1p7XS",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸家常蔬菜",
+  "category": "荤菜",
+  "ingredients": [
+   "花菜",
+   "豆腐",
+   "鸡肉",
+   "菌菇"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1FU4y1Z7T1",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸金针菇",
+  "category": "素菜",
+  "ingredients": [
+   "菌菇"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1x4411V7at",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸茄盒",
+  "category": "荤菜",
+  "ingredients": [
+   "茄子",
+   "猪肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1xP4y1J7eJ",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸蔬菜",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡蛋",
+   "黄瓜"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1qr4y1p7BX",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸薯角",
+  "category": "素菜",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1eR4y1j715",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸薯条",
+  "category": "素菜",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1tq4y1j72x",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸素菜",
+  "category": "荤菜",
+  "ingredients": [
+   "豆腐",
+   "洋葱",
+   "茄子",
+   "菌菇",
+   "鸡蛋",
+   "米"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Ap4y1b7a6",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸酸奶",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1xL411A7xG",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "空气炸锅炸土豆豆腐",
+  "category": "荤菜",
+  "ingredients": [
+   "豆腐",
+   "虾",
+   "土豆",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV15Z4y1D73J",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "空气炸锅炸吐司",
+  "category": "主食",
+  "ingredients": [
+   "面包",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1aQ4y1D77r",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸五花肉花菜",
+  "category": "荤菜",
+  "ingredients": [
+   "猪肉",
+   "花菜"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Jq4y147oM",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸鲜奶",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1AZ4y1R7T2",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "空气炸锅炸香肠鸡翅",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡蛋",
+   "香肠",
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV15r4y1W7vA",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅炸小吃一条街",
+  "category": "荤菜",
+  "ingredients": [
+   "包菜",
+   "香肠",
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1DL4y137CD",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "空气炸锅做蛋挞",
+  "category": "甜品零食",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1A44y1P7JY",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "悲伤"
+  ]
+ },
+ {
+  "name": "蜜汁脆皮烤鸡",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "av895289430",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦",
+   "悲伤"
+  ]
+ },
+ {
+  "name": "炸锅版吮指原味鸡",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [
+   "炸"
+  ],
+  "tools": [
+   "空气炸锅"
+  ],
+  "difficulty": "简单",
+  "bv": "BV155411S7Q1",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版番茄焖饭",
+  "category": "主食",
+  "ingredients": [
+   "香肠",
+   "番茄"
+  ],
+  "steps": [],
+  "tags": [
+   "减脂餐"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "普通",
+  "bv": "BV193411W7nb",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版菌菇鸡肉焖饭",
+  "category": "主食",
+  "ingredients": [
+   "鸡肉",
+   "胡萝卜",
+   "菌菇",
+   "米"
+  ],
+  "steps": [],
+  "tags": [
+   "减脂餐"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "普通",
+  "bv": "BV193411W7nb",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版盐烤土豆",
+  "category": "甜品零食",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "零食"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Cf4y1R7pe",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "微波炉版荷包蛋方便面",
+  "category": "主食",
+  "ingredients": [
+   "鸡蛋",
+   "方便面",
+   "香肠"
+  ],
+  "steps": [],
+  "tags": [
+   "速食"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "简单",
+  "bv": "BV18v411i7JM",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版KFC同款土豆泥",
+  "category": "素菜",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "同款"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1Ji4y1773B",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版乐事同款薯片",
+  "category": "素菜",
+  "ingredients": [
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "同款"
+  ],
+  "methods": [],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Ms411D7Qg",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版FKC同款嫩牛五方",
+  "category": "荤菜",
+  "ingredients": [
+   "牛肉",
+   "番茄",
+   "面食"
+  ],
+  "steps": [],
+  "tags": [
+   "同款"
+  ],
+  "methods": [],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1Ji4y1773B",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版可乐鸡翅",
+  "category": "荤菜",
+  "ingredients": [
+   "鸡肉",
+   "洋葱"
+  ],
+  "steps": [],
+  "tags": [],
+  "methods": [],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1jJ41127ML",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版蔬菜脆片",
+  "category": "素菜",
+  "ingredients": [
+   "土豆",
+   "西葫芦",
+   "黄瓜"
+  ],
+  "steps": [],
+  "tags": [
+   "杂烩"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1n441187r3",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉火锅",
+  "category": "荤菜",
+  "ingredients": [
+   "菌菇",
+   "牛肉",
+   "方便面",
+   "虾",
+   "鸡肉",
+   "猪肉",
+   "午餐肉",
+   "莴笋",
+   "豆腐",
+   "土豆"
+  ],
+  "steps": [],
+  "tags": [
+   "杂烩"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "普通",
+  "bv": "BV1o34y1R7BC",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": [
+   "喜悦"
+  ]
+ },
+ {
+  "name": "微波炉版鸡蛋羹",
+  "category": "粥羹",
+  "ingredients": [
+   "鸡蛋"
+  ],
+  "steps": [],
+  "tags": [
+   "早饭"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1HL411E7MM",
+  "spicy": false,
+  "vegetarian": false,
+  "mood_hint": []
+ },
+ {
+  "name": "微波炉版土豆浓汤",
+  "category": "汤羹",
+  "ingredients": [
+   "土豆",
+   "胡萝卜"
+  ],
+  "steps": [],
+  "tags": [
+   "早饭"
+  ],
+  "methods": [
+   "微波加热"
+  ],
+  "tools": [
+   "微波炉"
+  ],
+  "difficulty": "简单",
+  "bv": "BV1HL411E7MM",
+  "spicy": false,
+  "vegetarian": true,
+  "mood_hint": [
+   "焦虑"
+  ]
+ }
+]

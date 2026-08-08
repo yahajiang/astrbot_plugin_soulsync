@@ -1,8 +1,2 @@
 __pycache__/
 *.pyc
-.pytest_cache/
-data/
-rde/
-tpd/
-trainer/
-tools/part_*.json

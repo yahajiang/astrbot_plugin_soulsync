@@ -298,10 +298,12 @@ class RecipeEngine:
         return list(result)
 
     def recommend_for_mood(self, emotion: str, category: Optional[str] = None) -> Optional[Dict]:
-        """按情绪推荐一道菜，可附加分类限制；无匹配时回退随机。"""
+        """按情绪推荐一道菜，可附加分类限制；无匹配（如平静/未知情绪）时回退随机。"""
         pool = self.match_mood(emotion)
         if category:
             pool = [r for r in pool if self._in_category(r, category)] or self.filter_category(category)
+        if not pool:
+            pool = self.filter_category(category) if category else self.recipes
         if not pool:
             return None
         return self._rng.choice(pool)

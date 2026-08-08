@@ -52,6 +52,7 @@ def install_stubs():
     event_mod.filter = types.SimpleNamespace(
         command=lambda name, alias=None, **kw: (lambda fn: fn),
         on_llm_response=lambda: (lambda fn: fn),
+        regex=lambda pattern: (lambda fn: fn),
     )
     sys.modules["astrbot.api.event"] = event_mod
 
@@ -64,11 +65,22 @@ def install_stubs():
 class _MsgEvent:
     """模拟 AstrMessageEvent"""
 
-    def __init__(self, text):
+    def __init__(self, text, private=False, first_type="plain", first_text=None):
         self.message_str = text
+        self._private = private
+        self._first = types.SimpleNamespace(
+            type=first_type,
+            text=first_text if first_text is not None else text,
+        )
 
     def plain_result(self, text):
         return text
+
+    def is_private_chat(self):
+        return self._private
+
+    def get_messages(self):
+        return [self._first]
 
 
 class _FakeResponse:
@@ -256,6 +268,39 @@ def test_command_eat_what():
         asyncio.run(run())
 
 
+def test_command_eat_what_no_mood():
+    """无情绪快照（平静）时 /吃点啥 应回退随机推荐，而非报错"""
+    with tempfile.TemporaryDirectory() as td:
+        plugin = _make_plugin(td)
+        assert plugin._current_mood() is None, "测试前提：无情绪快照"
+
+        async def run():
+            ev = _MsgEvent("/吃点啥")
+            out = [x async for x in plugin.eat_what(ev, "")]
+            assert len(out) == 1
+            text = out[0]
+            assert "为你推荐" in text, f"应回退随机推荐: {text}"
+            assert "平静" in text or "随缘" in text
+
+            out = [x async for x in plugin.eat_what(ev, "素菜")]
+            assert "为你推荐" in out[0], f"素菜请求应正常推荐: {out[0]}"
+
+            engine = plugin.engine
+            r = engine.recommend_for_mood("平静")
+            assert r is not None, "平静情绪应回退随机"
+            r = engine.recommend_for_mood("平静", category="素菜")
+            assert r is not None and r.get("vegetarian"), (
+                f"素菜请求应返回素食菜: {r['name'] if r else None}"
+            )
+            r = engine.recommend_for_mood("平静", category="甜品")
+            assert r is not None and r["category"] == "甜品零食"
+            assert engine.recommend_for_mood("未知情绪xyz") is not None, "未知情绪也应回退随机"
+
+        import asyncio
+
+        asyncio.run(run())
+
+
 def test_command_search():
     with tempfile.TemporaryDirectory() as td:
         plugin = _make_plugin(td)
@@ -344,6 +389,34 @@ def test_command_status():
         asyncio.run(run2())
 
 
+def test_eat_what_bare():
+    """群聊纯文本含「吃点啥」无斜杠触发；斜杠/@/私聊场景不重复触发"""
+    with tempfile.TemporaryDirectory() as td:
+        plugin = _make_plugin(td)
+        plugin._mood_cache["last"] = ("期待", 0.9, "好期待", time.time())
+
+        async def run():
+            ev = _MsgEvent("咱们晚上吃点啥")
+            out = [x async for x in plugin.eat_what_bare(ev)]
+            assert len(out) == 1 and "为你推荐" in out[0], f"群聊纯文本应触发: {out}"
+
+            ev_slash = _MsgEvent("/吃点啥", first_text="/吃点啥")
+            out = [x async for x in plugin.eat_what_bare(ev_slash)]
+            assert len(out) == 0, "带斜杠应由命令处理器负责，不应重复触发"
+
+            ev_at = _MsgEvent("吃点啥", first_type="at")
+            out = [x async for x in plugin.eat_what_bare(ev_at)]
+            assert len(out) == 0, "@ 机器人触发不应走无前缀分支"
+
+            ev_private = _MsgEvent("吃点啥", private=True)
+            out = [x async for x in plugin.eat_what_bare(ev_private)]
+            assert len(out) == 0, "私聊已由命令处理器覆盖，不应重复触发"
+
+        import asyncio
+
+        asyncio.run(run())
+
+
 def main():
     tests = [
         test_emotion_detection,
@@ -359,6 +432,8 @@ def main():
         test_mood_ttl_expiry,
         test_extract_text_variants,
         test_command_eat_what,
+        test_command_eat_what_no_mood,
+        test_eat_what_bare,
         test_command_search,
         test_command_how_to_cook,
         test_command_random,

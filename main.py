@@ -157,6 +157,28 @@ class SoulSyncBistroPlugin(Star):
         lines.append(f"  想看做法？发送 /怎么做 {recipe['name']}")
         yield event.plain_result("\n".join(lines))
 
+    def _bare_group_text(self, event: AstrMessageEvent) -> bool:
+        """是否是无斜杠、不 @ 的群聊纯文本消息（用于无前缀触发）。"""
+        if event.is_private_chat():
+            return False
+        messages = event.get_messages()
+        if not messages:
+            return False
+        first = messages[0]
+        if getattr(first, "type", "") != "plain":
+            return False
+        if str(getattr(first, "text", "") or "").lstrip().startswith("/"):
+            return False
+        return True
+
+    @filter.regex(r"吃点啥")
+    async def eat_what_bare(self, event: AstrMessageEvent):
+        """群聊中不带斜杠、不 @ 机器人时说「吃点啥」也能触发推荐。"""
+        if not self._bare_group_text(event):
+            return
+        async for r in self.eat_what(event):
+            yield r
+
     @filter.command("菜谱搜索", alias={"找菜"})
     async def search_recipe(self, event: AstrMessageEvent, keyword: str = ""):
         """搜索本地菜谱库。用法：/菜谱搜索 土豆"""
