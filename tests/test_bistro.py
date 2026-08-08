@@ -82,6 +82,9 @@ class _MsgEvent:
     def get_messages(self):
         return [self._first]
 
+    def get_message_str(self):
+        return self.message_str
+
 
 class _FakeResponse:
     """模拟带 result_chain 的 LLM 回复"""
