@@ -122,6 +122,9 @@ class CorrectionManager:
 
         for pattern, replacement in strong_patterns:
             if pattern in user_input:
+                # 显式否定句式（不是A，是B）应走强修正
+                if pattern == "不是" and "也不是" in user_input:
+                    continue
                 # 提取新词
                 idx = user_input.index(pattern) + len(pattern)
                 new_value = user_input[idx:].strip()
@@ -135,7 +138,9 @@ class CorrectionManager:
                     old_value = self._extract_last_emotion(last_input)
 
                     # 判断修正强度
-                    if self._is_direction_change(old_value, new_value):
+                    if pattern == "不是":
+                        strength = CorrectionStrength.STRONG
+                    elif self._is_direction_change(old_value, new_value):
                         strength = CorrectionStrength.STRONG
                     else:
                         strength = CorrectionStrength.WEAK

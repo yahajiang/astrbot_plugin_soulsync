@@ -34,7 +34,15 @@ _STOP_WORDS = {
     "被", "从", "把", "让", "用", "为", "以", "所", "但", "而", "却",
     "如果", "虽然", "因为", "所以", "这个", "那个", "什么", "怎么",
     "为什么", "可以", "已经", "还是", "或者", "以及", "然后", "但是",
-    "不过", "而且", "或者", "或者", "以及", "然后", "但是", "不过",
+    "不过", "而且",
+}
+
+# 常见内容词表（简单分词用）
+_COMMON_WORDS = {
+    "今天", "昨天", "明天", "现在", "最近", "工作", "生活", "朋友", "家人",
+    "事情", "问题", "感觉", "心情", "希望", "害怕", "开心", "难过", "生气",
+    "孤独", "焦虑", "压力", "迷茫", "无聊", "喜欢", "讨厌", "累了",
+    "累", "烦", "爱", "恨", "想",
 }
 
 
@@ -98,9 +106,32 @@ class MirrorCore:
 
     def extract_content_words(self, text: str) -> List[str]:
         """提取内容词"""
-        # 简单分词
-        words = re.findall(r"[\u4e00-\u9fa5]+|[a-zA-Z]+", text)
-        return [w for w in words if w not in _STOP_WORDS and len(w) >= 2]
+        # 简单分词：英文词 + 常见中文词匹配 + 双字滑窗补充
+        words = re.findall(r"[a-zA-Z]{2,}", text)
+
+        for seg in re.findall(r"[\u4e00-\u9fa5]+", text):
+            # 常见词优先
+            for w in _COMMON_WORDS:
+                if w in seg:
+                    words.append(w)
+
+            # 双字滑窗补充（覆盖常见词表之外的表达）
+            if len(seg) >= 2:
+                for i in range(len(seg) - 1):
+                    w = seg[i:i+2]
+                    if w not in _STOP_WORDS:
+                        words.append(w)
+
+        # 去重保序
+        seen = set()
+        result = []
+        for w in words:
+            if w in _STOP_WORDS:
+                continue
+            if w not in seen:
+                seen.add(w)
+                result.append(w)
+        return result
 
     # ═══════════════════════════════════════════════════════════════
     #  镜面类型选择

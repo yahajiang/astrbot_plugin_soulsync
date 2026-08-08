@@ -140,8 +140,8 @@ class QuoteManager:
 
     def _is_high_density(self, text: str) -> bool:
         """判断是否是高密度表达"""
-        # 长度超过15个字
-        if len(text) < 15:
+        # 长度超过10个字
+        if len(text) < 10:
             return False
 
         # 包含明确情绪指向

@@ -4,7 +4,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from astrbot_plugin_soulmirror.conflict_detector import ConflictDetector, ConflictType
+from astrbot_plugin_soulmirror.conflict_detector import ConflictDetector, ConflictType, Conflict
 from astrbot_plugin_soulmirror.session import UserSession, SessionState
 
 
@@ -65,7 +65,6 @@ def test_no_conflict():
 def test_conflict_response():
     """测试矛盾应答"""
     detector = ConflictDetector()
-    from conflict_detector import Conflict
     import time
 
     conflict = Conflict(

@@ -8,6 +8,22 @@ from typing import Optional, List
 
 from .session import UserSession
 
+# 常见内容词表（简单分词用）
+_COMMON_WORDS = {
+    "今天", "昨天", "明天", "现在", "最近", "工作", "生活", "朋友", "家人",
+    "事情", "问题", "感觉", "心情", "希望", "害怕", "开心", "难过", "生气",
+    "孤独", "焦虑", "压力", "迷茫", "无聊", "喜欢", "讨厌", "累了",
+    "累", "烦", "爱", "恨", "想",
+}
+
+# 排除功能词
+_STOP_WORDS = {
+    "的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都", "一",
+    "一个", "上", "也", "很", "到", "说", "要", "去", "你", "会", "着",
+    "没有", "看", "好", "自己", "这", "他", "她", "它", "们", "那",
+    "还是", "但是", "不过", "而且", "然后", "或者", "以及",
+}
+
 
 @dataclass
 class RepeatSignal:
@@ -40,7 +56,7 @@ class RepeatDetector:
 
         # 检测重复
         for word, count in session.word_frequency.items():
-            if count >= self.threshold and len(word) >= 2:
+            if count >= self.threshold:
                 response = self._generate_response(word, count)
                 return RepeatSignal(
                     word=word,
@@ -53,17 +69,32 @@ class RepeatDetector:
 
     def _extract_content_words(self, text: str) -> List[str]:
         """提取内容词"""
-        # 简单分词
-        words = re.findall(r"[\u4e00-\u9fa5]+|[a-zA-Z]+", text)
+        # 简单分词：英文词 + 常见中文词匹配 + 双字滑窗补充
+        words = re.findall(r"[a-zA-Z]{2,}", text)
 
-        # 排除功能词
-        stop_words = {
-            "的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都", "一",
-            "一个", "上", "也", "很", "到", "说", "要", "去", "你", "会", "着",
-            "没有", "看", "好", "自己", "这", "他", "她", "它", "们", "那",
-        }
+        for seg in re.findall(r"[\u4e00-\u9fa5]+", text):
+            # 常见词优先
+            for w in _COMMON_WORDS:
+                if w in seg:
+                    words.append(w)
 
-        return [w for w in words if w not in stop_words and len(w) >= 2]
+            # 双字滑窗补充
+            if len(seg) >= 2:
+                for i in range(len(seg) - 1):
+                    w = seg[i:i+2]
+                    if w not in _STOP_WORDS:
+                        words.append(w)
+
+        # 去重保序
+        seen = set()
+        result = []
+        for w in words:
+            if w in _STOP_WORDS:
+                continue
+            if w not in seen:
+                seen.add(w)
+                result.append(w)
+        return result
 
     def _generate_response(self, word: str, count: int) -> str:
         """生成重复提示"""

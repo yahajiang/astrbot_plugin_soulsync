@@ -4,8 +4,8 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from astrbot_plugin_soulmirror.correction import CorrectionManager, CorrectionType, CorrectionStrength
-from astrbot_plugin_soulmirror.session import UserSession, SessionState
+from astrbot_plugin_soulmirror.correction import CorrectionManager, CorrectionType, CorrectionStrength, Correction
+from astrbot_plugin_soulmirror.session import UserSession, SessionState, DialogueEntry
 
 
 def test_nickname_correction():
@@ -26,7 +26,6 @@ def test_content_correction_strong():
     session = UserSession(user_id="test_user")
     session.state = SessionState.MIRROR_MODE
     entry = session.dialogue_history
-    from session import DialogueEntry
     entry.append(DialogueEntry(
         user_input="我好累",
         mirror_response="你说你好累。",
@@ -47,7 +46,6 @@ def test_content_correction_weak():
     manager = CorrectionManager()
     session = UserSession(user_id="test_user")
     session.state = SessionState.MIRROR_MODE
-    from session import DialogueEntry
     session.dialogue_history.append(DialogueEntry(
         user_input="我好累",
         mirror_response="你说你好累。",
@@ -75,7 +73,6 @@ def test_get_annotation():
     """测试标注生成"""
     manager = CorrectionManager()
     session = UserSession(user_id="test_user")
-    from correction import Correction
     import time
 
     correction = Correction(

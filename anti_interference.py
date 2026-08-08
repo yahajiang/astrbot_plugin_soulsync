@@ -46,8 +46,8 @@ class AntiInterferenceManager:
 
         检查回复是否合规
         """
-        # ── 回复长度检测 ──
-        if len(response) > len(user_input) * 1.5:
+        # ── 回复长度检测（容忍"你说"等固定前缀开销）──
+        if len(response) > len(user_input) * 1.5 + 3:
             return False
 
         # ── 外部信息检测 ──
@@ -127,8 +127,8 @@ class AntiInterferenceManager:
         text = re.sub(r"\[.*?\]", "", text)
 
         # 过滤以系统口吻生成的分析段落
-        text = re.sub(r"系统：.*?\n", "", text)
-        text = re.sub(r"分析：.*?\n", "", text)
+        text = re.sub(r"系统：.*?$", "", text, flags=re.MULTILINE)
+        text = re.sub(r"分析：.*?$", "", text, flags=re.MULTILINE)
 
         return text.strip()
 
