@@ -33,6 +33,7 @@ from .quote import QuoteManager
 from .session import UserSession, SessionState
 from .conflict_detector import ConflictDetector
 from .repeat_detector import RepeatDetector
+from .llm_mirror import LLMMirror
 
 
 class SoulMirror(Star):
@@ -48,6 +49,7 @@ class SoulMirror(Star):
         self.enable_conflict_detection: bool = config.get("enable_conflict_detection", True)
         self.enable_quote_storage: bool = config.get("enable_quote_storage", True)
         self.silent_mode: bool = config.get("silent_mode", False)
+        self.enable_llm_mirror: bool = config.get("enable_llm_mirror", True)
 
         # ── 核心引擎初始化 ──
         self.mirror_core = MirrorCore()
@@ -61,6 +63,7 @@ class SoulMirror(Star):
         self.command_router = CommandRouter()
         self.conflict_detector = ConflictDetector()
         self.repeat_detector = RepeatDetector()
+        self.llm_mirror = LLMMirror(context=context)
 
         # ── 数据目录 ──
         from astrbot.core.utils.astrbot_path import get_astrbot_data_path
@@ -83,6 +86,7 @@ class SoulMirror(Star):
             f"重复词检测={self.enable_repeat_detection} | "
             f"矛盾检测={self.enable_conflict_detection} | "
             f"金句存储={self.enable_quote_storage} | "
+            f"LLM镜像={self.enable_llm_mirror} | "
             f"静默模式={self.silent_mode}"
         )
 
@@ -340,6 +344,7 @@ class SoulMirror(Star):
         event: AstrMessageEvent,
     ):
         """镜像反射处理"""
+        user_id = event.get_sender_id()
         # ── 修正检测 ──
         correction = self.correction_manager.detect(session, filtered_input)
         if correction:
@@ -372,12 +377,24 @@ class SoulMirror(Star):
             self.sharpness_manager.auto_adjust(session, filtered_input)
 
         # ── 生成镜像反射 ──
-        sharpness = self.sharpness_manager.get_current_level(session)
-        response = self.mirror_core.reflect(
-            user_input=filtered_input,
-            session=session,
-            sharpness=sharpness,
-        )
+        response = None
+
+        # 优先使用 LLM 镜像（如果启用）
+        if self.enable_llm_mirror:
+            response = await self.llm_mirror.reflect(
+                user_input=filtered_input,
+                user_id=user_id,
+                conversation_history=session.dialogue_history,
+            )
+
+        # LLM 不可用或失败时，降级到算法反射
+        if response is None:
+            sharpness = self.sharpness_manager.get_current_level(session)
+            response = self.mirror_core.reflect(
+                user_input=filtered_input,
+                session=session,
+                sharpness=sharpness,
+            )
 
         # ── 输出审查 ──
         if self.anti_interference.check_output(response, filtered_input):
