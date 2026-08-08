@@ -40,18 +40,19 @@ class AntiInterferenceManager:
 
         return filtered
 
-    def check_output(self, response: str, user_input: str) -> bool:
+    def check_output(self, response: str, user_input: str, strict: bool = True) -> bool:
         """
         输出审查
 
         检查回复是否合规
+        strict=False 时跳过长度和新词检查（用于 LLM 回复）
         """
         # ── 回复长度检测（容忍"你说"等固定前缀开销）──
-        if len(response) > len(user_input) * 1.5 + 3:
+        if strict and len(response) > len(user_input) * 1.5 + 3:
             return False
 
         # ── 外部信息检测 ──
-        if self._has_external_info(response, user_input):
+        if strict and self._has_external_info(response, user_input):
             return False
 
         # ── 角色漂移检测 ──

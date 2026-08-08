@@ -378,14 +378,17 @@ class SoulMirror(Star):
 
         # ── 生成镜像反射 ──
         response = None
+        used_llm = False
 
         # 优先使用 LLM 镜像（如果启用）
         if self.enable_llm_mirror:
+            umo = getattr(event, "unified_msg_origin", None) or user_id
             response = await self.llm_mirror.reflect(
                 user_input=filtered_input,
-                user_id=user_id,
+                umo=umo,
                 conversation_history=session.dialogue_history,
             )
+            used_llm = response is not None
 
         # LLM 不可用或失败时，降级到算法反射
         if response is None:
@@ -396,8 +399,8 @@ class SoulMirror(Star):
                 sharpness=sharpness,
             )
 
-        # ── 输出审查 ──
-        if self.anti_interference.check_output(response, filtered_input):
+        # ── 输出审查（LLM 回复放宽新词限制，只查角色漂移/格式）──
+        if self.anti_interference.check_output(response, filtered_input, strict=not used_llm):
             await event.send(event.plain_result(response))
         else:
             # 输出异常，降级处理

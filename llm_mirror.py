@@ -30,7 +30,9 @@ MIRROR_SYSTEM_PROMPT = """你是一面镜子。你的唯一任务是把用户说
 - 用户："我不知道该怎么办" → "你说你不知道该怎么办。"
 - 用户："我觉得他不在乎我" → "你说你觉得他不在乎你。"
 - 用户："为什么总是我" → "你说为什么总是你。"
-- 用户："我好累，但是又睡不着" → "一方面你好累，另一方面又睡不着。"""
+- 用户："我好累，但是又睡不着" → "一方面你好累，另一方面又睡不着。"
+- 用户："那聊什么" → "你说那聊什么。"
+- 用户："不知道" → "你说不知道。" """
 
 
 class LLMMirror:
@@ -38,12 +40,11 @@ class LLMMirror:
 
     def __init__(self, context=None):
         self.context = context
-        self._provider_cache: Optional[str] = None
 
     async def reflect(
         self,
         user_input: str,
-        user_id: str,
+        umo: str,
         conversation_history: Optional[list] = None,
     ) -> Optional[str]:
         """
@@ -52,14 +53,18 @@ class LLMMirror:
         返回 None 表示 LLM 不可用，调用方应降级到算法反射
         """
         if not self.context:
+            logger.debug("LLM 镜像反射: 无 context，降级算法")
             return None
 
         try:
+            # 获取 provider ID（必填参数）
+            provider_id = await self._get_provider_id(umo)
+            if not provider_id:
+                logger.warning("LLM 镜像反射: 无法获取 provider ID，降级算法")
+                return None
+
             # 构建 prompt
             prompt = self._build_prompt(user_input, conversation_history)
-
-            # 获取 provider ID
-            provider_id = await self._get_provider_id(user_id)
 
             # 调用 LLM
             resp = await asyncio.wait_for(
@@ -73,17 +78,17 @@ class LLMMirror:
 
             if resp and resp.completion_text:
                 result = resp.completion_text.strip()
-                # 基础过滤：拒绝包含建议/共情/分析的回复
                 if self._is_valid_mirror(result, user_input):
+                    logger.info(f"LLM 镜像反射成功: {result[:60]}")
                     return result
                 else:
-                    logger.debug(f"LLM 镜像回复不合格: {result[:100]}")
+                    logger.warning(f"LLM 镜像回复不合格: {result[:100]}")
                     return None
 
             return None
 
         except asyncio.TimeoutError:
-            logger.warning("LLM 镜像反射超时")
+            logger.warning("LLM 镜像反射超时（10s）")
             return None
         except Exception as e:
             logger.warning(f"LLM 镜像反射失败: {e}")
@@ -111,44 +116,31 @@ class LLMMirror:
 
         return "\n".join(parts)
 
-    async def _get_provider_id(self, user_id: str) -> Optional[str]:
-        """获取 LLM provider ID"""
+    async def _get_provider_id(self, umo: str) -> Optional[str]:
+        """获取当前会话的 LLM provider ID"""
         try:
-            # 优先使用配置的 provider
-            if hasattr(self.context, "get_config"):
-                config = self.context.get_config()
-                provider_id = config.get("llm_provider_id", "")
+            if hasattr(self.context, "get_current_chat_provider_id"):
+                provider_id = await self.context.get_current_chat_provider_id(umo=umo)
                 if provider_id:
                     return provider_id
-
-            # 使用当前会话的默认 provider
-            if hasattr(self.context, "get_current_chat_provider_id"):
-                provider_id = await self.context.get_current_chat_provider_id(
-                    umo=user_id
-                )
-                return provider_id
-
-            return None
         except Exception as e:
             logger.debug(f"获取 provider ID 失败: {e}")
-            return None
+        return None
 
     def _is_valid_mirror(self, response: str, user_input: str) -> bool:
         """验证 LLM 回复是否为合格的镜像"""
-        # 禁止的模式
+        # 禁止的模式（仅当用户原词中没有该词时判定为新增内容）
         forbidden_patterns = [
             "建议", "推荐", "你应该", "你可以试试",
             "我理解", "我感受到", "我能体会",
             "这是因为", "原因是", "说明了",
-            "为什么", "怎么", "什么",  # 允许反转问题，但不允许新提问
         ]
 
-        # 如果回复包含禁止模式且不是用户原词的反射，拒绝
         for pattern in forbidden_patterns:
             if pattern in response and pattern not in user_input:
                 return False
 
-        # 回复长度不能太长（镜像应该简洁）
+        # 回复不能太长（镜像应该简洁）
         if len(response) > len(user_input) * 2 + 10:
             return False
 
