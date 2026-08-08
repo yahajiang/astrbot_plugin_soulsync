@@ -174,8 +174,14 @@ class SoulSyncBistroPlugin(Star):
     @filter.regex(r"吃点啥")
     async def eat_what_bare(self, event: AstrMessageEvent):
         """群聊中不带斜杠、不 @ 机器人时说「吃点啥」也能触发推荐。"""
+        logger.info(
+            f"心旅小馆: 无前缀触发命中 | 私聊={event.is_private_chat()} "
+            f"消息={event.get_message_str()!r} 组件={getattr(event.get_messages()[0], 'type', '?') if event.get_messages() else '?'}"
+        )
         if not self._bare_group_text(event):
+            logger.info("心旅小馆: 无前缀触发被 _bare_group_text 拦截")
             return
+        logger.info("心旅小馆: 无前缀触发放行，执行推荐")
         async for r in self.eat_what(event):
             yield r
 
