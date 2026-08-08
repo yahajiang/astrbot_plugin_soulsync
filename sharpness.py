@@ -26,10 +26,15 @@ class SharpnessManager:
         self.manual_level: Optional[SharpnessLevel] = None
         self.history: list[dict] = []  # 锐度变化轨迹
 
-    def get_current_level(self) -> SharpnessLevel:
+    def get_current_level(self, session: Optional[UserSession] = None) -> SharpnessLevel:
         """获取当前锐度等级"""
         if not self.auto_mode and self.manual_level:
             return self.manual_level
+        if session is not None:
+            try:
+                return SharpnessLevel(session.current_sharpness)
+            except (ValueError, TypeError):
+                return SharpnessLevel.STILL
         return SharpnessLevel.STILL
 
     def set_manual_level(self, level: SharpnessLevel):
@@ -61,12 +66,16 @@ class SharpnessManager:
         new_level = current
 
         # ── 信号1：用户主动调节 ──
-        if "直接点" in user_input or "别绕弯子" in user_input:
-            new_level = SharpnessLevel(min(current.value + 1, SharpnessLevel.ABYSS.value))
-        elif "慢一点" in user_input or "轻一点" in user_input:
-            new_level = SharpnessLevel(max(current.value - 1, SharpnessLevel.WATER.value))
-        elif "算了" in user_input or "不想说了" in user_input:
-            new_level = SharpnessLevel(max(current.value - 2, SharpnessLevel.WATER.value))
+        user_initiated = any(
+            k in user_input for k in ("直接点", "别绕弯子", "慢一点", "轻一点", "算了", "不想说了")
+        )
+        if user_initiated:
+            if "直接点" in user_input or "别绕弯子" in user_input:
+                new_level = SharpnessLevel(min(current.value + 1, SharpnessLevel.ABYSS.value))
+            elif "慢一点" in user_input or "轻一点" in user_input:
+                new_level = SharpnessLevel(max(current.value - 1, SharpnessLevel.WATER.value))
+            elif "算了" in user_input or "不想说了" in user_input:
+                new_level = SharpnessLevel(max(current.value - 2, SharpnessLevel.WATER.value))
 
         # ── 信号2：矛盾信号 ──
         elif self._has_contradiction_signal(user_input):
@@ -91,10 +100,10 @@ class SharpnessManager:
             elif depth_factor < 0.3 and current.value > SharpnessLevel.STILL.value:
                 new_level = SharpnessLevel.STILL
 
-        # ── 应用变化（单轮最大变化限制）──
+        # ── 应用变化（单轮最大变化限制；用户主动调节除外）──
         if new_level != current:
             change = new_level.value - current.value
-            if abs(change) <= 1:  # 单轮最大变化1级
+            if user_initiated or abs(change) <= 1:  # 单轮最大变化1级
                 session.current_sharpness = new_level.value
                 session.sharpness_last_change = time.time()
 

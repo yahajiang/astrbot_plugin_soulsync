@@ -78,7 +78,7 @@ class UserSession:
         self.dialogue_history.clear()
         self.current_round = 0
         self.current_sharpness = 2
-        self.sharpness_consecutive升 = 0
+        self.sharpness_consecutive_rise = 0
         self.correction_count = 0
         self.word_frequency.clear()
         self.repeat_warnings.clear()

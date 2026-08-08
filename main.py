@@ -22,18 +22,6 @@ from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star
 
-try:
-    from astrbot.core.agent.message import TextPart
-except ImportError:
-    try:
-        from astrbot.api.message import TextPart
-    except ImportError:
-        class TextPart:
-            def __init__(self, text="", **kw):
-                self.text = text
-            def mark_as_temp(self):
-                return self
-
 from .mirror_core import MirrorCore, ReflectionType, MirrorType
 from .sharpness import SharpnessManager, SharpnessLevel
 from .icebreaker import IcebreakerManager
@@ -116,138 +104,141 @@ class SoulMirror(Star):
         # 解析命令
         action, args = self.command_router.parse(command_text)
 
-        if action == "toggle" or action == "":
-            # 进入/退出镜像模式
-            await self._handle_toggle(user_id, event)
-        elif action == "重置":
-            await self._handle_reset(user_id, event)
-        elif action == "记住":
-            await self._handle_remember(user_id, event)
-        elif action == "忘记":
-            await self._handle_forget(user_id, args, event)
-        elif action == "状态":
-            await self._handle_status(user_id, event)
-        elif action == "深度":
-            await self._handle_depth(user_id, args, event)
-        elif action == "静默":
-            await self._handle_silent(user_id, event)
-        elif action == "导出":
-            await self._handle_export(user_id, event)
-        elif action == "帮助":
-            await self._handle_help(user_id, event)
+        if action == "toggle":
+            msgs = self._handle_toggle(user_id)
+        elif action == "reset":
+            msgs = self._handle_reset(user_id)
+        elif action == "remember":
+            msgs = self._handle_remember(user_id)
+        elif action == "forget":
+            msgs = self._handle_forget(user_id, args)
+        elif action == "status":
+            msgs = self._handle_status(user_id)
+        elif action == "depth":
+            msgs = self._handle_depth(user_id, args)
+        elif action == "silent":
+            msgs = self._handle_silent(user_id)
+        elif action == "export":
+            msgs = self._handle_export(user_id)
+        elif action == "help":
+            msgs = self._handle_help(user_id)
         else:
-            await event.reply(TextPart(f"未知命令：{action}。输入 /心镜 帮助 查看所有命令。"))
+            msgs = [f"未知命令：{action}。输入 /心镜 帮助 查看所有命令。"]
 
-    async def _handle_toggle(self, user_id: str, event: AstrMessageEvent):
+        for msg in msgs:
+            yield event.plain_result(msg)
+
+    def _handle_toggle(self, user_id: str) -> List[str]:
         """切换镜像模式"""
         session = self._get_session(user_id)
+        msgs = []
 
         if session.state == SessionState.MIRROR_MODE:
             # 退出镜像模式
             if not self.silent_mode:
-                summary = self._generate_summary(session)
-                await event.reply(TextPart(summary))
+                msgs.append(self._generate_summary(session))
             session.state = SessionState.IDLE
-            await event.reply(TextPart("镜子已收起。"))
+            msgs.append("镜子已收起。")
         else:
             # 进入镜像模式
             session.reset()
             session.state = SessionState.DECLARATION
-            session.session_start_time = __import__("time").time()
+            session.session_start_time = time.time()
             self.anti_interference.session_start_times[user_id] = session.session_start_time
-            declaration = self._get_declaration(full=True)
-            await event.reply(TextPart(declaration))
+            msgs.append(self._get_declaration(full=True))
 
             # 自动展示命令列表
-            help_text = self.command_router.get_help()
-            await event.reply(TextPart(help_text))
+            msgs.append(self.command_router.get_help())
 
             # 开始破冰
             session.state = SessionState.ICEBREAKER_FIXED
             first_question = self.icebreaker_manager.get_next_question(session)
             if first_question:
-                await event.reply(TextPart(first_question))
+                msgs.append(first_question)
 
-    async def _handle_reset(self, user_id: str, event: AstrMessageEvent):
+        return msgs
+
+    def _handle_reset(self, user_id: str) -> List[str]:
         """重置会话"""
         session = self._get_session(user_id)
         session.reset()
         session.state = SessionState.DECLARATION
-        declaration = self._get_declaration(full=True)
-        await event.reply(TextPart(declaration))
+        msgs = [self._get_declaration(full=True)]
 
         # 自动展示命令列表
-        help_text = self.command_router.get_help()
-        await event.reply(TextPart(help_text))
+        msgs.append(self.command_router.get_help())
 
         # 开始破冰
         session.state = SessionState.ICEBREAKER_FIXED
         first_question = self.icebreaker_manager.get_next_question(session)
         if first_question:
-            await event.reply(TextPart(first_question))
+            msgs.append(first_question)
 
-    async def _handle_remember(self, user_id: str, event: AstrMessageEvent):
+        return msgs
+
+    def _handle_remember(self, user_id: str) -> List[str]:
         """保存当前信息"""
         session = self._get_session(user_id)
         self.quote_manager.save_session(user_id, session)
-        await event.reply(TextPart("已保存。下次进入时，镜子会记得你说过的话。"))
+        return ["已保存。下次进入时，镜子会记得你说过的话。"]
 
-    async def _handle_forget(self, user_id: str, args: str, event: AstrMessageEvent):
+    def _handle_forget(self, user_id: str, args: str) -> List[str]:
         """擦除记忆"""
         if args:
             # 擦除指定条目
             self.quote_manager.remove_quote(user_id, args)
-            await event.reply(TextPart(f"已忘记：{args}"))
+            return [f"已忘记：{args}"]
         else:
             # 全部擦除
             self.quote_manager.clear_all(user_id)
-            await event.reply(TextPart("已清空所有记忆。"))
+            return ["已清空所有记忆。"]
 
-    async def _handle_status(self, user_id: str, event: AstrMessageEvent):
+    def _handle_status(self, user_id: str) -> List[str]:
         """查看状态"""
         session = self._get_session(user_id)
         quotes = self.quote_manager.get_quotes(user_id)
         status = (
             f"称呼：{session.nickname or '未设置'}\n"
-            f"当前锐度：{self.sharpness_manager.get_current_level().value}\n"
+            f"当前锐度：{self.sharpness_manager.get_current_level(session).value}\n"
             f"静默模式：{'开启' if self.silent_mode else '关闭'}\n"
             f"金句数量：{len(quotes)}"
         )
-        await event.reply(TextPart(status))
+        return [status]
 
-    async def _handle_depth(self, user_id: str, args: str, event: AstrMessageEvent):
+    def _handle_depth(self, user_id: str, args: str) -> List[str]:
         """查看或设定锐度"""
+        session = self._get_session(user_id)
         if not args:
-            level = self.sharpness_manager.get_current_level()
+            level = self.sharpness_manager.get_current_level(session)
             mode = "自动" if self.sharpness_manager.auto_mode else "手动"
-            await event.reply(TextPart(f"当前锐度：{level.value}（{mode}）"))
+            return [f"当前锐度：{level.value}（{mode}）"]
         elif args == "自动":
             self.sharpness_manager.set_auto_mode(True)
-            await event.reply(TextPart("已恢复自动调锐模式。"))
+            return ["已恢复自动调锐模式。"]
         else:
             try:
                 level = SharpnessLevel(int(args))
                 self.sharpness_manager.set_manual_level(level)
-                await event.reply(TextPart(
+                return [
                     f"镜面调至锐度{level.value}。反射会更直接，如果觉得太锐，随时可以调回来。"
-                ))
+                ]
             except ValueError:
-                await event.reply(TextPart("锐度范围：1-5 或 自动"))
+                return ["锐度范围：1-5 或 自动"]
 
-    async def _handle_silent(self, user_id: str, event: AstrMessageEvent):
+    def _handle_silent(self, user_id: str) -> List[str]:
         """切换静默模式"""
         self.silent_mode = not self.silent_mode
         self.config["silent_mode"] = self.silent_mode
         status = "开启" if self.silent_mode else "关闭"
-        await event.reply(TextPart(f"静默模式已{status}。"))
+        return [f"静默模式已{status}。"]
 
-    async def _handle_export(self, user_id: str, event: AstrMessageEvent):
+    def _handle_export(self, user_id: str) -> List[str]:
         """导出本次会话"""
         session = self._get_session(user_id)
         export = self._export_session(session)
-        await event.reply(TextPart(export))
+        return [export]
 
-    async def _handle_help(self, user_id: str, event: AstrMessageEvent):
+    def _handle_help(self, user_id: str) -> List[str]:
         """显示帮助"""
         help_text = (
             "你可以随时使用这些命令——\n"
@@ -261,94 +252,138 @@ class SoulMirror(Star):
             "/心镜 重置 重新开始\n"
             "不记得的时候打 /心镜 帮助"
         )
-        await event.reply(TextPart(help_text))
+        return [help_text]
 
     # ═══════════════════════════════════════════════════════════════
     #  LLM 钩子 - 镜像反射处理
     # ═══════════════════════════════════════════════════════════════
 
     @filter.on_llm_request()
-    async def on_llm_request(self, event: AstrMessageEvent, query: str):
-        """LLM请求前的处理：镜像反射"""
-        user_id = event.get_sender_id()
-        session = self._get_session(user_id)
+    async def on_llm_request(self, event: AstrMessageEvent, req):
+        """LLM请求前的处理：镜像反射
 
-        # ── 非镜像模式，不处理 ──
-        if session.state != SessionState.MIRROR_MODE:
-            return
+        仅在镜像模式（含破冰阶段）拦截用户消息并反射，
+        处理完成后通过 stop_event 阻止 LLM 生成。
+        """
+        try:
+            user_id = event.get_sender_id()
+            session = self._get_session(user_id)
 
-        # ── 安全红线检查 ──
-        crisis = self.safety_manager.check_crisis(query)
-        if crisis:
-            await event.reply(TextPart(self.safety_manager.get_crisis_response(crisis)))
-            session.state = SessionState.IDLE
-            return
+            # ── 非镜像/破冰模式，不处理 ──
+            if session.state not in (
+                SessionState.MIRROR_MODE,
+                SessionState.ICEBREAKER_FIXED,
+                SessionState.ICEBREAKER_RANDOM,
+            ):
+                return
 
-        # ── 输入过滤（防干扰）──
-        filtered_input = self.anti_interference.filter_input(query)
-        if filtered_input is None:
-            # 检测到注入攻击
-            await event.reply(TextPart("镜子不换角色。你想说什么？"))
-            return
+            query = (event.message_str or "").strip()
+            if not query:
+                return
 
-        # ── 破冰阶段处理 ──
-        if session.state in (SessionState.ICEBREAKER_FIXED, SessionState.ICEBREAKER_RANDOM):
-            response = self.icebreaker_manager.process_response(session, filtered_input)
-            await event.reply(TextPart(response))
+            # ── 安全红线检查 ──
+            crisis = self.safety_manager.check_crisis(query)
+            if crisis:
+                await event.send(event.plain_result(self.safety_manager.get_crisis_response(crisis)))
+                session.state = SessionState.IDLE
+                event.stop_event()
+                return
 
-            # 更新破冰阶段
-            session.icebreaker_stage += 1
+            # ── 输入过滤（防干扰）──
+            filtered_input = self.anti_interference.filter_input(query)
+            if filtered_input is None:
+                # 检测到注入攻击
+                await event.send(event.plain_result("镜子不换角色。你想说什么？"))
+                event.stop_event()
+                return
 
-            # 检查破冰是否完成
-            if self.icebreaker_manager.is_complete(session):
-                session.state = SessionState.MIRROR_MODE
-                收束句 = f"{session.nickname}，镜子准备好了。你说，我听。"
-                await event.reply(TextPart(收束句))
-            else:
-                # 获取下一个问题
-                next_question = self.icebreaker_manager.get_next_question(session)
-                if next_question:
-                    await event.reply(TextPart(next_question))
-            return
+            # ── 破冰阶段处理 ──
+            if session.state in (SessionState.ICEBREAKER_FIXED, SessionState.ICEBREAKER_RANDOM):
+                await self._process_icebreaker(session, filtered_input, event)
+                event.stop_event()
+                return
 
-        # ── 镜像反射处理 ──
-        # 修正检测
+            # ── 镜像反射处理 ──
+            await self._process_mirror(session, filtered_input, event)
+            event.stop_event()
+        except Exception as e:
+            logger.error(f"SoulMirror on_llm_request 异常: {e}", exc_info=True)
+
+    async def _process_icebreaker(
+        self,
+        session: UserSession,
+        filtered_input: str,
+        event: AstrMessageEvent,
+    ):
+        """破冰阶段处理"""
+        response = self.icebreaker_manager.process_response(session, filtered_input)
+        await event.send(event.plain_result(response))
+
+        # 更新破冰阶段
+        session.icebreaker_stage += 1
+
+        # 检查破冰是否完成
+        if self.icebreaker_manager.is_complete(session):
+            session.state = SessionState.MIRROR_MODE
+            await event.send(event.plain_result(f"{session.nickname}，镜子准备好了。你说，我听。"))
+        else:
+            # 获取下一个问题
+            next_question = self.icebreaker_manager.get_next_question(session)
+            if next_question:
+                await event.send(event.plain_result(next_question))
+
+    async def _process_mirror(
+        self,
+        session: UserSession,
+        filtered_input: str,
+        event: AstrMessageEvent,
+    ):
+        """镜像反射处理"""
+        # ── 修正检测 ──
         correction = self.correction_manager.detect(session, filtered_input)
         if correction:
             if correction.type == CorrectionType.NICKNAME:
                 session.nickname = correction.new_value
-                await event.reply(TextPart(f"好，之后叫你 {correction.new_value}。"))
+                await event.send(event.plain_result(f"好，之后叫你 {correction.new_value}。"))
+            else:
+                annotation = self.correction_manager.get_annotation(session, correction)
+                if annotation:
+                    session.correction_count += 1
+                    session.last_correction_time = time.time()
+                    await event.send(event.plain_result(annotation))
 
-        # 矛盾检测
+        # ── 矛盾检测 ──
         if self.enable_conflict_detection:
             conflict = self.conflict_detector.detect(session, filtered_input)
             if conflict:
                 session.conflicts.append(conflict)
+                await event.send(event.plain_result(self.conflict_detector.get_conflict_response(conflict)))
 
-        # 重复词检测
+        # ── 重复词检测 ──
         if self.enable_repeat_detection:
             repeat = self.repeat_detector.detect(session, filtered_input)
             if repeat:
                 session.repeats.append(repeat)
+                await event.send(event.plain_result(repeat.response))
 
-        # 自动调锐
+        # ── 自动调锐 ──
         if self.enable_sharpness_auto:
             self.sharpness_manager.auto_adjust(session, filtered_input)
 
-        # 生成镜像反射
-        sharpness = self.sharpness_manager.get_current_level()
+        # ── 生成镜像反射 ──
+        sharpness = self.sharpness_manager.get_current_level(session)
         response = self.mirror_core.reflect(
             user_input=filtered_input,
             session=session,
-            sharpness=sharpness
+            sharpness=sharpness,
         )
 
-        # 输出审查
+        # ── 输出审查 ──
         if self.anti_interference.check_output(response, filtered_input):
-            await event.reply(TextPart(response))
+            await event.send(event.plain_result(response))
         else:
             # 输出异常，降级处理
-            await event.reply(TextPart(self.mirror_core.reflect_simple(filtered_input)))
+            await event.send(event.plain_result(self.mirror_core.reflect_simple(filtered_input)))
 
     # ═══════════════════════════════════════════════════════════════
     #  辅助方法
@@ -457,8 +492,8 @@ class SoulMirror(Star):
 
         lines = ["=== 心镜会话导出 ===\n"]
         for i, entry in enumerate(session.dialogue_history, 1):
-            lines.append(f"[{i}] 你：{entry['user_input']}")
-            lines.append(f"    镜：{entry['mirror_response']}\n")
+            lines.append(f"[{i}] 你：{entry.user_input}")
+            lines.append(f"    镜：{entry.mirror_response}\n")
 
         return "\n".join(lines)
 

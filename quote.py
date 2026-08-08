@@ -8,6 +8,12 @@ from pathlib import Path
 from typing import List, Optional
 from dataclasses import dataclass
 
+try:
+    from astrbot.api import logger
+except ImportError:
+    import logging
+    logger = logging.getLogger("astrbot_plugin_soulmirror")
+
 from .session import UserSession
 
 
