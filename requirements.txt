@@ -1,0 +1,2 @@
+# SoulMirror - 核心功能零依赖（标准库 + AstrBot API）
+# 无强制依赖，所有功能纯 Python 实现

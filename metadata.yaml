@@ -1,0 +1,6 @@
+name: astrbot_plugin_soulmirror
+display_name: "心镜 (SoulMirror) - 镜像反射对话插件"
+desc: "心镜（SoulMirror）：一面有回应的镜子。不给建议、不共情、不分析，只把你此刻说出来的话，经过镜面折射后，以更清晰的形式返还给你。三层反射算法、五级锐度系统、六问破冰握手、动态修正机制、安全红线与防干扰协议。"
+version: "1.0.0"
+author: "Yahajiang"
+repo: "https://github.com/yahajiang/astrbot_plugin_soulmirror"
