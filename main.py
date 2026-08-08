@@ -1132,7 +1132,22 @@ class SoulSyncPro(Star):
     @filter.command("心助", desc="命令总览：显示全部父命令与子命令提示")
     async def cmd_commands(self, event: AstrMessageEvent):
         """查看 SoulSync 命令总览（10 父命令）"""
-        from .command_router import all_parent_help
+        from .command_router import (all_parent_help, help_guide, help_tips,
+                                     parent_help_sections, standalone_help)
+        if self._is_image_mode(event):
+            try:
+                path = self.image_renderer.render_help(
+                    "SoulSync 命令总览",
+                    parent_help_sections(),
+                    standalone=standalone_help(),
+                    guide=help_guide(),
+                    tips=help_tips(),
+                )
+                if path:
+                    yield event.image_result(path)
+                    return
+            except Exception:
+                pass
         lines = all_parent_help().split("\n")
         path = self._try_render_image(event, "SoulSync 命令总览", lines)
         if path:
@@ -2230,7 +2245,7 @@ class SoulSyncPro(Star):
                 tension = profile.tension
                 tstate = tension_state(tension, self.config.get("tension_threshold", 70.0))
                 tlabel = {"calm": "平静", "uneasy": "阴郁", "strained": "临界", "bursting": "即将爆发"}.get(tstate, tstate)
-                lines.append(f"  🌋 情绪张力：{tension:.0f}/100（{tlabel}）")
+                lines.append(f"  🌋 情绪张力：{tension:.1f}/100（{tlabel}）")
             if self.config.get("enable_stage_styles", True):
                 style = self._get_stage_style(profile)
                 lines.append(f"  🎭 阶段风格：称呼「{style['call']}」· {style['tone']}")
@@ -3322,17 +3337,19 @@ class SoulSyncPro(Star):
             if fav_delta == 0 and int_delta == 0:
                 fav_delta = dyn_micro_fav
                 int_delta = dyn_micro_int
-                # 张力种子：压抑的负面情绪（愤怒/悲伤/厌恶/恐惧偏高、喜悦偏低）
-                # 在普通聊天中持续微积累张力（情绪传染），正面情绪自然释放
+                # 张力种子：负面情绪基线越高、喜悦越低 → 张力积累越快；
+                # 喜悦基线越高 → 自然释放（情绪传染模型的日常漂移）
                 _e = profile.emotions
                 _seed = 0.0
                 for _dim in ("anger", "sadness", "disgust", "fear"):
-                    _seed += max(0.0, (_e.get(_dim, 50.0) - 60.0)) * 0.02
-                if _e.get("joy", 50.0) < 40.0:
-                    _seed += (40.0 - _e["joy"]) * 0.01
+                    _seed += max(0.0, (_e.get(_dim, 50.0) - 55.0)) * 0.03
+                if _e.get("joy", 50.0) < 45.0:
+                    _seed += (45.0 - _e["joy"]) * 0.02
+                _joy = _e.get("joy", 50.0)
                 emotion_deltas = {
                     "trust": 0.1, "anticipation": 0.1,
-                    "anger": round(min(1.0, _seed), 3) if _seed > 0 else 0.0,
+                    "joy": round(max(0.0, _joy - 60.0) * 0.02, 3),
+                    "anger": round(min(3.0, _seed), 3) if _seed > 0 else 0.0,
                 }
 
             # ── TPD 时间感知深化（统一处理：环境+倒计时+时间跳跃）──
@@ -4223,7 +4240,7 @@ class SoulSyncPro(Star):
                 tension = profile.tension
                 tstate = tension_state(tension, self.config.get("tension_threshold", 70.0))
                 tlabel = {"calm": "平静", "uneasy": "阴郁", "strained": "临界", "bursting": "即将爆发"}.get(tstate, tstate)
-                lines.append(f"  🌋 情绪张力：{tension:.0f}/100（{tlabel}）")
+                lines.append(f"  🌋 情绪张力：{tension:.1f}/100（{tlabel}）")
 
             custom = self.relationship_manager.custom_info(
                 str(profile.user_id).rpartition("::")[0] or profile.user_id
