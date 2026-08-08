@@ -62,6 +62,13 @@ def install_stubs():
     sys.modules["astrbot.api.star"] = star_api
 
 
+class _FakeEnum:
+    """模拟枚举成员（如 ComponentType.Plain），仅暴露 name"""
+
+    def __init__(self, name):
+        self.name = name
+
+
 class _MsgEvent:
     """模拟 AstrMessageEvent"""
 
@@ -410,6 +417,10 @@ def test_eat_what_bare():
             ev_at = _MsgEvent("吃点啥", first_type="at")
             out = [x async for x in plugin.eat_what_bare(ev_at)]
             assert len(out) == 0, "@ 机器人触发不应走无前缀分支"
+
+            ev_enum = _MsgEvent("吃点啥", first_type=_FakeEnum("Plain"))
+            out = [x async for x in plugin.eat_what_bare(ev_enum)]
+            assert len(out) == 1 and "为你推荐" in out[0], "枚举类型 Plain 组件应视为纯文本: {out}"
 
             ev_private = _MsgEvent("吃点啥", private=True)
             out = [x async for x in plugin.eat_what_bare(ev_private)]

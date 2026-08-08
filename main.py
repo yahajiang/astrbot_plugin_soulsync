@@ -165,7 +165,9 @@ class SoulSyncBistroPlugin(Star):
         if not messages:
             return False
         first = messages[0]
-        if getattr(first, "type", "") != "plain":
+        first_type = getattr(first, "type", None)
+        type_name = (getattr(first_type, "name", None) or str(first_type)).lower()
+        if type_name != "plain":
             return False
         if str(getattr(first, "text", "") or "").lstrip().startswith("/"):
             return False
