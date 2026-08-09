@@ -499,24 +499,33 @@ def test_engine_time_recommend():
 
 def test_command_eat_what_meal():
     """/吃点啥 无分类应按时段推荐套餐；指定分类仍推荐单菜"""
-    with tempfile.TemporaryDirectory() as td:
-        plugin = _make_plugin(td)
-        plugin._mood_cache["last"] = ("期待", 0.9, "好期待", time.time())
+    from astrbot_plugin_soulsync_bistro_心旅小馆 import main as main_mod
 
-        async def run():
-            ev = _MsgEvent("/吃点啥")
-            out = [x async for x in plugin.eat_what(ev, "")]
-            text = out[0]
-            assert "为你推荐套餐" in text, f"应推荐套餐: {text}"
-            assert "主菜" in text and "主食" in text, "套餐应含主菜与主食"
-            assert "时段" in text, "应标注时间时段"
+    orig = main_mod.time.localtime
+    main_mod.time.localtime = lambda: time.struct_time(
+        (2026, 8, 9, 12, 30, 0, 0, 0, 0)
+    )
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            plugin = _make_plugin(td)
+            plugin._mood_cache["last"] = ("期待", 0.9, "好期待", time.time())
 
-            out = [x async for x in plugin.eat_what(ev, "甜品")]
-            assert "为你推荐" in out[0] and "甜品" in out[0]
+            async def run():
+                ev = _MsgEvent("/吃点啥")
+                out = [x async for x in plugin.eat_what(ev, "")]
+                text = out[0]
+                assert "为你推荐套餐" in text, f"应推荐套餐: {text}"
+                assert "主菜" in text and "主食" in text, "套餐应含主菜与主食"
+                assert "时段" in text, "应标注时间时段"
 
-        import asyncio
+                out = [x async for x in plugin.eat_what(ev, "甜品")]
+                assert "为你推荐" in out[0] and "甜品" in out[0]
 
-        asyncio.run(run())
+            import asyncio
+
+            asyncio.run(run())
+    finally:
+        main_mod.time.localtime = orig
 
 
 def test_command_drink_what():
