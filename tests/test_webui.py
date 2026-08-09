@@ -45,8 +45,8 @@ assert set(RDE) <= panel_keys, "面板缺 RDE 键"
 
 # ── 4. 版本号 ───────────────────────────────────────────────
 hdr = schema["_info_header"]["description"]
-assert "v2.22" in hdr, f"_info_header 版本未更新: {hdr}"
+assert "v2.23" in hdr, f"_info_header 版本未更新: {hdr}"
 
 # ── 5. 控制台按钮文案与组数一致 ─────────────────────────────
 assert "141 项参数" in html and "16 个模块组" in html, "控制台按钮文案未同步"
-print("PASS: 模块分类（_section_rde 分组）+ v2.22 + 按钮文案")
+print("PASS: 模块分类（_section_rde 分组）+ v2.23 + 按钮文案")
