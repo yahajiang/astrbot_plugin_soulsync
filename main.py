@@ -128,7 +128,7 @@ class SoulSyncBistroPlugin(Star):
 
     @filter.command("吃点啥", alias={"吃啥", "吃什么", "今天吃什么"})
     async def eat_what(self, event: AstrMessageEvent, category: str = ""):
-        """按最近情绪推荐套餐（或指定分类的单菜）。用法：/吃点啥 [素菜|荤菜|主食|汤|甜品]"""
+        """按当前时间+情绪推荐套餐（或指定分类的单菜）。用法：/吃点啥 [素菜|荤菜|主食|汤|甜品]"""
         mood = self._current_mood() if self.enable_mood else None
         emotion = mood["emotion"] if mood else "平静"
         category = category.strip()
@@ -161,12 +161,15 @@ class SoulSyncBistroPlugin(Star):
             yield event.plain_result("\n".join(lines))
             return
 
-        meal = self.engine.recommend_meal(emotion)
-        if meal is None:
+        hour = time.localtime().tm_hour
+        res = self.engine.recommend_by_time(hour, emotion if emotion != "平静" else None)
+        if res is None:
             yield event.plain_result("菜谱库好像空了，请检查插件数据。")
             return
+        period = res["period"]
+        meal = res["meal"]
 
-        lines.append("🍽️ 为你推荐套餐：")
+        lines.append(f"⏰ 现在 {hour} 点（{period}时段）为你推荐套餐：")
         main = meal["main"]
         spicy = " 🌶️" if main.get("spicy") else ""
         lines.append(f"  主菜：{main['name']}（{main['category']}）{spicy}")
@@ -174,8 +177,8 @@ class SoulSyncBistroPlugin(Star):
             lines.append(f"  主食：{meal['staple']['name']}（{meal['staple']['category']}）")
         if meal.get("side"):
             lines.append(f"  配菜：{meal['side']['name']}（{meal['side']['category']}）")
-        if meal.get("dessert"):
-            lines.append(f"  甜品：{meal['dessert']['name']}（{meal['dessert']['category']}）")
+        if meal.get("soup"):
+            lines.append(f"  汤：{meal['soup']['name']}（{meal['soup']['category']}）")
         if mood_cfg.get("reply"):
             lines.append(f"  {mood_cfg['reply']}")
         lines.append("  想看做法？发送 /怎么做 菜名")

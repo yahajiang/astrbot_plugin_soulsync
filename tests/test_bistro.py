@@ -468,8 +468,37 @@ def test_eat_what_bare():
         asyncio.run(run())
 
 
+def test_engine_time_recommend():
+    """时间推荐：5 个时段各自返回时段名与合理的套餐结构"""
+    from astrbot_plugin_soulsync_bistro_心旅小馆.recipe_engine import RecipeEngine
+
+    engine = RecipeEngine()
+
+    cases = {
+        "夜宵": 23, "早餐": 8, "午餐": 12,
+        "下午茶": 15, "晚餐": 19, "夜宵": 2,
+    }
+    for period, hour in cases.items():
+        res = engine.recommend_by_time(hour)
+        assert res is not None, f"{hour} 点应有推荐"
+        assert res["period"] == period, f"{hour} 点应为{period}: {res['period']}"
+        assert "main" in res["meal"], f"{period} 应有主项"
+
+    assert engine.period_by_hour(6) == "早餐"
+    assert engine.period_by_hour(12) == "午餐"
+    assert engine.period_by_hour(16) == "下午茶"
+    assert engine.period_by_hour(20) == "晚餐"
+    assert engine.period_by_hour(23) == "夜宵"
+    assert engine.period_by_hour(3) == "夜宵"
+
+    res = engine.recommend_by_time(19, emotion="期待")
+    assert res is not None and res["period"] == "晚餐"
+    main = res["meal"]["main"]
+    assert main["category"] == "荤菜", "晚餐主菜应为荤菜"
+
+
 def test_command_eat_what_meal():
-    """/吃点啥 无分类应推荐套餐；指定分类仍推荐单菜"""
+    """/吃点啥 无分类应按时段推荐套餐；指定分类仍推荐单菜"""
     with tempfile.TemporaryDirectory() as td:
         plugin = _make_plugin(td)
         plugin._mood_cache["last"] = ("期待", 0.9, "好期待", time.time())
@@ -480,6 +509,7 @@ def test_command_eat_what_meal():
             text = out[0]
             assert "为你推荐套餐" in text, f"应推荐套餐: {text}"
             assert "主菜" in text and "主食" in text, "套餐应含主菜与主食"
+            assert "时段" in text, "应标注时间时段"
 
             out = [x async for x in plugin.eat_what(ev, "甜品")]
             assert "为你推荐" in out[0] and "甜品" in out[0]

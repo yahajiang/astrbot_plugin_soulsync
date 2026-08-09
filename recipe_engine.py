@@ -142,6 +142,12 @@ DRINK_KEYWORDS = (
 # 解馋（零食/小吃）标签判定
 SNACK_TAGS = ("小吃", "零食", "炸物", "甜品", "烧烤", "糖水", "糕点", "面包")
 
+# 时间推荐：时段标签
+TIME_TAGS = {
+    "早餐": ("早餐", "早点"),
+    "夜宵": ("夜宵", "宵夜", "烧烤", "小吃"),
+}
+
 
 class RecipeEngine:
     """菜谱加载、检索与推荐引擎"""
@@ -413,6 +419,110 @@ class RecipeEngine:
         if dessert_pool:
             meal["dessert"] = self._rng.choice(dessert_pool)
         return meal
+
+    # ────────────────────── 时间推荐 ──────────────────────
+
+    @staticmethod
+    def period_by_hour(hour: int) -> str:
+        """按小时（0-23）返回时段名：早餐/午餐/下午茶/晚餐/夜宵。"""
+        h = hour % 24
+        if 5 <= h < 11:
+            return "早餐"
+        if 11 <= h < 14:
+            return "午餐"
+        if 14 <= h < 17:
+            return "下午茶"
+        if 17 <= h < 21:
+            return "晚餐"
+        return "夜宵"
+
+    def _pick_mood(self, pool: List[Dict], emotion: Optional[str]) -> Dict:
+        """从候选池挑一道：情绪适配优先，否则随机。"""
+        if emotion:
+            mood_pool = [r for r in pool if self.is_mood_match(r, emotion)]
+            if mood_pool:
+                return self._rng.choice(mood_pool)
+        return self._rng.choice(pool)
+
+    def _tag_pool(self, tags: Tuple[str, ...]) -> List[Dict]:
+        lowered = {t.lower() for t in tags}
+        return [
+            r for r in self.recipes
+            if any(str(t).lower() in lowered for t in (r.get("tags") or []))
+        ]
+
+    def recommend_by_time(
+        self, hour: int, emotion: Optional[str] = None
+    ) -> Optional[Dict]:
+        """按小时推荐：返回 {"period": 时段名, "meal": {main/staple/side/soup}}。
+
+        早餐→粥面早餐池；午餐/晚餐→荤素主食汤套餐；下午茶→甜品饮品；
+        夜宵→夜宵小吃烧烤池。标签优先、分类兜底、情绪参与。
+        """
+        period = self.period_by_hour(hour)
+        meal = {}
+
+        if period == "早餐":
+            pool = self._tag_pool(TIME_TAGS["早餐"])
+            if not pool:
+                pool = [
+                    r for r in self.recipes
+                    if r.get("category") in ("主食", "粥羹", "汤羹")
+                ]
+            if not pool:
+                return None
+            meal["main"] = self._pick_mood(pool, emotion)
+            staple = [r for r in self.recipes if r.get("category") in ("主食", "粥羹")]
+            if staple and staple[0] is not meal["main"]:
+                meal["staple"] = self._rng.choice(staple)
+            drinks = self.drink_pool()
+            if drinks and drinks[0] is not meal["main"]:
+                meal["side"] = self._rng.choice(drinks)
+
+        elif period in ("午餐", "晚餐"):
+            mains = [r for r in self.recipes if r.get("category") == "荤菜"]
+            if not mains:
+                return None
+            meal["main"] = self._pick_mood(mains, emotion)
+            staples = [r for r in self.recipes if r.get("category") == "主食"]
+            if staples:
+                meal["staple"] = self._rng.choice(staples)
+            sides = [
+                r for r in self.recipes
+                if r.get("category") in ("素菜", "凉菜") and r is not meal["main"]
+            ]
+            if sides:
+                meal["side"] = self._rng.choice(sides)
+            soups = [
+                r for r in self.recipes
+                if r.get("category") == "汤羹" and r is not meal["main"]
+            ]
+            if soups:
+                meal["soup"] = self._rng.choice(soups)
+
+        elif period == "下午茶":
+            sweets = [r for r in self.recipes if r.get("category") == "甜品零食"]
+            drinks = self.drink_pool()
+            pool = sweets + drinks
+            if not pool:
+                return None
+            meal["main"] = self._pick_mood(pool, emotion)
+            others = [r for r in pool if r is not meal["main"]]
+            if others:
+                meal["side"] = self._rng.choice(others)
+
+        else:  # 夜宵
+            pool = self._tag_pool(TIME_TAGS["夜宵"])
+            if not pool:
+                pool = [
+                    r for r in self.recipes
+                    if r.get("category") in ("甜品零食", "主食", "汤羹")
+                ]
+            if not pool:
+                return None
+            meal["main"] = self._pick_mood(pool, emotion)
+
+        return {"period": period, "meal": meal}
 
     # ────────────────────── 辅助 ──────────────────────
 
