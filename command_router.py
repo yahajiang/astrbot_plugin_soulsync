@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import re
+
 # ─── 10 父命令路由表 ───────────────────────────────────────────
 PARENT_COMMANDS = {
     "心声": {
@@ -232,6 +234,26 @@ STANDALONE_HELP = [
     ("/心管", "管理员后台：好感、重置、备份、导出等"),
 ]
 
+# ─── 管理员专属子命令（普通用户总览隐藏）──────────────────────
+ADMIN_ONLY_SUBS = {
+    "纪念": ("节日添加", "节日删除"),
+    "人格": ("设置", "重置", "锁定"),
+}
+ADMIN_STANDALONE = ("/心管",)
+
+
+def _filter_sections(sections, include_admin: bool) -> list:
+    if include_admin:
+        return sections
+    out = []
+    for sec in sections:
+        name, cmds, example = sec
+        hidden = ADMIN_ONLY_SUBS.get(name)
+        keep = [(c, d) for c, d in cmds
+                if not hidden or not any(c.startswith(h) for h in hidden)]
+        out.append((name, keep, example))
+    return out
+
 
 def resolve_parent(parent: str, sub: str) -> str | None:
     """解析父命令+子命令 → 方法名；未知返回 None"""
@@ -271,14 +293,16 @@ def admin_help() -> str:
     return ADMIN_HELP
 
 
-def parent_help_sections() -> list:
+def parent_help_sections(include_admin: bool = True) -> list:
     """结构化帮助：[(父命令, [(子命令+参数, 说明), ...], 示例)]，供图片渲染器排版"""
-    return [tuple(sec) for sec in PARENT_HELP_SECTIONS]
+    return [tuple(sec) for sec in _filter_sections(PARENT_HELP_SECTIONS, include_admin)]
 
 
-def standalone_help() -> list:
-    """独立命令：[(命令, 说明), ...]"""
-    return list(STANDALONE_HELP)
+def standalone_help(include_admin: bool = True) -> list:
+    """独立命令：[(命令, 说明), ...]；include_admin=False 时隐藏 /心管"""
+    if include_admin:
+        return list(STANDALONE_HELP)
+    return [item for item in STANDALONE_HELP if item[0] not in ADMIN_STANDALONE]
 
 
 def help_guide() -> str:
@@ -291,15 +315,29 @@ def help_tips() -> list:
     return list(HELP_TIPS)
 
 
-def all_parent_help() -> str:
+def _visible_parent_line(parent: str, include_admin: bool) -> str:
+    line = PARENT_HELP[parent]
+    hidden = ADMIN_ONLY_SUBS.get(parent)
+    if include_admin or not hidden:
+        return line
+    m = re.match(r"^(.*\[)([^\]]*)(\].*)$", line)
+    if not m:
+        return line
+    toks = [t.strip() for t in m.group(2).split("|")]
+    keep = [t for t in toks if not any(t.startswith(h) for h in hidden)]
+    return m.group(1) + "|".join(keep) + m.group(3)
+
+
+def all_parent_help(include_admin: bool = True) -> str:
     lines = ["🎛️ SoulSync 命令总览", "━" * 24]
     for parent in ("心声", "回忆", "纪念", "角色", "人格", "知识",
                    "风格", "记忆", "天象", "排行"):
-        lines.append(PARENT_HELP[parent])
+        lines.append(_visible_parent_line(parent, include_admin))
     lines.append("")
     lines.append("/图片模式 — 指令输出图片/文本切换（零参数）")
     lines.append("/设置 — 状态显示开关（零参数）")
-    lines.append("/心管 ... — 管理员后台操作")
+    if include_admin:
+        lines.append("/心管 ... — 管理员后台操作")
     lines.append("")
     lines.append("💡 95% 场景无需输入命令：查询意图会自动识别（如\"我们什么关系？\"）")
     return "\n".join(lines)

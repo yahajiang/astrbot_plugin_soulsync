@@ -1134,12 +1134,13 @@ class SoulSyncPro(Star):
         """查看 SoulSync 命令总览（10 父命令）"""
         from .command_router import (all_parent_help, help_guide, help_tips,
                                      parent_help_sections, standalone_help)
+        is_admin = self._is_admin(event)
         if self._is_image_mode(event):
             try:
                 path = self.image_renderer.render_help(
                     "SoulSync 命令总览",
-                    parent_help_sections(),
-                    standalone=standalone_help(),
+                    parent_help_sections(include_admin=is_admin),
+                    standalone=standalone_help(include_admin=is_admin),
                     guide=help_guide(),
                     tips=help_tips(),
                 )
@@ -1148,7 +1149,7 @@ class SoulSyncPro(Star):
                     return
             except Exception:
                 pass
-        lines = all_parent_help().split("\n")
+        lines = all_parent_help(include_admin=is_admin).split("\n")
         path = self._try_render_image(event, "SoulSync 命令总览", lines)
         if path:
             yield event.image_result(path)
