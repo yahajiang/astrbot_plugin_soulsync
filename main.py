@@ -50,6 +50,7 @@ HELP_TEXT = """🍽️ 心旅小馆 · 情绪美食推荐
 /口味查看           查看口味档案
 /口味重置           清空口味档案
 /今天               查看今日节日/季节/时段建议
+/家里有 食材        按手头食材反查可做的菜（如：/家里有 鸡蛋,番茄）
 /心馆 状态          查看当前情绪快照
 
 分类可用：素菜 / 荤菜 / 主食 / 汤 / 甜品 / 凉菜"""
@@ -602,4 +603,43 @@ class SoulSyncBistroPlugin(Star):
         period = self.engine.period_by_hour(tm.tm_hour)
         lines.append(f"⏰ 当前时段：{period}")
         lines.append("🏠 周末啦，给自己做顿好的 → /吃点啥" if tm.tm_wday >= 5 else "→ 来一句 /吃点啥 开始吧")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("家里有", alias={"我有", "食材查", "有什么菜", "有啥食材"})
+    async def have_ingredients(self, event: AstrMessageEvent, ingredients: str = ""):
+        """按手头食材反查可做菜。用法：/家里有 鸡蛋,番茄,土豆"""
+        items = [t.strip() for t in re.split(r"[,，、\s]+", ingredients.strip()) if t.strip()]
+        if not items:
+            yield event.plain_result(
+                "告诉我你家里有什么食材吧～\n用法：/家里有 鸡蛋,番茄,土豆"
+            )
+            return
+        matches = self.engine.match_by_ingredients(items)
+        if not matches:
+            yield event.plain_result(
+                f"🥬 家里有：{'、'.join(items)}\n暂时没找到能做的菜，试试多给几样常见食材？"
+            )
+            return
+        mood = self._current_mood() if self.enable_mood else None
+        emotion = mood["emotion"] if mood else None
+
+        def _tag(m):
+            if emotion and self.engine.is_mood_match(m["recipe"], emotion):
+                return " ❤️"
+            return ""
+
+        ready = [m for m in matches if not m["missing"]]
+        partial = [m for m in matches if m["missing"]]
+        lines = [f"🥬 家里有：{'、'.join(items)}"]
+        if ready:
+            lines.append("✅ 食材齐活！可以做：")
+            for m in ready[:4]:
+                r = m["recipe"]
+                lines.append(f"  · {r['name']}（{r['category']}）{_tag(m)}")
+        if partial:
+            lines.append("缺一点点也能做：")
+            for m in partial[:3]:
+                r = m["recipe"]
+                lines.append(f"  · {r['name']}（缺：{'、'.join(m['missing'][:3])}）{_tag(m)}")
+        lines.append("想看做法？发送 /怎么做 菜名")
         yield event.plain_result("\n".join(lines))

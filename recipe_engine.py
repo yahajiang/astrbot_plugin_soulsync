@@ -55,6 +55,9 @@ def _build_index_pack(recipes_key: str, mood_key: str) -> Dict:
         "mood_hint_index": defaultdict(set),
         "id2idx": {},
         "mood_keyword_hits": {},
+        "ing_flat": [],
+        "ing_bigram": defaultdict(set),
+        "ing_char1": defaultdict(set),
     }
 
     for i, r in enumerate(recipes):
@@ -79,6 +82,19 @@ def _build_index_pack(recipes_key: str, mood_key: str) -> Dict:
             pack["tag_index"][t].add(i)
         for m in r.get("mood_hint") or []:
             pack["mood_hint_index"][m].add(i)
+        # v1.8：食材反查索引（归一化食材名列表 + 食材名 bigram → 菜 id 集）
+        ing_norm = []
+        for ing in r.get("ingredients", []):
+            base = _parse_ingredient(ing)
+            if base is None:
+                continue
+            norm = _norm_ingredient_name(base)
+            ing_norm.append((base, norm))
+            if len(norm) == 1:
+                pack["ing_char1"][norm].add(i)
+            for b in _bigrams(norm):
+                pack["ing_bigram"][b].add(i)
+        pack["ing_flat"].append(ing_norm)
 
     # mood_mapping 关键词 -> 命中 id 集（与 match_mood 的判定完全一致）
     if isinstance(mood_mapping, dict):
@@ -148,6 +164,73 @@ TIME_TAGS = {
     "夜宵": ("夜宵", "宵夜", "烧烤", "小吃"),
 }
 
+# 食材反查：别名 → 规范词（精确匹配/后缀匹配，从长到短）
+INGREDIENT_ALIASES = {
+    "西红柿": "番茄",
+    "洋芋": "土豆", "马铃薯": "土豆",
+    "柿子椒": "青椒", "甜椒": "青椒", "灯笼椒": "青椒",
+    "尖椒": "辣椒", "线椒": "辣椒", "小米辣": "辣椒",
+    "芫荽": "香菜",
+    "五花肉": "猪肉", "猪五花": "猪肉", "里脊肉": "猪肉", "猪里脊": "猪肉",
+    "猪瘦肉": "猪肉", "瘦肉": "猪肉", "梅花肉": "猪肉",
+    "鸡胸肉": "鸡肉", "鸡腿肉": "鸡肉", "鸡翅": "鸡肉", "鸡翅中": "鸡肉",
+    "鸡翅根": "鸡肉", "鸡腿": "鸡肉",
+    "牛里脊": "牛肉", "牛腩": "牛肉", "肥牛": "牛肉", "牛腱子": "牛肉",
+    "鲜虾": "虾", "虾仁": "虾", "基围虾": "虾", "大明虾": "虾", "大虾": "虾",
+    "小麦粉": "面粉", "中筋面粉": "面粉", "高筋面粉": "面粉", "低筋面粉": "面粉",
+    "嫩豆腐": "豆腐", "老豆腐": "豆腐", "北豆腐": "豆腐", "南豆腐": "豆腐",
+    "内酯豆腐": "豆腐",
+    "冬菇": "香菇", "花菇": "香菇",
+    "黑木耳": "木耳", "云耳": "木耳",
+    "花生仁": "花生", "花生米": "花生",
+    "上海青": "青菜", "油菜": "青菜", "小白菜": "青菜",
+    "红萝卜": "胡萝卜",
+    "生粉": "淀粉", "玉米淀粉": "淀粉", "土豆淀粉": "淀粉", "红薯淀粉": "淀粉",
+    "生抽": "酱油", "老抽": "酱油",
+    "陈醋": "醋", "香醋": "醋", "米醋": "醋", "白醋": "醋",
+    "黄酒": "料酒", "米酒": "料酒",
+    "白砂糖": "糖", "绵白糖": "糖",
+    "菜籽油": "油", "花生油": "油", "橄榄油": "油", "玉米油": "油",
+    "葵花籽油": "油", "大豆油": "油", "食用油": "油", "色拉油": "油",
+    "香油": "芝麻油", "麻油": "芝麻油",
+    "生姜": "姜", "大蒜": "蒜", "香葱": "葱", "小葱": "葱", "大葱": "葱",
+    "瑶柱": "干贝", "元贝": "干贝",
+    "车厘子": "樱桃",
+}
+
+# 食材反查：基础调味料豁免（默认家家有，缺了不算缺）
+BASIC_CONDIMENTS = frozenset(
+    (
+        "盐", "白糖", "白砂糖", "绵白糖", "红糖", "冰糖",
+        "酱油", "生抽", "老抽", "蚝油", "味极鲜",
+        "料酒", "黄酒", "米酒", "醋", "陈醋", "香醋", "米醋", "白醋",
+        "油", "食用油", "菜籽油", "花生油", "橄榄油", "玉米油", "葵花籽油",
+        "大豆油", "猪油", "黄油", "芝麻油", "香油", "麻油", "辣椒油", "花椒油",
+        "淀粉", "生粉", "玉米淀粉", "土豆淀粉", "红薯淀粉",
+        "鸡精", "味精", "鸡粉", "胡椒粉", "白胡椒粉", "黑胡椒",
+        "花椒", "花椒粉", "八角", "桂皮", "香叶", "草果", "丁香", "孜然", "茴香",
+        "姜", "生姜", "蒜", "大蒜", "葱", "小葱", "大葱", "香葱",
+        "水", "清水", "热水", "温水", "开水", "纯净水", "高汤",
+        "芝麻", "白芝麻", "黑芝麻", "豆瓣酱", "甜面酱", "番茄酱", "豆豉",
+    )
+)
+
+
+def _norm_ingredient_name(name: str) -> str:
+    """食材别名归一到规范词（精确/后缀匹配，长别名优先）。"""
+    for alias in sorted(INGREDIENT_ALIASES, key=len, reverse=True):
+        if name == alias or name.endswith(alias):
+            return INGREDIENT_ALIASES[alias]
+    return name
+
+
+def _parse_ingredient(ing) -> Optional[str]:
+    """食材项（如「里脊肉 200.0g」）→ 食材名；空/调味料返回 None。"""
+    name = str(ing).strip().split()[0].strip()
+    if not name or name in BASIC_CONDIMENTS:
+        return None
+    return name
+
 
 class RecipeEngine:
     """菜谱加载、检索与推荐引擎"""
@@ -176,6 +259,10 @@ class RecipeEngine:
         self._mood_hint_index = pack["mood_hint_index"]
         self._id2idx = pack["id2idx"]
         self._mood_keyword_hits = pack["mood_keyword_hits"]
+        self._ing_flat: List[List[Tuple[str, str]]] = pack["ing_flat"]
+        self._ing_bigram = pack["ing_bigram"]
+        self._ing_char1 = pack["ing_char1"]
+        self._name_hits_cache: Dict[str, Set[int]] = {}
         self._search_cache: "OrderedDict[str, Tuple]" = OrderedDict()
         self._mood_cache: Dict[str, Tuple] = {}
 
@@ -614,3 +701,82 @@ class RecipeEngine:
             s = re.sub(r"^步骤\s*\d+[\.、:：]?\s*", "", s)
             lines.append(f"{i}. {s}")
         return "\n".join(lines)
+
+    # ────────────────────── 食材反查 ──────────────────────
+
+    @staticmethod
+    def _norm_ingredient(name: str) -> str:
+        """食材别名归一到规范词（精确/后缀匹配，长别名优先）。"""
+        return _norm_ingredient_name(name)
+
+    def name_hits(self, kw: str) -> Set[int]:
+        """按关键词返回命中菜索引集（名称+食材全文，与忌口判定口径一致，懒缓存）。"""
+        cache = self._name_hits_cache
+        hits = cache.get(kw)
+        if hits is None:
+            hits = {
+                i
+                for i in range(len(self._names))
+                if kw in self._names[i] or kw in self._ing_texts[i]
+            }
+            cache[kw] = hits
+        return hits
+
+    def _ingredient_candidates(self, have_norm: List[str]) -> Set[int]:
+        """手头食材 → 候选菜索引集：bigram 并集 + 1 字食材补充（1 字查询回落字符索引）。
+
+        并集 + ing_char1 保证不因候选缩窄漏收（如「山楂干」需召回仅含「山楂」的菜、
+        「面粉」需召回仅含 1 字食材「面」的菜）；候选多收无害，由判定兜底过滤。
+        """
+        cand: Set[int] = set()
+        for hn in have_norm:
+            if len(hn) >= 2:
+                for b in _bigrams(hn):
+                    cand |= self._ing_bigram.get(b, set())
+                for c in hn:
+                    cand |= self._ing_char1.get(c, set())
+            else:
+                cand |= self._char_index.get(hn, set())
+                cand |= self._ing_char1.get(hn, set())
+        if not cand:
+            return set(range(len(self.recipes)))
+        return cand
+
+    def match_by_ingredients(
+        self, have: List[str], limit: int = 8
+    ) -> List[Dict]:
+        """按手头食材反查可做菜：返回按覆盖度降序的匹配列表。
+
+        每项 {"recipe", "owned", "missing", "coverage"}；基础调味料不计入
+        缺失，缺 >3 项或覆盖度 <0.5 的菜不展示。
+        """
+        have = [h.strip() for h in have if h and h.strip()]
+        if not have:
+            return []
+        have_norm = [self._norm_ingredient(h) for h in have]
+        results = []
+        for i in sorted(self._ingredient_candidates(have_norm)):
+            needed = self._ing_flat[i]
+            if not needed:
+                continue
+            owned, missing = [], []
+            for name, norm in needed:
+                if any(norm == hn or hn in norm or norm in hn for hn in have_norm):
+                    owned.append(name)
+                else:
+                    missing.append(name)
+            if not owned or len(missing) > 3:
+                continue
+            coverage = len(owned) / len(needed)
+            if coverage < 0.5:
+                continue
+            results.append(
+                {
+                    "recipe": self.recipes[i],
+                    "owned": owned,
+                    "missing": missing,
+                    "coverage": coverage,
+                }
+            )
+        results.sort(key=lambda m: (-m["coverage"], len(m["missing"]), -len(m["owned"])))
+        return results[:limit]
