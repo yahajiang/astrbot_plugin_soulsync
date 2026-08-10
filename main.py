@@ -18,6 +18,7 @@ from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star
 
 from .emotion_analyzer import analyze
+from .feedback import DEFAULT_DEDUP_DAYS, FeedbackStore
 from .recipe_engine import RecipeEngine
 
 EMOTION_EMOJI = {
@@ -33,12 +34,15 @@ EAT_WHAT_BARE_PATTERN = r"吃点啥|吃啥|吃什么"
 
 HELP_TEXT = """🍽️ 心旅小馆 · 情绪美食推荐
 
-/吃点啥 [分类]      推荐一份套餐（或指定分类的单菜）
+/吃啥 分类      推荐一份套餐（或指定分类的单菜）
 /喝点啥             推荐一杯饮品
 /解馋               推荐解馋小食（小吃/甜品/炸鸡）
 /菜谱搜索 关键词    搜索菜谱库，标出「❤️此刻适配」
 /怎么做 菜名        查看详细做法步骤
 /随机推荐 [数量]    随机推荐，至少一道情绪特调
+/好吃 [菜名]        标记喜欢（不带菜名=上一道推荐）
+/不好吃 [菜名]      标记不喜欢
+/我的口味           查看个人反馈统计
 /心馆 状态          查看当前情绪快照
 
 分类可用：素菜 / 荤菜 / 主食 / 汤 / 甜品 / 凉菜"""
@@ -55,6 +59,7 @@ class SoulSyncBistroPlugin(Star):
         self.enable_mood = bool(self.config.get("enable_mood_link", True))
         self.max_search = self._clamp_int(self.config.get("max_search_results", 8), 1, 20)
         self.engine = RecipeEngine()
+        self.feedback = FeedbackStore()
         self._mood_cache: Dict[str, tuple] = {}
         logger.info(
             f"心旅小馆已加载 | 菜谱 {self.engine.total()} 道 | "
@@ -67,6 +72,24 @@ class SoulSyncBistroPlugin(Star):
             return max(lo, min(hi, int(v)))
         except (TypeError, ValueError):
             return lo
+
+    @staticmethod
+    def _user_id(event: AstrMessageEvent) -> str:
+        """取用户唯一 ID：优先 unified_msg_origin，回退 sender_id。"""
+        uid = getattr(event, "unified_msg_origin", None)
+        if uid:
+            return str(uid)
+        try:
+            return str(event.get_sender_id())
+        except Exception:
+            return "unknown"
+
+    def _feedback_ctx(self, event: AstrMessageEvent):
+        """组装推荐上下文：近期推荐去重集合 + 反馈加权函数。"""
+        uid = self._user_id(event)
+        exclude = self.feedback.recently_recommended(uid, DEFAULT_DEDUP_DAYS)
+        weight = lambda r: self.feedback.dish_score(uid, r.get("name", ""))
+        return uid, exclude, weight
 
     # ────────────────────── 钩子：截取 LLM 回复 ──────────────────────
 
@@ -139,6 +162,8 @@ class SoulSyncBistroPlugin(Star):
             )
             return
 
+        uid, exclude, weight = self._feedback_ctx(event)
+
         mood_cfg = self.engine.mood_mapping.get(emotion, {})
         emoji = EMOTION_EMOJI.get(emotion, "")
         lines = [f"{emoji} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"]
@@ -147,10 +172,11 @@ class SoulSyncBistroPlugin(Star):
         lines.append("")
 
         if category:
-            recipe = self.engine.recommend_for_mood(emotion, category)
+            recipe = self.engine.recommend_for_mood(emotion, category, exclude, weight)
             if recipe is None:
                 yield event.plain_result("菜谱库好像空了，请检查插件数据。")
                 return
+            self.feedback.record_recommendation(uid, [recipe["name"]])
             lines.append(f"🍽️ 为你推荐：{recipe['name']}")
             lines.append(f"  分类：{recipe['category']} | 难度：{recipe['difficulty']}")
             ingredients = "、".join(recipe.get("ingredients", [])[:8])
@@ -162,12 +188,16 @@ class SoulSyncBistroPlugin(Star):
             return
 
         hour = time.localtime().tm_hour
-        res = self.engine.recommend_by_time(hour, emotion if emotion != "平静" else None)
+        res = self.engine.recommend_by_time(hour, emotion if emotion != "平静" else None, exclude, weight)
         if res is None:
             yield event.plain_result("菜谱库好像空了，请检查插件数据。")
             return
         period = res["period"]
         meal = res["meal"]
+        self.feedback.record_recommendation(
+            uid,
+            [meal[k]["name"] for k in ("main", "staple", "side", "soup") if meal.get(k)],
+        )
 
         lines.append(f"⏰ 现在 {hour} 点（{period}时段）为你推荐套餐：")
         main = meal["main"]
@@ -181,7 +211,7 @@ class SoulSyncBistroPlugin(Star):
             lines.append(f"  汤：{meal['soup']['name']}（{meal['soup']['category']}）")
         if mood_cfg.get("reply"):
             lines.append(f"  {mood_cfg['reply']}")
-        lines.append("  想看做法？发送 /怎么做 菜名")
+        lines.append("  好吃/踩雷？回复 /好吃 或 /不好吃，推荐会更懂你")
         yield event.plain_result("\n".join(lines))
 
     def _bare_group_text(self, event: AstrMessageEvent) -> bool:
@@ -219,10 +249,14 @@ class SoulSyncBistroPlugin(Star):
         """按最近情绪推荐一杯饮品。用法：/喝点啥"""
         mood = self._current_mood() if self.enable_mood else None
         emotion = mood["emotion"] if mood else "平静"
-        drink = self.engine.recommend_drink(emotion if emotion != "平静" else None)
+        uid, exclude, weight = self._feedback_ctx(event)
+        drink = self.engine.recommend_drink(
+            emotion if emotion != "平静" else None, exclude, weight
+        )
         if drink is None:
             yield event.plain_result("饮品库好像空了，请检查插件数据。")
             return
+        self.feedback.record_recommendation(uid, [drink["name"]])
 
         mood_cfg = self.engine.mood_mapping.get(emotion, {})
         emoji = EMOTION_EMOJI.get(emotion, "")
@@ -251,12 +285,14 @@ class SoulSyncBistroPlugin(Star):
         """按最近情绪推荐解馋小食（小吃/甜品/炸鸡）。用法：/解馋 [数量]"""
         mood = self._current_mood() if self.enable_mood else None
         emotion = mood["emotion"] if mood else "平静"
+        uid, exclude, weight = self._feedback_ctx(event)
         picks = self.engine.recommend_snacks(
-            count, emotion if emotion != "平静" else None
+            count, emotion if emotion != "平静" else None, exclude, weight
         )
         if not picks:
             yield event.plain_result("零食库好像空了，请检查插件数据。")
             return
+        self.feedback.record_recommendation(uid, [r["name"] for r in picks])
 
         mood_cfg = self.engine.mood_mapping.get(emotion, {})
         emoji = EMOTION_EMOJI.get(emotion, "")
@@ -349,10 +385,14 @@ class SoulSyncBistroPlugin(Star):
         """随机推荐 N 道菜，至少一道为情绪特调。用法：/随机推荐 [数量]"""
         mood = self._current_mood() if self.enable_mood else None
         emotion = mood["emotion"] if mood else None
-        picks = self.engine.random_recommend(count, emotion if emotion != "平静" else None)
+        uid, exclude, weight = self._feedback_ctx(event)
+        picks = self.engine.random_recommend(
+            count, emotion if emotion != "平静" else None, exclude, weight
+        )
         if not picks:
             yield event.plain_result("菜谱库为空。")
             return
+        self.feedback.record_recommendation(uid, [r["name"] for r in picks])
 
         lines = [f"🎲 随机推荐 {len(picks)} 道："]
         for r in picks:
@@ -388,3 +428,59 @@ class SoulSyncBistroPlugin(Star):
             lines.append(f"  此刻适配：{recipe['name']}")
             lines.append(f"  想看做法？发送 /怎么做 {recipe['name']}")
         yield event.plain_result("\n".join(lines))
+
+    # ────────────────────── 反馈指令 ──────────────────────
+
+    def _resolve_feedback_dish(self, event: AstrMessageEvent, name: str, uid: str):
+        """定位要反馈的菜：给菜名按名查；不带菜名用最近一次推荐的主菜。
+
+        返回 (recipe or None, 错误提示 or None)。
+        """
+        name = (name or "").strip()
+        if not name:
+            last = self.feedback.last_recommended(uid)
+            if not last:
+                return None, "还没有推荐记录哦，先来一句 /吃点啥 吧～"
+            return self.engine.find_by_name(last), None
+        recipe = self.engine.find_by_name(name)
+        if recipe is None:
+            similar = self.engine.search(name, limit=3)
+            if similar:
+                names = "、".join(s["name"] for s in similar)
+                return None, f"没找到「{name}」，是不是想说：{names}"
+            return None, f"菜谱库中没有「{name}」这道菜。"
+        return recipe, None
+
+    @filter.command("好吃", alias={"真好吃", "好香", "好吃极了"})
+    async def good_feedback(self, event: AstrMessageEvent, name: str = ""):
+        """标记喜欢。用法：/好吃 [菜名]（不带菜名标记上一道推荐的菜）"""
+        uid = self._user_id(event)
+        recipe, hint = self._resolve_feedback_dish(event, name, uid)
+        if recipe is None:
+            yield event.plain_result(hint)
+            return
+        self.feedback.record_feedback(uid, recipe["name"], "like")
+        score = self.feedback.dish_score(uid, recipe["name"])
+        yield event.plain_result(
+            f"👍 记下了：{recipe['name']} 好吃！以后会优先推荐（喜好分 {score:.2f}）"
+        )
+
+    @filter.command("不好吃", alias={"踩雷", "报吃"})
+    async def bad_feedback(self, event: AstrMessageEvent, name: str = ""):
+        """标记不喜欢。用法：/不好吃 [菜名]"""
+        uid = self._user_id(event)
+        recipe, hint = self._resolve_feedback_dish(event, name, uid)
+        if recipe is None:
+            yield event.plain_result(hint)
+            return
+        self.feedback.record_feedback(uid, recipe["name"], "dislike")
+        score = self.feedback.dish_score(uid, recipe["name"])
+        yield event.plain_result(
+            f"👎 记下了：{recipe['name']} 不合口味，以后会少推荐（喜好分 {score:.2f}）"
+        )
+
+    @filter.command("我的口味", alias={"口味"})
+    async def my_taste(self, event: AstrMessageEvent):
+        """查看个人反馈统计。用法：/我的口味"""
+        uid = self._user_id(event)
+        yield event.plain_result(self.feedback.summary(uid))

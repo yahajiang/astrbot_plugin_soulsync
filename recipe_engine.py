@@ -267,6 +267,22 @@ class RecipeEngine:
             return [r for r in self.recipes if r.get("vegetarian", False)]
         return [r for r in self.recipes if r.get("category") == cat]
 
+    def _exclude(self, pool: List[Dict], exclude_names: Optional[set]) -> List[Dict]:
+        """从候选池剔除近期推荐过的菜名；剔除后为空则回退原池。"""
+        if not exclude_names:
+            return pool
+        kept = [r for r in pool if r.get("name") not in exclude_names]
+        return kept or pool
+
+    def _choose(self, pool: List[Dict], weight_func=None) -> Dict:
+        """从池中选一道：无权重时均匀随机；有权重时按权重抽样（分数<=0 时给 0.01 保底）。"""
+        if not pool:
+            raise ValueError("empty pool")
+        if weight_func is None:
+            return self._rng.choice(pool)
+        weights = [max(weight_func(r), 0.01) for r in pool]
+        return self._rng.choices(pool, weights=weights, k=1)[0]
+
     # ────────────────────── 情绪推荐 ──────────────────────
 
     def is_mood_match(self, recipe: Dict, emotion: str) -> bool:
@@ -314,30 +330,42 @@ class RecipeEngine:
         self._mood_cache[emotion] = result
         return list(result)
 
-    def recommend_for_mood(self, emotion: str, category: Optional[str] = None) -> Optional[Dict]:
-        """按情绪推荐一道菜，可附加分类限制；无匹配（如平静/未知情绪）时回退随机。"""
+    def recommend_for_mood(
+        self,
+        emotion: str,
+        category: Optional[str] = None,
+        exclude_names: Optional[set] = None,
+        weight_func=None,
+    ) -> Optional[Dict]:
+        """按情绪推荐一道菜，可附加分类限制；无匹配（如平静/未知情绪）时回退随机。
+
+        exclude_names: 近期推荐去重；weight_func: 按个人反馈分加权抽样。
+        """
         pool = self.match_mood(emotion)
         if category:
             pool = [r for r in pool if self._in_category(r, category)] or self.filter_category(category)
+        pool = self._exclude(pool, exclude_names)
         if not pool:
             pool = self.filter_category(category) if category else self.recipes
         if not pool:
             return None
-        return self._rng.choice(pool)
+        return self._choose(pool, weight_func)
 
     def random_recommend(
-        self, count: int, emotion: Optional[str] = None
+        self, count: int, emotion: Optional[str] = None,
+        exclude_names: Optional[set] = None, weight_func=None,
     ) -> List[Dict]:
         """随机推荐 count 道；若给定情绪，保证至少一道为该情绪适配菜。"""
         count = max(1, min(int(count), 10))
+        pool_all = self._exclude(self.recipes, exclude_names)
         mood_pick = None
         if emotion:
-            pool = [self.recipes[i] for i in self._mood_hint_index.get(emotion, ())]
+            pool = [r for r in pool_all if self.is_mood_match(r, emotion)]
             if not pool:
-                pool = self.match_mood(emotion)
+                pool = [r for r in self.match_mood(emotion) if r in pool_all]
             if pool:
-                mood_pick = self._rng.choice(pool)
-        others = [r for r in self.recipes if r is not mood_pick]
+                mood_pick = self._choose(pool, weight_func)
+        others = [r for r in pool_all if r is not mood_pick]
         picks = self._rng.sample(others, min(count - (1 if mood_pick else 0), len(others)))
         result = ([mood_pick] if mood_pick else []) + picks
         return result[:count]
@@ -355,16 +383,19 @@ class RecipeEngine:
         """全部饮品候选（分类限甜品零食类，排除主食/菜肴误判）。"""
         return [r for r in self.recipes if self.is_drink(r)]
 
-    def recommend_drink(self, emotion: Optional[str] = None) -> Optional[Dict]:
+    def recommend_drink(
+        self, emotion: Optional[str] = None,
+        exclude_names: Optional[set] = None, weight_func=None,
+    ) -> Optional[Dict]:
         """按情绪推荐饮品；无情绪或未命中时回退随机饮品。"""
-        pool = self.drink_pool()
+        pool = self._exclude(self.drink_pool(), exclude_names)
         if not pool:
             return None
         if emotion:
             mood_pool = [r for r in pool if self.is_mood_match(r, emotion)]
             if mood_pool:
-                return self._rng.choice(mood_pool)
-        return self._rng.choice(pool)
+                return self._choose(mood_pool, weight_func)
+        return self._choose(pool, weight_func)
 
     def is_snack(self, recipe: Dict) -> bool:
         """判断是否解馋零食：甜品零食分类或命中零食标签。"""
@@ -377,47 +408,59 @@ class RecipeEngine:
         return [r for r in self.recipes if self.is_snack(r)]
 
     def recommend_snacks(
-        self, count: int, emotion: Optional[str] = None
+        self, count: int, emotion: Optional[str] = None,
+        exclude_names: Optional[set] = None, weight_func=None,
     ) -> List[Dict]:
         """随机推荐 count 样解馋零食；给定情绪时优先情绪适配。"""
-        pool = self.snack_pool()
+        pool = self._exclude(self.snack_pool(), exclude_names)
         if not pool:
             return []
         count = max(1, min(int(count), 6))
         if emotion:
             mood_pool = [r for r in pool if self.is_mood_match(r, emotion)]
             if mood_pool:
-                first = self._rng.choice(mood_pool)
+                first = self._choose(mood_pool, weight_func)
                 rest = [r for r in pool if r is not first]
                 picks = self._rng.sample(rest, min(count - 1, len(rest)))
                 return [first] + picks
         return self._rng.sample(pool, min(count, len(pool)))
 
-    def recommend_meal(self, emotion: Optional[str] = None) -> Optional[Dict]:
+    def recommend_meal(
+        self, emotion: Optional[str] = None,
+        exclude_names: Optional[set] = None, weight_func=None,
+    ) -> Optional[Dict]:
         """推荐套餐：情绪主菜 + 主食 + 配菜（汤/凉菜）+ 甜品。"""
         meal = {}
-        main = self.recommend_for_mood(emotion or "平静")
+        main = self.recommend_for_mood(emotion or "平静", exclude_names=exclude_names, weight_func=weight_func)
         if main is None:
             return None
         meal["main"] = main
 
-        staple_pool = [r for r in self.recipes if r.get("category") == "主食"]
+        staple_pool = self._exclude(
+            [r for r in self.recipes if r.get("category") == "主食"], exclude_names
+        )
         if staple_pool:
-            meal["staple"] = self._rng.choice(staple_pool)
+            meal["staple"] = self._choose(staple_pool, weight_func)
 
-        side_pool = [
-            r for r in self.recipes
-            if r.get("category") in ("汤羹", "凉菜") and r is not main
-        ]
+        side_pool = self._exclude(
+            [
+                r for r in self.recipes
+                if r.get("category") in ("汤羹", "凉菜") and r is not main
+            ],
+            exclude_names,
+        )
         if side_pool:
-            meal["side"] = self._rng.choice(side_pool)
+            meal["side"] = self._choose(side_pool, weight_func)
 
-        dessert_pool = [
-            r for r in self.recipes
-            if r.get("category") == "甜品零食" and r is not main
-        ]
+        dessert_pool = self._exclude(
+            [
+                r for r in self.recipes
+                if r.get("category") == "甜品零食" and r is not main
+            ],
+            exclude_names,
+        )
         if dessert_pool:
-            meal["dessert"] = self._rng.choice(dessert_pool)
+            meal["dessert"] = self._choose(dessert_pool, weight_func)
         return meal
 
     # ────────────────────── 时间推荐 ──────────────────────
@@ -436,13 +479,18 @@ class RecipeEngine:
             return "晚餐"
         return "夜宵"
 
-    def _pick_mood(self, pool: List[Dict], emotion: Optional[str]) -> Dict:
-        """从候选池挑一道：情绪适配优先，否则随机。"""
+    def _pick_mood(
+        self, pool: List[Dict], emotion: Optional[str],
+        exclude_names: Optional[set] = None, weight_func=None,
+    ) -> Dict:
+        """从候选池挑一道：情绪适配优先，否则随机；支持去重与加权。"""
         if emotion:
-            mood_pool = [r for r in pool if self.is_mood_match(r, emotion)]
+            mood_pool = self._exclude(
+                [r for r in pool if self.is_mood_match(r, emotion)], exclude_names
+            )
             if mood_pool:
-                return self._rng.choice(mood_pool)
-        return self._rng.choice(pool)
+                return self._choose(mood_pool, weight_func)
+        return self._choose(self._exclude(pool, exclude_names), weight_func)
 
     def _tag_pool(self, tags: Tuple[str, ...]) -> List[Dict]:
         lowered = {t.lower() for t in tags}
@@ -452,7 +500,8 @@ class RecipeEngine:
         ]
 
     def recommend_by_time(
-        self, hour: int, emotion: Optional[str] = None
+        self, hour: int, emotion: Optional[str] = None,
+        exclude_names: Optional[set] = None, weight_func=None,
     ) -> Optional[Dict]:
         """按小时推荐：返回 {"period": 时段名, "meal": {main/staple/side/soup}}。
 
@@ -471,45 +520,58 @@ class RecipeEngine:
                 ]
             if not pool:
                 return None
-            meal["main"] = self._pick_mood(pool, emotion)
-            staple = [r for r in self.recipes if r.get("category") in ("主食", "粥羹")]
+            meal["main"] = self._pick_mood(pool, emotion, exclude_names, weight_func)
+            staple = self._exclude(
+                [r for r in self.recipes if r.get("category") in ("主食", "粥羹")],
+                exclude_names,
+            )
             if staple and staple[0] is not meal["main"]:
-                meal["staple"] = self._rng.choice(staple)
-            drinks = self.drink_pool()
+                meal["staple"] = self._choose(staple, weight_func)
+            drinks = self._exclude(self.drink_pool(), exclude_names)
             if drinks and drinks[0] is not meal["main"]:
-                meal["side"] = self._rng.choice(drinks)
+                meal["side"] = self._choose(drinks, weight_func)
 
         elif period in ("午餐", "晚餐"):
-            mains = [r for r in self.recipes if r.get("category") == "荤菜"]
+            mains = self._exclude(
+                [r for r in self.recipes if r.get("category") == "荤菜"], exclude_names
+            )
             if not mains:
                 return None
-            meal["main"] = self._pick_mood(mains, emotion)
-            staples = [r for r in self.recipes if r.get("category") == "主食"]
+            meal["main"] = self._pick_mood(mains, emotion, exclude_names, weight_func)
+            staples = self._exclude(
+                [r for r in self.recipes if r.get("category") == "主食"], exclude_names
+            )
             if staples:
-                meal["staple"] = self._rng.choice(staples)
-            sides = [
-                r for r in self.recipes
-                if r.get("category") in ("素菜", "凉菜") and r is not meal["main"]
-            ]
+                meal["staple"] = self._choose(staples, weight_func)
+            sides = self._exclude(
+                [
+                    r for r in self.recipes
+                    if r.get("category") in ("素菜", "凉菜") and r is not meal["main"]
+                ],
+                exclude_names,
+            )
             if sides:
-                meal["side"] = self._rng.choice(sides)
-            soups = [
-                r for r in self.recipes
-                if r.get("category") == "汤羹" and r is not meal["main"]
-            ]
+                meal["side"] = self._choose(sides, weight_func)
+            soups = self._exclude(
+                [
+                    r for r in self.recipes
+                    if r.get("category") == "汤羹" and r is not meal["main"]
+                ],
+                exclude_names,
+            )
             if soups:
-                meal["soup"] = self._rng.choice(soups)
+                meal["soup"] = self._choose(soups, weight_func)
 
         elif period == "下午茶":
             sweets = [r for r in self.recipes if r.get("category") == "甜品零食"]
             drinks = self.drink_pool()
-            pool = sweets + drinks
+            pool = self._exclude(sweets + drinks, exclude_names)
             if not pool:
                 return None
-            meal["main"] = self._pick_mood(pool, emotion)
-            others = [r for r in pool if r is not meal["main"]]
+            meal["main"] = self._pick_mood(pool, emotion, exclude_names, weight_func)
+            others = self._exclude([r for r in pool if r is not meal["main"]], exclude_names)
             if others:
-                meal["side"] = self._rng.choice(others)
+                meal["side"] = self._choose(others, weight_func)
 
         else:  # 夜宵
             pool = self._tag_pool(TIME_TAGS["夜宵"])
@@ -520,7 +582,7 @@ class RecipeEngine:
                 ]
             if not pool:
                 return None
-            meal["main"] = self._pick_mood(pool, emotion)
+            meal["main"] = self._pick_mood(pool, emotion, exclude_names, weight_func)
 
         return {"period": period, "meal": meal}
 

@@ -229,9 +229,12 @@ def test_engine_drink_snack_meal():
 
 def _make_plugin(tmp_dir):
     install_stubs()
+    from astrbot_plugin_soulsync_bistro_心旅小馆.feedback import FeedbackStore
     from astrbot_plugin_soulsync_bistro_心旅小馆.main import SoulSyncBistroPlugin
 
-    return SoulSyncBistroPlugin(None, {})
+    plugin = SoulSyncBistroPlugin(None, {})
+    plugin.feedback = FeedbackStore(Path(tmp_dir) / "feedback.json")
+    return plugin
 
 
 def test_plugin_init():
