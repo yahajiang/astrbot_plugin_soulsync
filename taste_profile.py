@@ -125,9 +125,9 @@ def _hit(recipe: Dict, keywords: tuple, exempt: tuple = ()) -> bool:
 
 
 def dishes_to_exclude(engine, taste: List[str]) -> Set[str]:
-    """按忌口标签返回应排除的菜名集合（引擎词命中索引加速）。"""
-    recipes = engine.recipes
+    """按忌口标签返回应排除的菜名集合。"""
     names: Set[str] = set()
+    recipes = engine.recipes
     if "素食" in taste:
         names |= {r["name"] for r in recipes if not r.get("vegetarian", False)}
     if "不吃辣" in taste:
@@ -139,12 +139,7 @@ def dishes_to_exclude(engine, taste: List[str]) -> Set[str]:
         if not kws:
             continue
         exempt = AVOID_EXEMPT.get(tag, ())
-        hits: Set[int] = set()
-        for kw in kws:
-            hits |= engine.name_hits(kw)
-        for w in exempt:
-            hits -= engine.name_hits(w)
-        names |= {recipes[i]["name"] for i in hits}
+        names |= {r["name"] for r in recipes if _hit(r, kws, exempt)}
     return names
 
 

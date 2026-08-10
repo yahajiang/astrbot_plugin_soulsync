@@ -151,31 +151,6 @@ def test_command_have_mood_tag():
         asyncio.run(run())
 
 
-def test_candidate_no_miss_long_query():
-    """v1.8 候选索引回归：查询词长于食材名时不可漏（如「山楂干」须召回仅含「山楂」的菜）。"""
-    from astrbot_plugin_soulsync_bistro_心旅小馆.recipe_engine import RecipeEngine
-
-    engine = RecipeEngine()
-    matches = _match(engine, "冰粉籽", "山楂干", "糍粑", limit=50)
-    names = [m["recipe"]["name"] for m in matches]
-    assert "冰糖葫芦" in names, f"「山楂干」应命中仅含「山楂」的冰糖葫芦: {names[:5]}"
-    assert "糖葫芦" in names, f"「山楂干」应命中仅含「山楂」的糖葫芦: {names[:5]}"
-
-
-def test_candidate_no_miss_char1_ingredient():
-    """v1.8 候选索引回归：1 字食材不可漏（「面粉」须召回食材「面」的菜）。"""
-    from astrbot_plugin_soulsync_bistro_心旅小馆.recipe_engine import RecipeEngine
-
-    engine = RecipeEngine()
-    matches = _match(engine, "面粉", "红枣", limit=50)
-    names = [m["recipe"]["name"] for m in matches]
-    assert "老干妈拌面" in names, f"「面粉」应命中仅含 1 字食材「面」的老干妈拌面: {names[:5]}"
-
-    matches = _match(engine, "糖渍橙皮", limit=50)
-    names = [m["recipe"]["name"] for m in matches]
-    assert "水煮玉米" in names, f"「糖渍橙皮」应命中含 1 字食材「糖」的水煮玉米: {names[:5]}"
-
-
 def main():
     tests = [
         test_tomato_egg_ready,
@@ -187,8 +162,6 @@ def main():
         test_no_match,
         test_command_have,
         test_command_have_mood_tag,
-        test_candidate_no_miss_long_query,
-        test_candidate_no_miss_char1_ingredient,
     ]
     passed = 0
     for t in tests:
