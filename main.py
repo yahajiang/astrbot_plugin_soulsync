@@ -21,6 +21,7 @@ from astrbot.api.star import Context, Star
 from .emotion_analyzer import analyze
 from .feedback import DEFAULT_DEDUP_DAYS, FeedbackStore
 from .recipe_engine import RecipeEngine
+from .social import FAV_BONUS, FavoriteStore, group_hot
 from .taste_profile import ALL_TAGS, TasteProfile, dishes_to_exclude, preference_bonus
 from .time_sense import is_fast_dish, season_hit, today_context
 
@@ -51,6 +52,11 @@ HELP_TEXT = """🍽️ 心旅小馆 · 情绪美食推荐
 /口味重置           清空口味档案
 /今天               查看今日节日/季节/时段建议
 /家里有 食材        按手头食材反查可做的菜（如：/家里有 鸡蛋,番茄）
+/收藏 菜名          把菜收进个人收藏夹（推荐时优先）
+/我的收藏           查看收藏列表
+/取消收藏 菜名      移出收藏夹
+/群榜               看看群里最近都在吃什么
+/分享 菜名          生成菜谱卡片分享给群友
 /心馆 状态          查看当前情绪快照
 
 分类可用：素菜 / 荤菜 / 主食 / 汤 / 甜品 / 凉菜"""
@@ -69,6 +75,7 @@ class SoulSyncBistroPlugin(Star):
         self.engine = RecipeEngine()
         self.feedback = FeedbackStore()
         self.profile = TasteProfile()
+        self.favorites = FavoriteStore()
         self._today_key = ""
         self._today_ctx = None
         self._mood_cache: Dict[str, tuple] = {}
@@ -96,18 +103,23 @@ class SoulSyncBistroPlugin(Star):
             return "unknown"
 
     def _feedback_ctx(self, event: AstrMessageEvent):
-        """组装推荐上下文：近期去重 + 忌口排除 + 反馈/偏好加权。"""
+        """组装推荐上下文：近期去重 + 忌口排除 + 反馈/偏好/收藏加权。"""
         uid = self._user_id(event)
         exclude = self.feedback.recently_recommended(uid, DEFAULT_DEDUP_DAYS)
         taste = self.profile.get_taste(uid)
         if taste:
             exclude = exclude | dishes_to_exclude(self.engine, taste)
         base = lambda r: self.feedback.dish_score(uid, r.get("name", ""))
+        favs = self.favorites.names(uid)
+
+        def fav_bonus(r):
+            return FAV_BONUS if r.get("name", "") in favs else 0.0
+
         if taste:
             bonus = preference_bonus(self.engine, taste)
-            weight = lambda r: base(r) + bonus(r)
+            weight = lambda r: base(r) + bonus(r) + fav_bonus(r)
         else:
-            weight = base
+            weight = lambda r: base(r) + fav_bonus(r)
         return uid, exclude, weight
 
     def _today(self) -> dict:
@@ -642,4 +654,108 @@ class SoulSyncBistroPlugin(Star):
                 r = m["recipe"]
                 lines.append(f"  · {r['name']}（缺：{'、'.join(m['missing'][:3])}）{_tag(m)}")
         lines.append("想看做法？发送 /怎么做 菜名")
+        yield event.plain_result("\n".join(lines))
+
+    # ────────────────────── 社交指令 ──────────────────────
+
+    def _resolve_dish(self, name: str):
+        """定位菜：返回 (recipe or None, 错误提示 or None)。"""
+        name = (name or "").strip()
+        if not name:
+            return None, "告诉我菜名，例如 /收藏 宫保鸡丁"
+        recipe = self.engine.find_by_name(name)
+        if recipe is None:
+            similar = self.engine.search(name, limit=3)
+            if similar:
+                names = "、".join(s["name"] for s in similar)
+                return None, f"没找到「{name}」，要不要试试：{names}"
+            return None, f"菜谱库中没有「{name}」这道菜。"
+        return recipe, None
+
+    @filter.command("收藏", alias={"收藏菜", "加收藏"})
+    async def fav_dish(self, event: AstrMessageEvent, name: str = ""):
+        """把菜收进个人收藏夹（推荐时优先）。用法：/收藏 宫保鸡丁"""
+        recipe, hint = self._resolve_dish(name)
+        if recipe is None:
+            yield event.plain_result(hint)
+            return
+        uid = self._user_id(event)
+        added = self.favorites.add(uid, recipe["name"])
+        if added:
+            yield event.plain_result(
+                f"⭐ 已收藏「{recipe['name']}」！以后推荐会优先想到它"
+            )
+        else:
+            yield event.plain_result(f"「{recipe['name']}」已经在收藏夹里啦～")
+
+    @filter.command("我的收藏", alias={"收藏列表"})
+    async def my_favorites(self, event: AstrMessageEvent):
+        """查看个人收藏列表。用法：/我的收藏"""
+        uid = self._user_id(event)
+        items = self.favorites.list(uid)
+        if not items:
+            yield event.plain_result("收藏夹空空如也～ 用 /收藏 菜名 把想吃的记下来")
+            return
+        lines = [f"⭐ 我的收藏（共 {self.favorites.total(uid)} 道）："]
+        for dish, _ts in items[:10]:
+            lines.append(f"  · {dish}")
+        if len(items) > 10:
+            lines.append(f"  …还有 {len(items) - 10} 道，用 /取消收藏 清理")
+        lines.append("想看做法？发送 /怎么做 菜名")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("取消收藏", alias={"取消"})
+    async def unfav_dish(self, event: AstrMessageEvent, name: str = ""):
+        """把菜移出收藏夹。用法：/取消收藏 宫保鸡丁"""
+        name = (name or "").strip()
+        if not name:
+            yield event.plain_result("告诉我菜名，例如 /取消收藏 宫保鸡丁")
+            return
+        uid = self._user_id(event)
+        ok = self.favorites.remove(uid, name)
+        if ok:
+            yield event.plain_result(f"🗑️ 已取消收藏「{name}」")
+        else:
+            yield event.plain_result(f"收藏夹里没有「{name}」哦")
+
+    @filter.command("群榜", alias={"排行榜", "大家都在吃"})
+    async def group_rank(self, event: AstrMessageEvent):
+        """查看群热度榜：聚合全群点赞与收藏。用法：/群榜"""
+        rows = group_hot(self.feedback, self.favorites)
+        if not rows:
+            yield event.plain_result(
+                "还没有热度数据～ 大家多用 /好吃 点赞、用 /收藏 记录，榜单就会热闹起来"
+            )
+            return
+        medals = ("🥇", "🥈", "🥉")
+        lines = ["🔥 群热度榜 TOP10（大家都在吃什么）："]
+        for i, r in enumerate(rows):
+            mark = medals[i] if i < 3 else f"{i + 1}."
+            parts = []
+            if r["likes"]:
+                parts.append(f"👍{r['likes']}")
+            if r["favs"]:
+                parts.append(f"⭐{r['favs']}")
+            suffix = f"（{' '.join(parts)}）" if parts else ""
+            lines.append(f"  {mark} {r['name']}{suffix}")
+        lines.append("点赞？/好吃 菜名 · 想记住？/收藏 菜名")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("分享", alias={"分享菜谱"})
+    async def share_recipe(self, event: AstrMessageEvent, name: str = ""):
+        """生成完整菜谱卡片，方便转发给群友。用法：/分享 宫保鸡丁"""
+        recipe, hint = self._resolve_dish(name)
+        if recipe is None:
+            yield event.plain_result(hint)
+            return
+        lines = [f"📤 分享 · {recipe['name']}"]
+        lines.append(f"难度：{recipe['difficulty']} | 分类：{recipe['category']}")
+        lines.append(f"🛒 食材：{'、'.join(recipe.get('ingredients', []))}")
+        lines.append("")
+        lines.append("📋 做法：")
+        lines.append(self.engine.format_steps(recipe))
+        bv = recipe.get("bv")
+        if bv:
+            lines.append(f"🎬 视频参考：https://www.bilibili.com/video/{bv}")
+        lines.append("—— 来自「心旅小馆」")
         yield event.plain_result("\n".join(lines))
