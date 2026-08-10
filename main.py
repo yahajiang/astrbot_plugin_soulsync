@@ -22,6 +22,7 @@ from .emotion_analyzer import analyze
 from .feedback import DEFAULT_DEDUP_DAYS, FeedbackStore
 from .recipe_engine import RecipeEngine
 from .taste_profile import ALL_TAGS, TasteProfile, dishes_to_exclude, preference_bonus
+from .time_sense import is_fast_dish, season_hit, today_context
 
 EMOTION_EMOJI = {
     "喜悦": "😊",
@@ -48,6 +49,7 @@ HELP_TEXT = """🍽️ 心旅小馆 · 情绪美食推荐
 /口味设置 标签      设置忌口与偏好（逗号分隔，如：不吃香菜,喜欢面食）
 /口味查看           查看口味档案
 /口味重置           清空口味档案
+/今天               查看今日节日/季节/时段建议
 /心馆 状态          查看当前情绪快照
 
 分类可用：素菜 / 荤菜 / 主食 / 汤 / 甜品 / 凉菜"""
@@ -66,6 +68,8 @@ class SoulSyncBistroPlugin(Star):
         self.engine = RecipeEngine()
         self.feedback = FeedbackStore()
         self.profile = TasteProfile()
+        self._today_key = ""
+        self._today_ctx = None
         self._mood_cache: Dict[str, tuple] = {}
         logger.info(
             f"心旅小馆已加载 | 菜谱 {self.engine.total()} 道 | "
@@ -104,6 +108,21 @@ class SoulSyncBistroPlugin(Star):
         else:
             weight = base
         return uid, exclude, weight
+
+    def _today(self) -> dict:
+        """今日上下文缓存（同一天只算一次）。"""
+        key = time.strftime("%Y-%m-%d")
+        if self._today_key != key:
+            self._today_key = key
+            self._today_ctx = today_context(self.engine, time.localtime())
+        return self._today_ctx
+
+    def _season_weight(self, base, ctx: dict):
+        """叠加季节加权：命中季节关键词的菜 +bonus。"""
+        if not ctx.get("season_bonus"):
+            return base
+        bonus = ctx["season_bonus"]
+        return lambda r: base(r) + (bonus if season_hit(r, ctx) else 0.0)
 
     # ────────────────────── 钩子：截取 LLM 回复 ──────────────────────
 
@@ -183,7 +202,20 @@ class SoulSyncBistroPlugin(Star):
         lines = [f"{emoji} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"]
         if mood and mood["snippet"]:
             lines.append(f"  SoulSync 说：「{mood['snippet'][:50]}…」")
+        tc = self._today()
+        if tc["festival"]:
+            if tc["festival_dish"]:
+                lines.append(
+                    f"🎉 今日{tc['festival']}：{tc['festival_hint']}，来份「{tc['festival_dish']}」应景"
+                )
+            else:
+                lines.append(f"🎉 今日{tc['festival']}：{tc['festival_hint']}")
+        if tc["season"]:
+            lines.append(f"🍃 {tc['season']}季：{tc['season_hint']}")
         lines.append("")
+
+        if tc["season_bonus"]:
+            weight = self._season_weight(weight, tc)
 
         if category:
             recipe = self.engine.recommend_for_mood(emotion, category, exclude, weight)
@@ -225,6 +257,8 @@ class SoulSyncBistroPlugin(Star):
             lines.append(f"  汤：{meal['soup']['name']}（{meal['soup']['category']}）")
         if mood_cfg.get("reply"):
             lines.append(f"  {mood_cfg['reply']}")
+        if hour in (17, 18, 19) and not is_fast_dish(meal["main"]):
+            lines.append("  🍳 忙碌一天，来点快手菜？试试 /菜谱搜索 快手")
         lines.append("  好吃/踩雷？回复 /好吃 或 /不好吃，推荐会更懂你")
         yield event.plain_result("\n".join(lines))
 
@@ -550,3 +584,22 @@ class SoulSyncBistroPlugin(Star):
         uid = self._user_id(event)
         self.profile.reset(uid)
         yield event.plain_result("🧹 已清空口味档案，以后按默认方式推荐～")
+
+    @filter.command("今天", alias={"今日", "今日推荐"})
+    async def today_info(self, event: AstrMessageEvent):
+        """查看今日节日/季节/时段建议。用法：/今天"""
+        tc = self._today()
+        tm = time.localtime()
+        weekday = ("一", "二", "三", "四", "五", "六", "日")[tm.tm_wday]
+        lines = [f"📅 今天 {time.strftime('%Y-%m-%d')} 星期{weekday}"]
+        if tc["festival"]:
+            line = f"🎉 {tc['festival']}：{tc['festival_hint']}"
+            if tc["festival_dish"]:
+                line += f"，来份「{tc['festival_dish']}」"
+            lines.append(line)
+        if tc["season"]:
+            lines.append(f"🍃 {tc['season']}季：{tc['season_hint']}")
+        period = self.engine.period_by_hour(tm.tm_hour)
+        lines.append(f"⏰ 当前时段：{period}")
+        lines.append("🏠 周末啦，给自己做顿好的 → /吃点啥" if tm.tm_wday >= 5 else "→ 来一句 /吃点啥 开始吧")
+        yield event.plain_result("\n".join(lines))
