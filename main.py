@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 from typing import Dict, Optional
@@ -20,6 +21,7 @@ from astrbot.api.star import Context, Star
 from .emotion_analyzer import analyze
 from .feedback import DEFAULT_DEDUP_DAYS, FeedbackStore
 from .recipe_engine import RecipeEngine
+from .taste_profile import ALL_TAGS, TasteProfile, dishes_to_exclude, preference_bonus
 
 EMOTION_EMOJI = {
     "喜悦": "😊",
@@ -43,6 +45,9 @@ HELP_TEXT = """🍽️ 心旅小馆 · 情绪美食推荐
 /好吃 [菜名]        标记喜欢（不带菜名=上一道推荐）
 /不好吃 [菜名]      标记不喜欢
 /我的口味           查看个人反馈统计
+/口味设置 标签      设置忌口与偏好（逗号分隔，如：不吃香菜,喜欢面食）
+/口味查看           查看口味档案
+/口味重置           清空口味档案
 /心馆 状态          查看当前情绪快照
 
 分类可用：素菜 / 荤菜 / 主食 / 汤 / 甜品 / 凉菜"""
@@ -60,6 +65,7 @@ class SoulSyncBistroPlugin(Star):
         self.max_search = self._clamp_int(self.config.get("max_search_results", 8), 1, 20)
         self.engine = RecipeEngine()
         self.feedback = FeedbackStore()
+        self.profile = TasteProfile()
         self._mood_cache: Dict[str, tuple] = {}
         logger.info(
             f"心旅小馆已加载 | 菜谱 {self.engine.total()} 道 | "
@@ -85,10 +91,18 @@ class SoulSyncBistroPlugin(Star):
             return "unknown"
 
     def _feedback_ctx(self, event: AstrMessageEvent):
-        """组装推荐上下文：近期推荐去重集合 + 反馈加权函数。"""
+        """组装推荐上下文：近期去重 + 忌口排除 + 反馈/偏好加权。"""
         uid = self._user_id(event)
         exclude = self.feedback.recently_recommended(uid, DEFAULT_DEDUP_DAYS)
-        weight = lambda r: self.feedback.dish_score(uid, r.get("name", ""))
+        taste = self.profile.get_taste(uid)
+        if taste:
+            exclude = exclude | dishes_to_exclude(self.engine, taste)
+        base = lambda r: self.feedback.dish_score(uid, r.get("name", ""))
+        if taste:
+            bonus = preference_bonus(self.engine, taste)
+            weight = lambda r: base(r) + bonus(r)
+        else:
+            weight = base
         return uid, exclude, weight
 
     # ────────────────────── 钩子：截取 LLM 回复 ──────────────────────
@@ -479,8 +493,60 @@ class SoulSyncBistroPlugin(Star):
             f"👎 记下了：{recipe['name']} 不合口味，以后会少推荐（喜好分 {score:.2f}）"
         )
 
-    @filter.command("我的口味", alias={"口味"})
+    @filter.command("我的口味")
     async def my_taste(self, event: AstrMessageEvent):
         """查看个人反馈统计。用法：/我的口味"""
         uid = self._user_id(event)
         yield event.plain_result(self.feedback.summary(uid))
+
+    @filter.command("口味设置", alias={"设置口味"})
+    async def set_taste(self, event: AstrMessageEvent, tags: str = ""):
+        """设置口味档案。用法：/口味设置 不吃香菜,喜欢面食"""
+        uid = self._user_id(event)
+        tags = tags.strip()
+        if not tags:
+            yield event.plain_result(
+                f"用法：/口味设置 不吃香菜,不吃辣\n可用标签：{'、'.join(ALL_TAGS)}"
+            )
+            return
+        items = [t.strip() for t in re.split(r"[,，、\s]+", tags) if t.strip()]
+        valid, invalid = [], []
+        for t in items:
+            (valid if t in ALL_TAGS else invalid).append(t)
+        if invalid:
+            yield event.plain_result(
+                f"不认识的标签：{'、'.join(invalid)}\n可用标签：{'、'.join(ALL_TAGS)}"
+            )
+            return
+        self.profile.set_taste(uid, valid)
+        yield event.plain_result(
+            f"🧂 已保存口味：{'、'.join(valid)}\n"
+            "推荐时会避开忌口、优先你的偏好；可用 /口味查看 确认，/口味重置 清空"
+        )
+
+    @filter.command("口味查看", alias={"查看口味"})
+    async def view_taste(self, event: AstrMessageEvent):
+        """查看当前口味档案。用法：/口味查看"""
+        uid = self._user_id(event)
+        tags = self.profile.get_taste(uid)
+        if not tags:
+            yield event.plain_result(
+                f"你还没设置口味档案～用 /口味设置 配置（例如：/口味设置 不吃香菜,喜欢面食）\n可用标签：{'、'.join(ALL_TAGS)}"
+            )
+            return
+        hard = [t for t in tags if t in ("不吃香菜", "不吃内脏", "不吃海鲜", "不吃辣", "不吃葱姜蒜", "素食")]
+        soft = [t for t in tags if t not in hard]
+        lines = ["🧂 你的口味档案："]
+        if hard:
+            lines.append("🚫 忌口：" + "、".join(hard))
+        if soft:
+            lines.append("❤️ 偏好：" + "、".join(soft))
+        lines.append("用 /口味设置 修改，/口味重置 清空")
+        yield event.plain_result("\n".join(lines))
+
+    @filter.command("口味重置", alias={"重置口味"})
+    async def reset_taste(self, event: AstrMessageEvent):
+        """清空口味档案。用法：/口味重置"""
+        uid = self._user_id(event)
+        self.profile.reset(uid)
+        yield event.plain_result("🧹 已清空口味档案，以后按默认方式推荐～")
