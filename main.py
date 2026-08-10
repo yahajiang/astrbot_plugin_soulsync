@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from astrbot.api import logger
 from astrbot.api.event import filter, AstrMessageEvent
@@ -33,6 +33,9 @@ EMOTION_EMOJI = {
     "期待": "🤩",
     "平静": "😌",
 }
+
+CARD_SEP = "━" * 17  # 卡片分隔线（显示宽 34，与内容最大行宽一致）
+CARD_MAX_W = 34      # 内容行最大显示宽度（中文=2 宽）
 
 EAT_WHAT_BARE_PATTERN = r"吃点啥|吃啥|吃什么"
 
@@ -90,6 +93,102 @@ class SoulSyncBistroPlugin(Star):
             return max(lo, min(hi, int(v)))
         except (TypeError, ValueError):
             return lo
+
+    # ────────────────────── 输出排版辅助 ──────────────────────
+
+    @staticmethod
+    def _disp_width(s: str) -> int:
+        """显示宽度：中文/全角=2，ASCII=1。"""
+        return sum(2 if ord(c) > 127 else 1 for c in s)
+
+    @classmethod
+    def _wrap(cls, text: str, max_w: int = CARD_MAX_W) -> List[str]:
+        """按显示宽度折行，返回行列表（不拆语义单元，逐字符切）。"""
+        if cls._disp_width(text) <= max_w:
+            return [text]
+        lines, cur, w = [], "", 0
+        for ch in text:
+            cw = 2 if ord(ch) > 127 else 1
+            if cur and w + cw > max_w:
+                lines.append(cur)
+                cur, w = ch, cw
+            else:
+                cur += ch
+                w += cw
+        if cur:
+            lines.append(cur)
+        return lines
+
+    @classmethod
+    def _chunk(cls, items, max_w: int = CARD_MAX_W, joiner: str = "、") -> List[str]:
+        """条目列表按显示宽度分块为多行（行内用 joiner 连接，不拆条目）。"""
+        rows: List[str] = []
+        cur = ""
+        for it in items:
+            it = str(it)
+            if cur and cls._disp_width(cur) + cls._disp_width(joiner) + cls._disp_width(it) > max_w:
+                rows.append(cur)
+                cur = it
+            else:
+                cur = cur + joiner + it if cur else it
+        if cur:
+            rows.append(cur)
+        return rows
+
+    @classmethod
+    def _card(cls, title: str, body: List[str], footer: Optional[str] = None) -> str:
+        """统一卡片：标题 → 分隔线 → 内容 → 分隔线 → 可选 footer。"""
+        lines = [title, CARD_SEP]
+        lines.extend(body)
+        lines.append(CARD_SEP)
+        if footer:
+            lines.append(footer)
+        return "\n".join(lines)
+
+    @classmethod
+    def _wrap_steps(cls, steps_text: str, max_w: int = CARD_MAX_W) -> List[str]:
+        """做法步骤按宽度折行：首行保留编号，续行缩进 4 空格。"""
+        out: List[str] = []
+        for line in steps_text.split("\n"):
+            if not line:
+                out.append("")
+                continue
+            parts = cls._wrap(line, max_w)
+            out.append(parts[0])
+            for extra in parts[1:]:
+                out.append("    " + extra)
+        return out
+
+    @classmethod
+    def _ingredient_lines(cls, ingredients, prefix: str = "🛒 食材：") -> List[str]:
+        """食材行：首行接 prefix，续行缩进对齐，超宽自动分块。"""
+        chunks = cls._chunk(ingredients)
+        if not chunks:
+            return []
+        lines = [prefix + chunks[0]]
+        for extra in chunks[1:]:
+            lines.append(" " * cls._disp_width(prefix) + extra)
+        return lines
+
+    def _header_lines(self, mood: Optional[dict], emotion: str, tc: dict) -> List[str]:
+        """压缩头部：心情 1 行 + 原话 1 行 + 节日/季节合并 1 行。"""
+        mood_cfg = self.engine.mood_mapping.get(emotion, {})
+        lines = [
+            f"{EMOTION_EMOJI.get(emotion, '')} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"
+        ]
+        if mood and mood.get("snippet") and emotion != "平静":
+            lines.append(f"  SoulSync 说：「{mood['snippet'][:30]}…」")
+        parts = []
+        if tc.get("festival"):
+            if tc.get("festival_dish"):
+                parts.append(f"🎉 {tc['festival']} · {tc['festival_hint']}，来份「{tc['festival_dish']}」应景")
+            else:
+                parts.append(f"🎉 {tc['festival']} · {tc['festival_hint']}")
+        if tc.get("season"):
+            parts.append(f"🍃 {tc['season']}季 · {tc['season_hint']}")
+        if parts:
+            lines.append(" | ".join(parts))
+        return lines
 
     @staticmethod
     def _user_id(event: AstrMessageEvent) -> str:
@@ -204,28 +303,14 @@ class SoulSyncBistroPlugin(Star):
 
         if category and category not in ("素菜", "荤菜", "主食", "汤", "甜品", "凉菜", "粥"):
             yield event.plain_result(
-                f"分类「{category}」不认识哦，可用：素菜 / 荤菜 / 主食 / 汤 / 甜品 / 凉菜"
+                f"❓ 分类「{category}」不认识哦，可用：素菜 / 荤菜 / 主食 / 汤 / 甜品 / 凉菜"
             )
             return
 
         uid, exclude, weight = self._feedback_ctx(event)
-
-        mood_cfg = self.engine.mood_mapping.get(emotion, {})
-        emoji = EMOTION_EMOJI.get(emotion, "")
-        lines = [f"{emoji} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"]
-        if mood and mood["snippet"]:
-            lines.append(f"  SoulSync 说：「{mood['snippet'][:50]}…」")
         tc = self._today()
-        if tc["festival"]:
-            if tc["festival_dish"]:
-                lines.append(
-                    f"🎉 今日{tc['festival']}：{tc['festival_hint']}，来份「{tc['festival_dish']}」应景"
-                )
-            else:
-                lines.append(f"🎉 今日{tc['festival']}：{tc['festival_hint']}")
-        if tc["season"]:
-            lines.append(f"🍃 {tc['season']}季：{tc['season_hint']}")
-        lines.append("")
+        header = self._header_lines(mood, emotion, tc)
+        head_rest = header[1:] + ([""] if header[1:] else [])
 
         if tc["season_bonus"]:
             weight = self._season_weight(weight, tc)
@@ -233,23 +318,22 @@ class SoulSyncBistroPlugin(Star):
         if category:
             recipe = self.engine.recommend_for_mood(emotion, category, exclude, weight)
             if recipe is None:
-                yield event.plain_result("菜谱库好像空了，请检查插件数据。")
+                yield event.plain_result("😕 菜谱库好像空了，请检查插件数据。")
                 return
             self.feedback.record_recommendation(uid, [recipe["name"]])
-            lines.append(f"🍽️ 为你推荐：{recipe['name']}")
-            lines.append(f"  分类：{recipe['category']} | 难度：{recipe['difficulty']}")
-            ingredients = "、".join(recipe.get("ingredients", [])[:8])
-            lines.append(f"  食材：{ingredients}")
+            body = [f"🍽️ 为你推荐：{recipe['name']}"]
+            body.append(f"分类：{recipe['category']} | 难度：{recipe['difficulty']}")
+            body += self._ingredient_lines(recipe.get("ingredients", [])[:8])
             if recipe.get("spicy"):
-                lines.append("  🌶️ 这道有点辣，正好")
-            lines.append(f"  想看做法？发送 /怎么做 {recipe['name']}")
-            yield event.plain_result("\n".join(lines))
+                body.append("🌶️ 这道有点辣，正好")
+            footer = f"📖 想看做法？发送 /怎么做 {recipe['name']}"
+            yield event.plain_result(self._card(header[0], head_rest + body, footer))
             return
 
         hour = time.localtime().tm_hour
         res = self.engine.recommend_by_time(hour, emotion if emotion != "平静" else None, exclude, weight)
         if res is None:
-            yield event.plain_result("菜谱库好像空了，请检查插件数据。")
+            yield event.plain_result("😕 菜谱库好像空了，请检查插件数据。")
             return
         period = res["period"]
         meal = res["meal"]
@@ -258,22 +342,24 @@ class SoulSyncBistroPlugin(Star):
             [meal[k]["name"] for k in ("main", "staple", "side", "soup") if meal.get(k)],
         )
 
-        lines.append(f"⏰ 现在 {hour} 点（{period}时段）为你推荐套餐：")
+        mood_cfg = self.engine.mood_mapping.get(emotion, {})
+        body = [f"⏰ 现在 {hour} 点（{period}时段）为你推荐套餐："]
         main = meal["main"]
         spicy = " 🌶️" if main.get("spicy") else ""
-        lines.append(f"  主菜：{main['name']}（{main['category']}）{spicy}")
+        body.append(f"🛒 主菜：{main['name']}（{main['category']}）{spicy}")
         if meal.get("staple"):
-            lines.append(f"  主食：{meal['staple']['name']}（{meal['staple']['category']}）")
+            body.append(f"🍚 主食：{meal['staple']['name']}（{meal['staple']['category']}）")
         if meal.get("side"):
-            lines.append(f"  配菜：{meal['side']['name']}（{meal['side']['category']}）")
+            body.append(f"🥗 配菜：{meal['side']['name']}（{meal['side']['category']}）")
         if meal.get("soup"):
-            lines.append(f"  汤：{meal['soup']['name']}（{meal['soup']['category']}）")
+            body.append(f"🍲 汤：{meal['soup']['name']}（{meal['soup']['category']}）")
         if mood_cfg.get("reply"):
-            lines.append(f"  {mood_cfg['reply']}")
+            body.append(f"💬 {mood_cfg['reply']}")
+        footers = []
         if hour in (17, 18, 19) and not is_fast_dish(meal["main"]):
-            lines.append("  🍳 忙碌一天，来点快手菜？试试 /菜谱搜索 快手")
-        lines.append("  好吃/踩雷？回复 /好吃 或 /不好吃，推荐会更懂你")
-        yield event.plain_result("\n".join(lines))
+            footers.append("🍳 忙碌一天，来点快手菜？试试 /菜谱搜索 快手")
+        footers.append("👍 好吃/踩雷？回复 /好吃 或 /不好吃，推荐会更懂你")
+        yield event.plain_result(self._card(header[0], head_rest + body, "\n".join(footers)))
 
     def _bare_group_text(self, event: AstrMessageEvent) -> bool:
         """是否是无斜杠、不 @ 的群聊纯文本消息（用于无前缀触发）。"""
@@ -315,23 +401,19 @@ class SoulSyncBistroPlugin(Star):
             emotion if emotion != "平静" else None, exclude, weight
         )
         if drink is None:
-            yield event.plain_result("饮品库好像空了，请检查插件数据。")
+            yield event.plain_result("🥤 饮品库好像空了，请检查插件数据。")
             return
         self.feedback.record_recommendation(uid, [drink["name"]])
 
+        header = self._header_lines(mood, emotion, self._today())
+        head_rest = header[1:] + ([""] if header[1:] else [])
         mood_cfg = self.engine.mood_mapping.get(emotion, {})
-        emoji = EMOTION_EMOJI.get(emotion, "")
-        lines = [f"{emoji} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"]
-        if mood and mood["snippet"]:
-            lines.append(f"  SoulSync 说：「{mood['snippet'][:50]}…」")
-        lines.append("")
-        lines.append(f"🥤 为你推荐饮品：{drink['name']}")
-        ingredients = "、".join(drink.get("ingredients", [])[:8])
-        lines.append(f"  食材：{ingredients}")
+        body = [f"🥤 为你推荐饮品：{drink['name']}"]
+        body += self._ingredient_lines(drink.get("ingredients", [])[:8])
         if mood_cfg.get("reply"):
-            lines.append(f"  {mood_cfg['reply']}")
-        lines.append(f"  想看做法？发送 /怎么做 {drink['name']}")
-        yield event.plain_result("\n".join(lines))
+            body.append(f"💬 {mood_cfg['reply']}")
+        footer = f"📖 想看做法？发送 /怎么做 {drink['name']}"
+        yield event.plain_result(self._card(header[0], head_rest + body, footer))
 
     @filter.regex(r"喝点啥|喝什么|喝啥")
     async def drink_what_bare(self, event: AstrMessageEvent):
@@ -351,24 +433,21 @@ class SoulSyncBistroPlugin(Star):
             count, emotion if emotion != "平静" else None, exclude, weight
         )
         if not picks:
-            yield event.plain_result("零食库好像空了，请检查插件数据。")
+            yield event.plain_result("🍟 零食库好像空了，请检查插件数据。")
             return
         self.feedback.record_recommendation(uid, [r["name"] for r in picks])
 
+        header = self._header_lines(mood, emotion, self._today())
+        head_rest = header[1:] + ([""] if header[1:] else [])
         mood_cfg = self.engine.mood_mapping.get(emotion, {})
-        emoji = EMOTION_EMOJI.get(emotion, "")
-        lines = [f"{emoji} 今日心情：{emotion}（{mood_cfg.get('label', '随缘')}）"]
-        if mood and mood["snippet"]:
-            lines.append(f"  SoulSync 说：「{mood['snippet'][:50]}…」")
-        lines.append("")
-        lines.append(f"🍟 解馋推荐 {len(picks)} 样：")
+        body = [f"🍟 解馋推荐 {len(picks)} 样："]
         for r in picks:
             spicy = " 🌶️" if r.get("spicy") else ""
-            lines.append(f"  · {r['name']}（{r['category']}）{spicy}")
+            body.append(f"  · {r['name']}（{r['category']}）{spicy}")
         if mood_cfg.get("reply"):
-            lines.append(f"  {mood_cfg['reply']}")
-        lines.append("  想吃哪个？发送 /怎么做 名字")
-        yield event.plain_result("\n".join(lines))
+            body.append(f"💬 {mood_cfg['reply']}")
+        footer = "📖 想吃哪个？发送 /怎么做 名字"
+        yield event.plain_result(self._card(header[0], head_rest + body, footer))
 
     @filter.regex(r"解馋|馋了|嘴馋")
     async def snack_craving_bare(self, event: AstrMessageEvent):
@@ -396,14 +475,17 @@ class SoulSyncBistroPlugin(Star):
             r["name"] for r in self.engine.match_mood(emotion)
         }
 
-        lines = [f"🔍 找到 {len(results)} 道与「{keyword}」相关的菜："]
+        body = []
         for r in results:
             star = "❤️此刻适配" if r["name"] in mood_hit_names else ""
             mark = "（素）" if r.get("vegetarian") else ""
-            lines.append(f"  · {r['name']}{mark} {star}")
+            body.append(f"  · {r['name']}{mark} {star}".rstrip())
+        footer = None
         if mood and emotion != "平静":
-            lines.append(f"（当前情绪：{emotion}，标❤️的与此刻情绪契合）")
-        yield event.plain_result("\n".join(lines))
+            footer = f"😊 当前情绪：{emotion}，标❤️的与此刻情绪契合"
+        yield event.plain_result(
+            self._card(f"🔍 找到 {len(results)} 道与「{keyword}」相关的菜", body, footer)
+        )
 
     @filter.command("怎么做", alias={"做法", "菜谱"})
     async def how_to_cook(self, event: AstrMessageEvent, name: str = ""):
@@ -426,20 +508,20 @@ class SoulSyncBistroPlugin(Star):
         emotion = mood["emotion"] if mood else "平静"
         mood_cfg = self.engine.mood_mapping.get(emotion, {})
 
-        lines = [f"👨‍🍳 {recipe['name']}"]
-        lines.append(f"难度：{recipe['difficulty']} | 分类：{recipe['category']}")
-        ingredients = "、".join(recipe.get("ingredients", []))
-        lines.append(f"🛒 食材：{ingredients}")
-        lines.append("")
-        lines.append("📋 做法：")
-        lines.append(self.engine.format_steps(recipe))
-        lines.append("")
+        body = [f"难度：{recipe['difficulty']} | 分类：{recipe['category']}"]
+        body += self._ingredient_lines(recipe.get("ingredients", []))
+        body.append("")
+        body.append("📋 做法：")
+        body += self._wrap_steps(self.engine.format_steps(recipe))
+        footers = []
         if mood_cfg.get("reply"):
-            lines.append(f"💬 {mood_cfg['reply']}")
+            footers.append(f"💬 {mood_cfg['reply']}")
         bv = recipe.get("bv")
         if bv:
-            lines.append(f"🎬 视频参考：https://www.bilibili.com/video/{bv}")
-        yield event.plain_result("\n".join(lines))
+            footers.append(f"🎬 视频参考：https://www.bilibili.com/video/{bv}")
+        yield event.plain_result(
+            self._card(f"👨‍🍳 {recipe['name']}", body, "\n".join(footers) if footers else None)
+        )
 
     @filter.command("随机推荐", alias={"随机菜", "吃什么好"})
     async def random_dish(self, event: AstrMessageEvent, count: int = 1):
@@ -451,18 +533,21 @@ class SoulSyncBistroPlugin(Star):
             count, emotion if emotion != "平静" else None, exclude, weight
         )
         if not picks:
-            yield event.plain_result("菜谱库为空。")
+            yield event.plain_result("😕 菜谱库为空。")
             return
         self.feedback.record_recommendation(uid, [r["name"] for r in picks])
 
-        lines = [f"🎲 随机推荐 {len(picks)} 道："]
+        body = []
         for r in picks:
             star = " ⭐心选之作" if emotion and self.engine.is_mood_match(r, emotion) else ""
-            lines.append(f"  · {r['name']}（{r['category']}）{star}")
+            body.append(f"  · {r['name']}（{r['category']}）{star}")
+        footers = []
         if emotion and emotion != "平静":
-            lines.append(f"（情绪 {emotion} 适配的「心选之作」已混入其中）")
-        lines.append("想看做法？发送 /怎么做 菜名")
-        yield event.plain_result("\n".join(lines))
+            footers.append(f"😊 情绪 {emotion} 适配的「心选之作」已混入其中")
+        footers.append("📖 想看做法？发送 /怎么做 菜名")
+        yield event.plain_result(
+            self._card(f"🎲 随机推荐 {len(picks)} 道", body, "\n".join(footers))
+        )
 
     @filter.command("心馆", alias={"心馆状态", "心情状态"})
     async def status(self, event: AstrMessageEvent, sub: str = "状态"):
@@ -476,19 +561,20 @@ class SoulSyncBistroPlugin(Star):
             return
         emotion = mood["emotion"]
         mood_cfg = self.engine.mood_mapping.get(emotion, {})
-        lines = [
-            f"{EMOTION_EMOJI.get(emotion, '')} 心馆状态",
-            f"  当前情绪：{emotion}（置信度 {mood['confidence']:.0%}）",
-            f"  情绪解读：{mood_cfg.get('label', '随缘')}",
-            f"  SoulSync 原话：「{mood['snippet'][:80]}」",
+        body = [
+            f"当前情绪：{emotion}（置信度 {mood['confidence']:.0%}）",
+            f"情绪解读：{mood_cfg.get('label', '随缘')}",
+            f"SoulSync 原话：「{mood['snippet'][:60]}」",
         ]
         if mood_cfg.get("reply"):
-            lines.append(f"  心选方向：{mood_cfg['reply']}")
+            body.append(f"心选方向：{mood_cfg['reply']}")
+        footer = None
         recipe = self.engine.recommend_for_mood(emotion)
         if recipe:
-            lines.append(f"  此刻适配：{recipe['name']}")
-            lines.append(f"  想看做法？发送 /怎么做 {recipe['name']}")
-        yield event.plain_result("\n".join(lines))
+            footer = f"✨ 此刻适配：{recipe['name']}\n📖 想看做法？发送 /怎么做 {recipe['name']}"
+        yield event.plain_result(
+            self._card(f"{EMOTION_EMOJI.get(emotion, '')} 心馆状态", body, footer)
+        )
 
     # ────────────────────── 反馈指令 ──────────────────────
 
@@ -544,7 +630,11 @@ class SoulSyncBistroPlugin(Star):
     async def my_taste(self, event: AstrMessageEvent):
         """查看个人反馈统计。用法：/我的口味"""
         uid = self._user_id(event)
-        yield event.plain_result(self.feedback.summary(uid))
+        text = self.feedback.summary(uid)
+        if text.startswith("还没有"):
+            yield event.plain_result(text)
+            return
+        yield event.plain_result(self._card("🧂 我的口味", text.split("\n")))
 
     @filter.command("口味设置", alias={"设置口味"})
     async def set_taste(self, event: AstrMessageEvent, tags: str = ""):
@@ -583,13 +673,13 @@ class SoulSyncBistroPlugin(Star):
             return
         hard = [t for t in tags if t in ("不吃香菜", "不吃内脏", "不吃海鲜", "不吃辣", "不吃葱姜蒜", "素食")]
         soft = [t for t in tags if t not in hard]
-        lines = ["🧂 你的口味档案："]
+        body = []
         if hard:
-            lines.append("🚫 忌口：" + "、".join(hard))
+            body.append("🚫 忌口：" + "、".join(hard))
         if soft:
-            lines.append("❤️ 偏好：" + "、".join(soft))
-        lines.append("用 /口味设置 修改，/口味重置 清空")
-        yield event.plain_result("\n".join(lines))
+            body.append("❤️ 偏好：" + "、".join(soft))
+        footer = "用 /口味设置 修改，/口味重置 清空"
+        yield event.plain_result(self._card("🧂 你的口味档案", body, footer))
 
     @filter.command("口味重置", alias={"重置口味"})
     async def reset_taste(self, event: AstrMessageEvent):
@@ -604,18 +694,19 @@ class SoulSyncBistroPlugin(Star):
         tc = self._today()
         tm = time.localtime()
         weekday = ("一", "二", "三", "四", "五", "六", "日")[tm.tm_wday]
-        lines = [f"📅 今天 {time.strftime('%Y-%m-%d')} 星期{weekday}"]
+        body = []
         if tc["festival"]:
-            line = f"🎉 {tc['festival']}：{tc['festival_hint']}"
             if tc["festival_dish"]:
-                line += f"，来份「{tc['festival_dish']}」"
-            lines.append(line)
+                body.append(f"🎉 {tc['festival']} · {tc['festival_hint']}，来份「{tc['festival_dish']}」应景")
+            else:
+                body.append(f"🎉 {tc['festival']} · {tc['festival_hint']}")
         if tc["season"]:
-            lines.append(f"🍃 {tc['season']}季：{tc['season_hint']}")
-        period = self.engine.period_by_hour(tm.tm_hour)
-        lines.append(f"⏰ 当前时段：{period}")
-        lines.append("🏠 周末啦，给自己做顿好的 → /吃点啥" if tm.tm_wday >= 5 else "→ 来一句 /吃点啥 开始吧")
-        yield event.plain_result("\n".join(lines))
+            body.append(f"🍃 {tc['season']}季 · {tc['season_hint']}")
+        body.append(f"⏰ 当前时段：{self.engine.period_by_hour(tm.tm_hour)}")
+        footer = "🏠 周末啦，给自己做顿好的 → /吃点啥" if tm.tm_wday >= 5 else "→ 来一句 /吃点啥 开始吧"
+        yield event.plain_result(
+            self._card(f"📅 今天 {time.strftime('%Y-%m-%d')} 星期{weekday}", body, footer)
+        )
 
     @filter.command("家里有", alias={"我有", "食材查", "有什么菜", "有啥食材"})
     async def have_ingredients(self, event: AstrMessageEvent, ingredients: str = ""):
@@ -642,19 +733,22 @@ class SoulSyncBistroPlugin(Star):
 
         ready = [m for m in matches if not m["missing"]]
         partial = [m for m in matches if m["missing"]]
-        lines = [f"🥬 家里有：{'、'.join(items)}"]
+        head = self._chunk(items)
+        body = []
+        if len(head) > 1:
+            body += [" " * self._disp_width("🥬 家里有：") + x for x in head[1:]]
         if ready:
-            lines.append("✅ 食材齐活！可以做：")
+            body.append("✅ 食材齐活！可以做：")
             for m in ready[:4]:
                 r = m["recipe"]
-                lines.append(f"  · {r['name']}（{r['category']}）{_tag(m)}")
+                body.append(f"  · {r['name']}（{r['category']}）{_tag(m)}")
         if partial:
-            lines.append("缺一点点也能做：")
+            body.append("🟡 缺一点点也能做：")
             for m in partial[:3]:
                 r = m["recipe"]
-                lines.append(f"  · {r['name']}（缺：{'、'.join(m['missing'][:3])}）{_tag(m)}")
-        lines.append("想看做法？发送 /怎么做 菜名")
-        yield event.plain_result("\n".join(lines))
+                body.append(f"  · {r['name']}（缺：{'、'.join(m['missing'][:3])}）{_tag(m)}")
+        footer = "📖 想看做法？发送 /怎么做 菜名"
+        yield event.plain_result(self._card("🥬 家里有：" + head[0], body, footer))
 
     # ────────────────────── 社交指令 ──────────────────────
 
@@ -694,15 +788,15 @@ class SoulSyncBistroPlugin(Star):
         uid = self._user_id(event)
         items = self.favorites.list(uid)
         if not items:
-            yield event.plain_result("收藏夹空空如也～ 用 /收藏 菜名 把想吃的记下来")
+            yield event.plain_result("⭐ 收藏夹空空如也～ 用 /收藏 菜名 把想吃的记下来")
             return
-        lines = [f"⭐ 我的收藏（共 {self.favorites.total(uid)} 道）："]
+        body = []
         for dish, _ts in items[:10]:
-            lines.append(f"  · {dish}")
+            body.append(f"  · {dish}")
+        footer = "📖 想看做法？发送 /怎么做 菜名"
         if len(items) > 10:
-            lines.append(f"  …还有 {len(items) - 10} 道，用 /取消收藏 清理")
-        lines.append("想看做法？发送 /怎么做 菜名")
-        yield event.plain_result("\n".join(lines))
+            footer = f"…还有 {len(items) - 10} 道，用 /取消收藏 清理\n" + footer
+        yield event.plain_result(self._card(f"⭐ 我的收藏（共 {self.favorites.total(uid)} 道）", body, footer))
 
     @filter.command("取消收藏", alias={"取消"})
     async def unfav_dish(self, event: AstrMessageEvent, name: str = ""):
@@ -728,7 +822,7 @@ class SoulSyncBistroPlugin(Star):
             )
             return
         medals = ("🥇", "🥈", "🥉")
-        lines = ["🔥 群热度榜 TOP10（大家都在吃什么）："]
+        body = []
         for i, r in enumerate(rows):
             mark = medals[i] if i < 3 else f"{i + 1}."
             parts = []
@@ -737,9 +831,9 @@ class SoulSyncBistroPlugin(Star):
             if r["favs"]:
                 parts.append(f"⭐{r['favs']}")
             suffix = f"（{' '.join(parts)}）" if parts else ""
-            lines.append(f"  {mark} {r['name']}{suffix}")
-        lines.append("点赞？/好吃 菜名 · 想记住？/收藏 菜名")
-        yield event.plain_result("\n".join(lines))
+            body.append(f"  {mark} {r['name']}{suffix}")
+        footer = "点赞？/好吃 菜名 · 想记住？/收藏 菜名"
+        yield event.plain_result(self._card("🔥 群热度榜 TOP10（大家都在吃什么）", body, footer))
 
     @filter.command("分享", alias={"分享菜谱"})
     async def share_recipe(self, event: AstrMessageEvent, name: str = ""):
@@ -748,14 +842,14 @@ class SoulSyncBistroPlugin(Star):
         if recipe is None:
             yield event.plain_result(hint)
             return
-        lines = [f"📤 分享 · {recipe['name']}"]
-        lines.append(f"难度：{recipe['difficulty']} | 分类：{recipe['category']}")
-        lines.append(f"🛒 食材：{'、'.join(recipe.get('ingredients', []))}")
-        lines.append("")
-        lines.append("📋 做法：")
-        lines.append(self.engine.format_steps(recipe))
+        body = [f"难度：{recipe['difficulty']} | 分类：{recipe['category']}"]
+        body += self._ingredient_lines(recipe.get("ingredients", []))
+        body.append("")
+        body.append("📋 做法：")
+        body += self._wrap_steps(self.engine.format_steps(recipe))
+        footers = []
         bv = recipe.get("bv")
         if bv:
-            lines.append(f"🎬 视频参考：https://www.bilibili.com/video/{bv}")
-        lines.append("—— 来自「心旅小馆」")
-        yield event.plain_result("\n".join(lines))
+            footers.append(f"🎬 视频参考：https://www.bilibili.com/video/{bv}")
+        footers.append("—— 来自「心旅小馆」")
+        yield event.plain_result(self._card(f"📤 分享 · {recipe['name']}", body, "\n".join(footers)))
