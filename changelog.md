@@ -1,7 +1,7 @@
 # 心旅知音 (SoulSync) 更新日志
 
 ### v3.00 Project Hermes — SQLite 分片存储 + 转生系统（当前版本）
-- **S12 称呼修复**：`enable_s12_forced_address` 开启时每句必须使用「唯一的你」至少 2 次；关闭时不使用「唯一的你」，只用「亲爱的」
+- **S12 称呼修复**：`enable_s12_forced_address` 开启时每句必须使用「唯一的你」至少 2 次；关闭时不注入称呼，使用用户规定的专属称谓
 - **SQLite 分片引擎**：JSON 落盘全面替换为 SQLite（WAL 模式，单例连接池，10s 超时），支持 2 万轮对话无感知卡顿
   - `storage/pool.py` 连接池（WAL + busy_timeout 10s）
   - `storage/schema.py` 9 张主表 + 月度分表 `daily_snapshot_YYYYMM` + 复合索引
