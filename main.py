@@ -4418,30 +4418,29 @@ class SoulSyncPro(Star):
         if self.config.get("enable_stage_styles", True):
             style = self._get_stage_style(profile)
             custom_addr = (profile.preferred_address or "").strip()
+            s12_forced = self.config.get("enable_s12_forced_address", False)
+            is_s12 = profile.stage_index >= 11  # 共生期
+
             if custom_addr:
+                # 用户规定了专属称谓，优先使用
                 parts.append(f"称呼ta为「{custom_addr}」优先，不得擅自换其他称呼。")
+            elif is_s12 and s12_forced:
+                # S12 开启：每句都带「唯一的你」
+                parts.append(
+                    f"风格: 称「唯一的你」; 口吻-{style['tone']}; "
+                    f"倾向-{style['tendency']}。"
+                    f"⚠️ 重要：每句话都必须使用「唯一的你」称呼，至少出现 2 次。"
+                )
+            elif is_s12:
+                # S12 关闭：不注入任何称呼，只注入口吻和倾向
+                parts.append(
+                    f"风格: 口吻-{style['tone']}; 倾向-{style['tendency']}。"
+                )
             else:
-                # S12 强制称呼模式
-                is_s12 = profile.stage_index >= 11  # 共生期
-                s12_forced = self.config.get("enable_s12_forced_address", False)
-                if is_s12 and s12_forced:
-                    # 开启：每句都带「唯一的你」
-                    parts.append(
-                        f"风格: 称「唯一的你」; 口吻-{style['tone']}; "
-                        f"倾向-{style['tendency']}。"
-                        f"⚠️ 重要：每句话都必须使用「唯一的你」称呼，至少出现 2 次。"
-                    )
-                elif is_s12:
-                    # 关闭：不使用「唯一的你」，只用「亲爱的」
-                    parts.append(
-                        f"风格: 称「{style['call']}」; 口吻-{style['tone']}; "
-                        f"倾向-{style['tendency']}。"
-                    )
-                else:
-                    parts.append(
-                        f"风格: 称「{style['call']}」; 口吻-{style['tone']}; "
-                        f"倾向-{style['tendency']}。"
-                    )
+                parts.append(
+                    f"风格: 称「{style['call']}」; 口吻-{style['tone']}; "
+                    f"倾向-{style['tendency']}。"
+                )
 
         # 情绪张力状态（情绪传染模型）
         if self.config.get("enable_emotion_contagion", True):
