@@ -18,8 +18,17 @@ import sqlite3
 import time
 from typing import Dict, List, Optional
 
-from ..emotion_engine import DIM_ICONS, DIM_LABELS
 from .pool import ConnectionPool
+
+# 情感维度图标和标签（避免循环导入）
+DIM_ICONS = {
+    "joy": "😊", "sadness": "😢", "anger": "😠", "fear": "😨",
+    "surprise": "😲", "disgust": "🤢", "trust": "🤗", "anticipation": "🌟"
+}
+DIM_LABELS = {
+    "joy": "喜悦", "sadness": "悲伤", "anger": "愤怒", "fear": "恐惧",
+    "surprise": "惊讶", "disgust": "厌恶", "trust": "信任", "anticipation": "期待"
+}
 
 logger = logging.getLogger("soulsync.storage.memory")
 

@@ -274,13 +274,13 @@ class SoulSyncPro(Star):
         self.rebirth_engine = None
         if not self.db_fallback:
             try:
-                from storage.pool import ConnectionPool
-                from storage.schema import init_schema
-                from storage.memory_store import SQLiteMemoryManager
-                from storage.stats_store import SQLiteStatsTracker
-                from storage.leaderboard_cache import LeaderboardCache
-                from compressor.memory_compressor import MemoryCompressor
-                from rebirth.rebirth_engine import RebirthEngine
+                from .storage.pool import ConnectionPool
+                from .storage.schema import init_schema
+                from .storage.memory_store import SQLiteMemoryManager
+                from .storage.stats_store import SQLiteStatsTracker
+                from .storage.leaderboard_cache import LeaderboardCache
+                from .compressor.memory_compressor import MemoryCompressor
+                from .rebirth.rebirth_engine import RebirthEngine
 
                 self.sqlite_pool = ConnectionPool.get_instance(self.data_dir)
                 with self.sqlite_pool.connect() as conn:
