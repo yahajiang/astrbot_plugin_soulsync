@@ -10,12 +10,12 @@
   --text:#1c2433;--dim:#5b6577;
   --gold:#A67C2F;--gold-d:#8C6A1F;--gold-l:#C9A34E;
   --green:#0E9F6E;--blue:#3B66D8;--red:#C0392B;--orange:#D9822B;--purple:#7C5CE7;
-  --glass-bg:rgba(255,255,255,.55);--glass-bg-strong:rgba(255,255,255,.78);
-  --glass-border:rgba(255,255,255,.65);--glass-line:rgba(15,25,50,.08);
-  --shadow-s:0 2px 8px rgba(15,25,50,.06),inset 0 1px 0 rgba(255,255,255,.85),inset 0 -1px 0 rgba(15,25,50,.05);
-  --shadow-m:0 8px 24px rgba(15,25,50,.08),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(15,25,50,.06);
-  --shadow-l:0 16px 48px rgba(15,25,50,.12),0 0 0 1px rgba(255,255,255,.6),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(15,25,50,.08);
-  --shadow-hover:0 20px 60px rgba(15,25,50,.14),0 0 0 1px rgba(255,255,255,.7),inset 0 1px 0 rgba(255,255,255,1);
+  --glass-bg:rgba(255,255,255,.58);--glass-bg-strong:rgba(255,255,255,.82);
+  --glass-border:rgba(255,255,255,.7);--glass-line:rgba(15,25,50,.07);
+  --shadow-s:0 2px 8px rgba(15,25,50,.05),0 1px 2px rgba(15,25,50,.04),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(15,25,50,.04);
+  --shadow-m:0 8px 28px rgba(15,25,50,.07),0 2px 6px rgba(15,25,50,.04),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(15,25,50,.05);
+  --shadow-l:0 20px 56px rgba(15,25,50,.1),0 4px 12px rgba(15,25,50,.06),0 0 0 1px rgba(255,255,255,.65),inset 0 1px 0 rgba(255,255,255,1),inset 0 -1px 0 rgba(15,25,50,.06);
+  --shadow-hover:0 24px 64px rgba(15,25,50,.12),0 6px 16px rgba(15,25,50,.06),0 0 0 1px rgba(255,255,255,.75),inset 0 1px 0 rgba(255,255,255,1);
   --spring:cubic-bezier(.16,1,.3,1);
 }
 body{position:relative;overflow-x:hidden;min-height:100vh;background:
@@ -27,8 +27,8 @@ body::before{width:660px;height:660px;background:radial-gradient(circle at cente
 body::after{width:720px;height:720px;background:radial-gradient(circle at center,rgba(166,124,47,.16) 0%,rgba(166,124,47,.08) 50%,rgba(166,124,47,.02) 74%,rgba(166,124,47,0) 92%);bottom:-250px;right:-230px;animation:driftB 46s ease-in-out infinite alternate}
 .wrap{max-width:1200px;margin:0 auto;padding:20px;position:relative;z-index:1}
 .grid{display:grid;grid-template-columns:1fr 320px;gap:18px}
-.card{position:relative;background:var(--glass-bg);-webkit-backdrop-filter:blur(40px) saturate(180%);backdrop-filter:blur(40px) saturate(180%);border:1px solid var(--glass-border);border-radius:24px;overflow:hidden;box-shadow:var(--shadow-m);background-image:linear-gradient(to bottom,rgba(255,255,255,.35),transparent 50%);transition:box-shadow .5s var(--spring);animation:riseIn .5s var(--spring) backwards}
-.card:hover{box-shadow:var(--shadow-hover)}
+.card{position:relative;background:var(--glass-bg);-webkit-backdrop-filter:blur(50px) saturate(200%);backdrop-filter:blur(50px) saturate(200%);border:1px solid var(--glass-border);border-radius:24px;overflow:hidden;box-shadow:var(--shadow-m);background-image:linear-gradient(to bottom,rgba(255,255,255,.4),transparent 50%);transition:box-shadow .5s var(--spring),transform .3s var(--spring);animation:riseIn .5s var(--spring) backwards;will-change:transform}
+.card:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px)}
 .grid .card:first-child{animation-delay:.2s}
 .grid aside .card{animation-delay:.28s}
 .card-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--glass-line)}
@@ -42,7 +42,7 @@ body::after{width:720px;height:720px;background:radial-gradient(circle at center
 .btn.dan{background:var(--red);color:#fff;border-color:#D96C5A}
 .btn.sm{padding:4px 10px;font-size:12px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-.stat{position:relative;background:var(--glass-bg);-webkit-backdrop-filter:blur(40px) saturate(180%);backdrop-filter:blur(40px) saturate(180%);border:1px solid var(--glass-border);border-radius:20px;padding:12px;text-align:center;overflow:hidden;box-shadow:var(--shadow-s);transition:all .5s var(--spring);animation:riseIn .5s var(--spring) backwards}
+.stat{position:relative;background:var(--glass-bg);-webkit-backdrop-filter:blur(50px) saturate(200%);backdrop-filter:blur(50px) saturate(200%);border:1px solid var(--glass-border);border-radius:20px;padding:12px;text-align:center;overflow:hidden;box-shadow:var(--shadow-s);transition:all .5s var(--spring);animation:riseIn .5s var(--spring) backwards;will-change:transform}
 .stat:nth-child(2){animation-delay:.06s}
 .stat:nth-child(3){animation-delay:.12s}
 .stat:nth-child(4){animation-delay:.18s}
@@ -74,15 +74,15 @@ body::after{width:720px;height:720px;background:radial-gradient(circle at center
 .act-btn.hot{background:var(--gold);color:#FFF8E8;border-color:var(--gold-l);box-shadow:0 6px 20px rgba(166,124,47,.25)}
 .act-btn.hot:hover{background:var(--gold-d);color:#fff;transform:translateX(3px);box-shadow:0 8px 28px rgba(166,124,47,.35)}
 .sys{font-size:12px;color:var(--dim);line-height:1.8}
-.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,25,50,.32);z-index:10;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .5s var(--spring),visibility 0s linear .5s}
-.ov.on{opacity:1;visibility:visible;pointer-events:auto;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:opacity .5s var(--spring),visibility 0s linear 0s}
-.modal{width:min(800px,100%);max-height:min(640px,calc(100vh - 40px));display:grid;grid-template-rows:auto 1fr;background:var(--glass-bg-strong);border-radius:24px;border:1px solid var(--glass-border);box-shadow:var(--shadow-l);overflow:hidden;transform:translateY(16px) scale(.96);opacity:0;transition:transform .5s var(--spring),opacity .5s var(--spring)}
-.ov.on .modal{transform:translateY(0) scale(1);opacity:1;-webkit-backdrop-filter:blur(60px) saturate(180%);backdrop-filter:blur(60px) saturate(180%);will-change:transform,opacity}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,25,50,.35);z-index:10;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .5s var(--spring),visibility 0s linear .5s}
+.ov.on{opacity:1;visibility:visible;pointer-events:auto;-webkit-backdrop-filter:blur(12px) saturate(120%);backdrop-filter:blur(12px) saturate(120%);transition:opacity .5s var(--spring),visibility 0s linear 0s}
+.modal{width:min(840px,100%);max-height:min(680px,calc(100vh - 40px));display:grid;grid-template-rows:auto 1fr;background:var(--glass-bg-strong);border-radius:24px;border:1px solid var(--glass-border);box-shadow:var(--shadow-l);overflow:hidden;transform:translateY(16px) scale(.96);opacity:0;transition:transform .5s var(--spring),opacity .5s var(--spring)}
+.ov.on .modal{transform:translateY(0) scale(1);opacity:1;-webkit-backdrop-filter:blur(80px) saturate(200%);backdrop-filter:blur(80px) saturate(200%);will-change:transform,opacity}
 .modal-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--glass-line);background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(255,255,255,0))}
 .modal-hd h3{font-size:15px;font-weight:700}
 .modal-bd{overflow:auto;padding:16px}
 .modal-sm{width:min(460px,100%)}
-.cs{margin-bottom:14px;padding:12px 14px;border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,.72),rgba(248,250,255,.45));border:1px solid var(--glass-line);box-shadow:0 4px 16px rgba(15,25,50,.05)}
+.cs{margin-bottom:14px;padding:12px 14px;border-radius:16px;background:linear-gradient(160deg,rgba(255,255,255,.75),rgba(248,250,255,.5));border:1px solid var(--glass-line);box-shadow:0 4px 16px rgba(15,25,50,.04);-webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%)}
 .cs-t{font-size:12px;font-weight:800;color:var(--gold);margin-bottom:8px;display:flex;align-items:center;gap:6px;letter-spacing:.3px}
 .cs-t::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(166,124,47,.35),transparent)}
 .cr{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;align-items:start;padding:6px 8px;border-radius:10px;margin:0 -8px;transition:background .3s}
@@ -155,6 +155,51 @@ textarea.fld{min-height:56px;resize:vertical}
 @supports not ((backdrop-filter:blur(4px)) or (-webkit-backdrop-filter:blur(4px))){.card,.stat,.modal,.row:hover{background:rgba(255,255,255,.92)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.row:hover,.btn:hover,.act-btn:hover,.stat:hover{transform:none!important}.stat:hover .ic{transform:none!important}}
 @media(max-width:800px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.det-grid{grid-template-columns:1fr}.cr{grid-template-columns:1fr}}
+/* ── Portrait Tabs ── */
+.pt-tabs{display:flex;gap:4px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px}
+.pt-tabs::-webkit-scrollbar{display:none}
+.pt-tab{flex-shrink:0;padding:6px 14px;border-radius:12px;border:1px solid var(--glass-line);background:rgba(255,255,255,.5);font-size:12px;font-weight:600;cursor:pointer;transition:all .3s var(--spring);white-space:nowrap}
+.pt-tab:hover{background:rgba(255,255,255,.75)}
+.pt-tab.on{background:var(--gold);color:#FFF8E8;border-color:var(--gold-l);box-shadow:0 2px 10px rgba(166,124,47,.3)}
+.pt-panel{display:none;animation:tSwap .28s var(--spring)}
+.pt-panel.on{display:block}
+/* ── Circular Progress Ring ── */
+.ring-wrap{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.ring{position:relative;width:80px;height:80px;flex-shrink:0}
+.ring svg{width:80px;height:80px;transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:rgba(15,25,50,.06);stroke-width:6}
+.ring-fg{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s var(--spring)}
+.ring-val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:18px;font-weight:800;line-height:1}
+.ring-val .ring-lbl{font-size:10px;color:var(--dim);font-weight:400;margin-top:2px}
+.ring-info{flex:1;min-width:0}
+.ring-info .ri-title{font-size:13px;font-weight:700;margin-bottom:4px}
+.ring-info .ri-sub{font-size:11px;color:var(--dim)}
+/* ── Horizontal Emotion Bars ── */
+.emo-h{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.emo-r{display:flex;align-items:center;gap:8px}
+.emo-r .emo-icon{width:20px;text-align:center;font-size:14px;flex-shrink:0}
+.emo-r .emo-name{width:36px;font-size:11px;color:var(--dim);flex-shrink:0}
+.emo-r .emo-bar{flex:1;height:6px;background:rgba(15,25,50,.06);border-radius:999px;overflow:hidden}
+.emo-r .emo-bar-fg{height:100%;border-radius:999px;transition:width .6s var(--spring)}
+.emo-r .emo-val{width:28px;font-size:11px;font-weight:700;text-align:right;flex-shrink:0}
+/* ── Tension Gradient Bar ── */
+.tension-bar{height:8px;border-radius:999px;background:linear-gradient(90deg,var(--green),#FBBF24,var(--red));position:relative;margin:6px 0}
+.tension-dot{position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--gold);box-shadow:0 1px 4px rgba(0,0,0,.15);transition:left .6s var(--spring)}
+/* ── Prism Card ── */
+.prism-list{display:flex;flex-direction:column;gap:5px}
+.prism-item{display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:rgba(255,255,255,.5);border:1px solid var(--glass-line);border-radius:10px;font-size:12px}
+.prism-num{width:20px;height:20px;border-radius:50%;background:var(--gold);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.prism-text{flex:1;line-height:1.5}
+/* ── Mobile Performance ── */
+@media(pointer:coarse){
+  .card,.stat,.modal{will-change:auto}
+  .act-btn:hover,.row:hover,.stat:hover{transform:none}
+}
+@media(max-width:480px){
+  .ring-wrap{flex-direction:column;align-items:flex-start}
+  .emo-r .emo-name{width:28px;font-size:10px}
+  .modal{max-height:min(80vh,calc(100vh - 20px))}
+}
 </style>
 </head>
 <body>
@@ -335,29 +380,90 @@ function detail(uid){
   $('dTitle').textContent=`🖼️ ${p.user_name||p.user_id}${p.role_cid?`（${p.role_emoji||'🎭'} ${p.role_name||''}）`:''} 的情感自画像`;
   const fav=p.favorability;
 
-  // ── 核心数值 ──
-  let h='<div class="det-grid">';
-  h+=dc('好感度',`${fav>=0?'+':''}${fav.toFixed(1)}`,fav,-100,200,fc(fav));
-  h+=dc('亲密度',p.intimacy.toFixed(1),p.intimacy,0,100,'var(--purple)');
-  h+=dc('复合评分',p.composite_score.toFixed(1),null,0,0,'var(--blue)');
-  h+=dc('阶段进度',`${p.stage_progress.toFixed(1)}%`,p.stage_progress,0,100,'var(--green)');
+  // ── Tab 头部 ──
+  let h='<div class="pt-tabs">';
+  h+='<div class="pt-tab on" onclick="ptSwitch(this,0)">💝 核心</div>';
+  h+='<div class="pt-tab" onclick="ptSwitch(this,1)">🎭 角色</div>';
+  h+='<div class="pt-tab" onclick="ptSwitch(this,2)">📊 行为</div>';
+  h+='<div class="pt-tab" onclick="ptSwitch(this,3)">📅 时间</div>';
+  h+='<div class="pt-tab" onclick="ptSwitch(this,4)">🧠 记忆</div>';
   h+='</div>';
 
-  // ── 关系阶段 + 距下一阶段 ──
-  h+=`<div style="margin-bottom:12px;font-size:13px">🧬 当前关系：${stg(p)}`;
+  // ══════ Tab 0: 核心 ══════
+  h+='<div class="pt-panel on">';
+  // 好感/亲密 圆环 + 阶段
+  h+='<div class="ring-wrap">';
+  h+=ring('❤️','好感',fav,-100,200,fc(fav));
+  h+=ring('💜','亲密',p.intimacy,0,100,'var(--purple)');
+  h+='<div class="ring-info">';
+  h+=`<div class="ri-title">${stg(p)}`;
   if(p.stage_index>=0&&p.stage_index<11){
     const thresholds=[15,35,55,75,95,115,135,152,168,180,185,200];
     const nxt=thresholds[p.stage_index+1];
     const need=nxt-p.composite_score;
-    if(need>0)h+=`<span class="next-tag">还需 ${need.toFixed(1)} 分进阶</span>`;
+    if(need>0)h+=` <span class="next-tag">还需 ${need.toFixed(1)} 分</span>`;
   }else if(p.stage_index>=11){
-    h+=`<span class="next-tag">🌸 最高阶段</span>`;
+    h+=' <span class="next-tag">🌸 最高阶段</span>';
+  }
+  h+=`</div><div class="ri-sub">复合评分 ${p.composite_score.toFixed(1)} · 阶段进度 ${p.stage_progress.toFixed(0)}%</div>`;
+  h+='</div></div>';
+
+  // 8 维情感（横向条形图）
+  h+='<div class="sec-t">🎭 情感画像</div><div class="emo-h">';
+  const dimIc={joy:'😊',sadness:'😢',anger:'😠',fear:'😨',surprise:'😲',disgust:'🤢',trust:'🤗',anticipation:'🌟'};
+  for(const d of Object.keys(DM)){
+    const v=(p.emotions&&p.emotions[d])||50;
+    h+=`<div class="emo-r"><span class="emo-icon">${dimIc[d]||''}</span><span class="emo-name">${DM[d]}</span><div class="emo-bar"><div class="emo-bar-fg" style="width:${v}%;background:${DC[d]}"></div></div><span class="emo-val" style="color:${DC[d]}">${v.toFixed(0)}</span></div>`;
   }
   h+='</div>';
-  // 关系角色（完整解锁状态 + 当前激活）
+
+  // 复合情绪
+  const cmp=compoundOf(p.emotions);
+  if(cmp.length)h+=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;margin-bottom:10px;color:var(--dim)">🎯 复合情绪：${cmp.map(c=>`<span style="display:inline-block;background:var(--gold-l);color:var(--gold-d);border-radius:10px;padding:1px 8px;font-size:11px">${esc(c)}</span>`).join('')}</div>`;
+
+  // 情绪张力
+  if(typeof p.tension==='number'){
+    const tsT=p.tension;const tSt=tsT<30?'平静':tsT<60?'阴郁':tsT<85?'临界':'即将爆发';
+    h+=`<div style="font-size:12px;margin-bottom:10px">🌋 情绪张力 <strong>${tsT.toFixed(0)}/100</strong>（${tSt}）</div>`;
+    h+=`<div class="tension-bar"><div class="tension-dot" style="left:calc(${tsT}% - 7px)"></div></div>`;
+  }
+
+  // Prometheus 灵魂棱镜
+  if(p.psych_prisms&&p.psych_prisms.length){
+    h+='<div class="sec-t">🔮 灵魂棱镜</div><div class="prism-list">';
+    for(let i=0;i<p.psych_prisms.length;i++){
+      h+=`<div class="prism-item"><div class="prism-num">${i+1}</div><div class="prism-text">${esc(p.psych_prisms[i])}</div></div>`;
+    }
+    h+='</div>';
+  }
+  if(p.psych_comm_style){
+    const styleIcon={'共情优先型':'💗','逻辑清晰型':'🧠','鼓励型':'🌟'};
+    h+=`<div style="font-size:12px;margin:8px 0;color:var(--dim)">💬 沟通风格：<strong>${styleIcon[p.psych_comm_style]||''} ${esc(p.psych_comm_style)}</strong></div>`;
+  }
+
+  // 关系建议
+  let advice='';
+  if(fav<-50)advice='关系处于敌对状态，需要真诚道歉和长时间修复。';
+  else if(fav<-20)advice='关系紧张，多表达善意，信任需慢慢重建。';
+  else if(fav<0)advice='偏冷淡，多温暖互动可改善。';
+  else if(fav<15)advice='初识阶段，保持真诚和耐心。';
+  else if(fav<35)advice='好感在增长，继续用心互动。';
+  else if(fav<55)advice='信任已建立，多分享心事更进一步。';
+  else if(fav<75)advice='越来越熟悉，陪伴与默契正在积累。';
+  else if(fav<95)advice='已能交心，这份信任值得珍惜。';
+  else if(fav<135)advice='关系深化中，保持真诚互动。';
+  else if(fav<168)advice='默契十足，彼此已是重要的人。';
+  else if(fav<185)advice='感情深厚，守护这份依恋与承诺。';
+  else advice='已达共生阶段，最深层的情感连接 🌸';
+  h+=`<div class="advice"><div class="hd">💡 关系建议</div>${advice}</div>`;
+  h+='</div>';
+
+  // ══════ Tab 1: 角色 ══════
+  h+='<div class="pt-panel">';
+  // 关系角色解锁状态
   if(p.relationships&&p.relationships.length){
     const relRows=p.relationships.filter(r=>r.key!=='stranger');
-    h+=`<div class="sec-t">🎭 关系角色解锁</div><div class="sec-box">`;
+    h+='<div class="sec-box">';
     const activeRel=p.rel_active?p.relationships.find(x=>x.key===p.rel_active):null;
     const rk=p.rel_active?Roles.find(x=>x.key===p.rel_active):null;
     if(rk&&activeRel){
@@ -371,8 +477,7 @@ function detail(uid){
     }
     h+='</div>';
   }
-
-  // ── 自定义态度/关系描述（合并进关系角色系统）──
+  // 自定义态度/关系
   const rc=p.rel_custom||{};
   if(rc.attitude||rc.relationship){
     h+='<div class="sec-box">';
@@ -380,49 +485,63 @@ function detail(uid){
     if(rc.relationship)h+=`<div class="item"><span class="ic">🤝</span>关系描述：${esc(rc.relationship)}</div>`;
     h+='</div>';
   }
-
-  // ── 8 维情感 ──
-  h+='<div class="sec-t">🎭 情感画像</div><div class="emo">';
-  const dimIc={joy:'😊',sadness:'😢',anger:'😠',fear:'😨',surprise:'😲',disgust:'🤢',trust:'🤗',anticipation:'✨'};
-  for(const d of Object.keys(DM)){const v=(p.emotions&&p.emotions[d])||50;h+=`<div class="ei"><div class="n">${dimIc[d]||''} ${DM[d]}</div><div class="v" style="color:${DC[d]}">${v.toFixed(0)}</div><div class="eb"><div class="ef" style="width:${v}%;background:${DC[d]}"></div></div></div>`}
-  const cmp=compoundOf(p.emotions);
-  if(cmp.length)h+=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;grid-column:1/-1;min-width:0;font-size:12px;margin-top:8px;color:var(--dim);white-space:nowrap">🎯 复合情绪：${cmp.map(c=>`<span style="display:inline-block;background:var(--gold-l);color:var(--gold-d);border-radius:10px;padding:1px 8px;font-size:11px;white-space:nowrap">${esc(c)}</span>`).join('')}</div>`;
-  if(typeof p.tension==='number'){const tsT=p.tension;const tSt=tsT<30?'平静':tsT<60?'阴郁':tsT<85?'临界':'即将爆发';const tC=tsT<60?'var(--green)':tsT<85?'var(--orange)':'var(--red)';
-    h+=`<div style="font-size:12px;margin-top:8px;color:var(--dim);grid-column:1/-1">🌋 情绪张力：${tsT.toFixed(0)}/100（<span style="color:${tC}">${tSt}</span>）</div>`}
+  // S12 称谓
+  if(p.preferred_address)h+=`<div class="sec-box"><div class="item"><span class="ic">📌</span>专属称谓：${esc(p.preferred_address)}</div></div>`;
   h+='</div>';
 
-  // ── 互动统计 ──
-  h+='<div class="sec-box">';
+  // ══════ Tab 2: 行为 ══════
+  h+='<div class="pt-panel">';
+  // 互动统计
   const pctPos=p.total_interactions>0?Math.round(p.positive_interactions/p.total_interactions*100):0;
-  h+=`<div class="item"><span class="ic">💬</span>总互动 <strong>${p.total_interactions}</strong> 次 · 正面 <strong>${p.positive_interactions}</strong>（${pctPos}%） · 负面 <strong>${p.negative_interactions}</strong> · 对话 <strong>${p.conversation_turns}</strong> 轮</div>`;
-  h+=`<div class="item"><span class="ic">🔄</span>距上次智能更新 <strong>${p.turns_since_update??0}</strong> 轮 · 最近更新 <strong>${p.last_update_ts?new Date(p.last_update_ts*1000).toLocaleString('zh-CN'):'未知'}</strong></div>`;
+  h+='<div class="sec-box">';
+  h+=`<div class="item"><span class="ic">💬</span>总互动 <strong>${p.total_interactions}</strong> 次 · 正面 <strong>${p.positive_interactions}</strong>（${pctPos}%） · 负面 <strong>${p.negative_interactions}</strong></div>`;
+  h+=`<div class="item"><span class="ic">🔄</span>对话 <strong>${p.conversation_turns}</strong> 轮 · 距上次更新 <strong>${p.turns_since_update??0}</strong> 轮</div>`;
+  h+='</div>';
+  // 行为档案
+  if(bp){
+    h+='<div class="bh">';
+    h+=bc('🔥',bp.current_streak_count,bp.current_streak_type==='positive'?'正面势头':bp.current_streak_type==='negative'?'负面势头':'中性');
+    h+=bc('💔',bp.betrayal_count,'背叛');h+=bc('💫',bp.comeback_count,'回归');
+    h+=bc('🕊️',bp.apology_count,'道歉');h+=bc('📈',bp.total_reward_accumulated.toFixed(1),'奖励');h+=bc('📉',bp.total_penalty_accumulated.toFixed(1),'惩罚');
+    h+='</div>';
+    if(bp.current_streak_count>1){
+      const skType=bp.current_streak_type==='positive'?'正面 ✨':'负面 ⚡';
+      h+=`<div class="sec-box"><div class="item"><span class="ic">🔥</span>当前势头：${skType} ×${bp.current_streak_count}</div>`;
+      h+=`<div class="item"><span class="ic">📊</span>最长正面 ${bp.max_positive_streak} · 最长负面 ${bp.max_negative_streak}</div></div>`;
+    }
+    const tsRows=[];
+    if(bp.last_betrayal_ts)tsRows.push(['💔','上次背叛',bp.last_betrayal_ts]);
+    if(bp.last_apology_ts)tsRows.push(['🕊️','上次道歉',bp.last_apology_ts]);
+    if(bp.last_comeback_ts)tsRows.push(['💫','上次回归',bp.last_comeback_ts]);
+    if(tsRows.length){h+='<div class="sec-box">';for(const[ic,l,t]of tsRows)h+=`<div class="item"><span class="ic">${ic}</span>${l}：${new Date(t*1000).toLocaleString('zh-CN')}</div>`;h+='</div>';}
+    // 里程碑
+    const milestones={first_positive:'🎉 首次正面',fifty_interactions:'🎉 50次互动',hundred_interactions:'🎉 100次互动',two_hundred:'🎉 200次互动'};
+    if(bp.achieved_milestones&&bp.achieved_milestones.length){
+      h+='<div class="sec-box"><div class="item"><span class="ic">🏆</span>里程碑：</div>';
+      for(const m of bp.achieved_milestones)h+=`<div style="padding-left:20px;font-size:12px">${milestones[m]||m}</div>`;
+      h+='</div>';
+    }
+    h+=`<div style="margin-bottom:10px"><button class="btn sm" onclick="toggleRaw('rawBp')">🗂️ 原始数据</button></div><div id="rawBp" style="display:none;background:#f8f9fb;border:1px solid var(--glass-line);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;margin-bottom:10px">${esc(JSON.stringify(bp,null,2))}</div>`;
+  }
   h+='</div>';
 
-  // ── 今日节日/纪念日 ──
+  // ══════ Tab 3: 时间 ══════
+  h+='<div class="pt-panel">';
   if(p.anniversaries&&p.anniversaries.length){
     const todayItems=p.anniversaries.filter(a=>a.is_today);
     if(todayItems.length){
       h+='<div class="sec-t">🎉 今日特别日子</div><div class="sec-box">';
-      for(const a of todayItems){
-        const ic=a.kind==='birthday'?'🎂':a.kind==='first_meet'?'🤝':'💝';
-        h+=`<div class="item"><span class="ic">${ic}</span>${esc(a.name)} · <span style="color:#e84393;font-weight:700">就是今天 🎉</span></div>`;
-      }
+      for(const a of todayItems){const ic=a.kind==='birthday'?'🎂':a.kind==='first_meet'?'🤝':'💝';h+=`<div class="item"><span class="ic">${ic}</span>${esc(a.name)} · <span style="color:#e84393;font-weight:700">就是今天 🎉</span></div>`;}
       h+='</div>';
     }
-  }
-
-  // ── 纪念日 ──
-  if(p.anniversaries&&p.anniversaries.length){
     h+='<div class="sec-t">📅 纪念日与倒计时</div><div class="sec-box">';
     for(const a of p.anniversaries){
-      const tag=a.is_today?' · <span style="color:#e84393;font-weight:700">就是今天 🎉</span>':(a.days_left>=0?` · 还有 ${a.days_left} 天`:` · ${a.month??''}-${a.day??''}`);
+      const tag=a.is_today?' · <span style="color:#e84393;font-weight:700">今天</span>':(a.days_left>=0?` · 还有 ${a.days_left} 天`:` · ${a.month??''}-${a.day??''}`);
       const ic=a.kind==='birthday'?'🎂':a.kind==='first_meet'?'🤝':'💝';
       h+=`<div class="item"><span class="ic">${ic}</span>${esc(a.name)}${tag}</div>`;
     }
     h+='</div>';
   }
-
-  // ── 近7天趋势 ──
   if(p.trend&&p.trend.dates&&p.trend.dates.length>1){
     h+='<div class="sec-t">📈 近7天趋势</div><div class="sec-box" style="font-size:11px">';
     const mn=Math.min(...p.trend.fav),mx=Math.max(...p.trend.fav);
@@ -437,112 +556,56 @@ function detail(uid){
       h+=`<div class="item"><span class="ic">📅</span>上升 ${tsd.up_days} 天 · 下降 ${tsd.down_days} 天 · 平均亲密 <strong>${tsd.avg_int.toFixed(1)}</strong></div></div>`;
     }
   }
-
-  // ── 关系雷达对比（前后两段关系维度）──
   if(p.radar){
     h+='<div class="sec-t">🕸️ 关系雷达对比（前后7天）</div><div class="sec-box" style="text-align:center">';
     h+=`<canvas id="radarCv" width="280" height="224" style="max-width:100%"></canvas>`;
-    h+=`<div style="font-size:11px;color:var(--dim)"><span style="color:#8fa3c8">◾ 前段 ${p.radar.before_avg}</span> → <span style="color:var(--gold-d)">◾ 后段 ${p.radar.after_avg}</span> 综合评分</div>`;
+    h+=`<div style="font-size:11px;color:var(--dim)"><span style="color:#8fa3c8">◾ 前段 ${p.radar.before_avg}</span> → <span style="color:var(--gold-d)">◾ 后段 ${p.radar.after_avg}</span></div>`;
     h+='</div>';
-    setTimeout(()=>drawRadar($('radarCv'),p.radar),0);
+    setTimeout(()=>drawRadar($('radarCv'),p.radar),100);
   }
+  h+='</div>';
 
-  // ── 行为模式 ──
-  if(bp){
-    h+='<div class="sec-t">🎯 行为档案</div><div class="bh">';
-    h+=bc('🔥',bp.current_streak_count,bp.current_streak_type==='positive'?'正面势头':bp.current_streak_type==='negative'?'负面势头':'中性');
-    h+=bc('💔',bp.betrayal_count,'背叛');h+=bc('💫',bp.comeback_count,'回归');
-    h+=bc('🕊️',bp.apology_count,'道歉');h+=bc('📈',bp.total_reward_accumulated.toFixed(1),'奖励');h+=bc('📉',bp.total_penalty_accumulated.toFixed(1),'惩罚');
-    h+='</div>';
-
-    // 势头详情
-    if(bp.current_streak_count>1){
-      const skType=bp.current_streak_type==='positive'?'正面 ✨':'负面 ⚡';
-      h+=`<div class="sec-box"><div class="item"><span class="ic">🔥</span>当前势头：${skType} ×${bp.current_streak_count}</div>`;
-      h+=`<div class="item"><span class="ic">📊</span>最长正面连续 ${bp.max_positive_streak} 次 · 最长负面连续 ${bp.max_negative_streak} 次</div>`;
-      h+=`<div class="item"><span class="ic">🕒</span>最近互动：${bp.last_interaction_ts?new Date(bp.last_interaction_ts*1000).toLocaleString('zh-CN'):'未知'}</div></div>`;
-    }
-
-    // 特殊事件时间戳
-    const tsRows=[];
-    if(bp.last_betrayal_ts)tsRows.push(['💔','上次背叛',bp.last_betrayal_ts]);
-    if(bp.last_apology_ts)tsRows.push(['🕊️','上次道歉',bp.last_apology_ts]);
-    if(bp.last_comeback_ts)tsRows.push(['💫','上次回归',bp.last_comeback_ts]);
-    if(tsRows.length){
-      h+='<div class="sec-box">';
-      for(const[ic,l,t]of tsRows)h+=`<div class="item"><span class="ic">${ic}</span>${l}：${new Date(t*1000).toLocaleString('zh-CN')}</div>`;
-      h+='</div>';
-    }
-
-    // 待衰减效果
-    if(bp.pending_effects&&bp.pending_effects.length){
-      h+='<div class="sec-box"><div class="item"><span class="ic">⏳</span>待衰减效果（${bp.pending_effects.length}）</div>';
-      for(const e of bp.pending_effects){
-        const applyAt=e[0]||0,fav=e[1]||0,int_=e[2]||0,reason=e[3]||'';
-        h+=`<div style="padding-left:20px;font-size:11px;color:var(--dim)">${reason} · 好感${fav>=0?'+':''}${fav.toFixed(1)} 亲密${int_>=0?'+':''}${int_.toFixed(1)} · ${new Date(applyAt*1000).toLocaleString('zh-CN')}</div>`;
-      }
-      h+='</div>';
-    }
-
-    // 里程碑
-    const milestones={first_positive:'🎉 首次正面互动',fifty_interactions:'🎉 50次互动',hundred_interactions:'🎉 100次互动',two_hundred:'🎉 200次互动'};
-    if(bp.achieved_milestones&&bp.achieved_milestones.length){
-      h+='<div class="sec-box"><div class="item"><span class="ic">🏆</span>已达成里程碑：</div>';
-      for(const m of bp.achieved_milestones)h+=`<div style="padding-left:20px">${milestones[m]||m}</div>`;
-      h+='</div>';
-    }
-
-    // 行为档案原始数据
-    h+=`<div style="margin-bottom:10px"><button class="btn sm" onclick="toggleRaw('rawBp')">🗂️ 查看行为档案原始数据</button></div><div id="rawBp" style="display:none;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;margin-bottom:10px">${esc(JSON.stringify(bp,null,2))}</div>`;
-  }
-
-  // ── 长期记忆（真实数据）──
+  // ══════ Tab 4: 记忆 ══════
+  h+='<div class="pt-panel">';
   if(p.memory&&p.memory.length){
-    h+='<div class="sec-t">📜 情感记忆（${p.memory.length} 条）</div><div class="mem-box">';
+    h+=`<div style="font-size:12px;color:var(--dim);margin-bottom:8px">📜 共 ${p.memory.length} 条记忆</div>`;
     for(const e of p.memory){
       const ts=new Date(e.ts*1000).toLocaleString('zh-CN');
       const stgTag=e.stage?` · <span style="color:var(--blue)">${esc(e.stage)}</span>`:'';
       const anc=anchorOf(e.emotions)?`<span style="color:var(--gold);font-size:11px;margin-left:6px">${esc(anchorOf(e.emotions))}</span>`:'';
       const delta=typeof e.fav_delta==='number'?` · <span style="color:${e.fav_delta>=0?'var(--green)':'var(--red)'}">好感${e.fav_delta>=0?'+':''}${e.fav_delta}</span>`:'';
       const vivid=typeof e.vividness==='number'?` · <span style="color:${e.vividness>=60?'var(--dim)':'var(--purple)'}">清晰度${e.vividness}%${e.vividness<60?' 🌫️':''}</span>`:'';
-      const imp=e.important?' · <span style="color:var(--gold)">⭐ 重要回忆</span>':'';
-      h+=`<div style="font-size:12px;padding:5px 0;border-bottom:1px solid #f0f2f5"><div style="color:var(--dim);font-size:10px">🕒 ${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}${stgTag}${delta}${vivid}${imp}</div><div>${esc(e.description||'')}${anc}</div>${e.message?`<div style="color:var(--dim);font-size:11px;padding-left:10px">💬 ${esc(String(e.message))}</div>`:''}</div>`;
+      const imp=e.important?' · <span style="color:var(--gold)">⭐ 重要</span>':'';
+      h+=`<div class="mem-box"><div style="color:var(--dim);font-size:10px;margin-bottom:2px">🕒 ${ts} · 好感 ${e.favorability!=null?(e.favorability>=0?'+':'')+e.favorability:'?'}${stgTag}${delta}${vivid}${imp}</div><div style="font-size:12px">${esc(e.description||'')}${anc}</div>${e.message?`<div style="color:var(--dim);font-size:11px;margin-top:2px">💬 ${esc(String(e.message))}</div>`:''}</div>`;
     }
-    h+='</div>';
-  }else if(p.user_id){
-    h+='<div class="sec-t">📜 情感记忆</div><div class="mem-box"><div class="hd">暂无长期记忆记录</div></div>';
+  }else{
+    h+='<div class="mem-box"><div class="hd">暂无长期记忆</div></div>';
   }
-  if(p.memory){
-    h+=`<div style="margin-bottom:10px"><button class="btn sm" onclick="toggleRaw('rawMem')">🗂️ 查看长期记忆原始数据</button></div><div id="rawMem" style="display:none;background:#f8f9fb;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;margin-bottom:10px">${esc(JSON.stringify(p.memory,null,2))}</div>`;
-  }
+  h+=`<div style="margin-top:8px"><button class="btn sm" onclick="toggleRaw('rawMem')">🗂️ 原始数据</button></div><div id="rawMem" style="display:none;background:#f8f9fb;border:1px solid var(--glass-line);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;margin-top:8px">${esc(JSON.stringify(p.memory||[],null,2))}</div>`;
+  h+='</div>';
 
-  // ── 关系建议 ──
-  let advice='';
-  if(fav<-50)advice='你们的关系处于敌对状态，需要真诚的道歉和长时间的修复才能缓和。';
-  else if(fav<-20)advice='关系有些紧张，试着多表达善意，减少负面言辞，信任需要慢慢重建。';
-  else if(fav<0)advice='关系偏冷淡，多一些温暖的互动可以改善，不要急于求成。';
-  else if(fav<15)advice='初识阶段，保持真诚和耐心，关系会随着互动慢慢加深。';
-  else if(fav<35)advice='好感在增长中，继续用心互动，信任正在稳步建立。';
-  else if(fav<55)advice='信任已建立，多分享心事会让关系更进一步。';
-  else if(fav<75)advice='越来越熟悉了，陪伴与默契正在慢慢积累。';
-  else if(fav<95)advice='已能交心，这份信任值得加倍珍惜。';
-  else if(fav<135)advice='关系深化中，心动明显，保持真诚的互动。';
-  else if(fav<168)advice='默契十足，彼此已是对方重要的人。';
-  else if(fav<185)advice='感情非常深厚，守护这份依恋与承诺。';
-  else advice='已达共生阶段，这是最深层的情感连接 🌸 珍惜彼此。';
-  h+=`<div class="advice"><div class="hd">💡 关系建议</div>${advice}</div>`;
-
-  // ── 底部信息 ──
-  h+=`<div style="font-size:11px;color:var(--dim);text-align:center">UID: ${esc(p.user_id)} · 档案创建 ${p.created_at?new Date(p.created_at*1000).toLocaleString('zh-CN'):'—'} · 最近更新 ${p.last_update_ts?new Date(p.last_update_ts*1000).toLocaleString('zh-CN'):'未知'} · 自上次更新 ${p.turns_since_update??0} 轮</div>`;
+  // ── 底部 ──
+  h+=`<div style="font-size:11px;color:var(--dim);text-align:center;margin-top:12px">UID: ${esc(p.user_id)} · 创建 ${p.created_at?new Date(p.created_at*1000).toLocaleString('zh-CN'):'—'} · 更新 ${p.last_update_ts?new Date(p.last_update_ts*1000).toLocaleString('zh-CN'):'未知'}</div>`;
 
   $('dBody').innerHTML=h;
   $('oDet').classList.add('on');
 }
 
+function ring(ic,lbl,val,mn,mx,c){
+  const pct=Math.max(0,Math.min(100,(val-mn)/(mx-mn)*100));
+  const r=34,circ=2*Math.PI*r,offset=circ*(1-pct/100);
+  return`<div class="ring"><svg viewBox="0 0 80 80"><circle class="ring-bg" cx="40" cy="40" r="${r}"/><circle class="ring-fg" cx="40" cy="40" r="${r}" stroke="${c}" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/></svg><div class="ring-val" style="color:${c}"><span>${ic}</span><span class="ring-lbl">${lbl}</span></div></div>`;
+}
 function dc(l,v,bv,mn,mx,c){let h=`<div class="det-c"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div>`;if(bv!==null)h+=`<div class="bar" style="margin-top:4px"><div class="bar-fg" style="width:${pc(bv,mn,mx)}%;background:${c}"></div></div>`;return h+'</div>'}
 function bc(ic,v,l){return`<div class="bc"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`}
 function toggleRaw(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'block':'none'}
 window.toggleRaw=toggleRaw;
+function ptSwitch(tab,idx){
+  tab.parentElement.querySelectorAll('.pt-tab').forEach(t=>t.classList.remove('on'));
+  tab.classList.add('on');
+  const panels=tab.parentElement.parentElement.querySelectorAll('.pt-panel');
+  panels.forEach((p,i)=>{p.classList.toggle('on',i===idx)});
+}
 
 function lb(neg){
   const sorted=neg?[...P].sort((a,b)=>a.favorability-b.favorability).slice(0,15):[...P].sort((a,b)=>b.favorability-a.favorability).slice(0,15);
