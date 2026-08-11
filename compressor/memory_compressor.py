@@ -28,8 +28,10 @@ COMPRESS_SUMMARY_WEIGHT = 0.3  # 摘要权重
 class MemoryCompressor:
     """记忆压缩器：将旧记忆压缩为泛化摘要"""
 
-    def __init__(self, pool):
+    def __init__(self, pool, threshold: int = COMPRESS_THRESHOLD, batch: int = COMPRESS_BATCH):
         self.pool = pool
+        self.threshold = threshold
+        self.batch = batch
 
     def check_and_compress(self, user_id: str) -> bool:
         """检查并压缩用户记忆，返回是否执行了压缩"""
@@ -39,16 +41,16 @@ class MemoryCompressor:
                 (user_id,),
             ).fetchone()["c"]
 
-            if count <= COMPRESS_THRESHOLD:
+            if count <= self.threshold:
                 return False
 
-            # 取最旧的 COMPRESS_BATCH 条未压缩记忆
+            # 取最旧的 batch 条未压缩记忆
             rows = conn.execute(
                 """SELECT ts, description, message, emotions, favorability, stage
                    FROM long_term_memory
                    WHERE user_id=? AND compressed=0 AND important=0
                    ORDER BY ts ASC LIMIT ?""",
-                (user_id, COMPRESS_BATCH),
+                (user_id, self.batch),
             ).fetchall()
 
             if len(rows) < 3:

@@ -294,7 +294,11 @@ class SoulSyncPro(Star):
                     self.sqlite_pool, max_days=self.stats_history_days
                 )
                 self.leaderboard_cache = LeaderboardCache(self.sqlite_pool)
-                self.memory_compressor = MemoryCompressor(self.sqlite_pool)
+                self.memory_compressor = MemoryCompressor(
+                    self.sqlite_pool,
+                    threshold=self.config.get("memory_compress_threshold", 20),
+                    batch=self.config.get("memory_compress_batch", 10),
+                )
                 self.rebirth_engine = RebirthEngine(self.sqlite_pool)
                 logger.info("[SoulSync] SQLite 存储引擎初始化完成")
             except Exception as e:
