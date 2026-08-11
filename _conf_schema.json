@@ -1,6 +1,6 @@
 {
   "_info_header": {
-    "description": "══════ 心旅知音 (SoulSync) v3.10 配置 ══════",
+    "description": "══════ 心旅知音 (SoulSync) v3.11 配置 ══════",
     "type": "string",
     "default": "",
     "invisible": true
@@ -1376,5 +1376,18 @@
       "max": 100,
       "step": 10
     }
+  },
+  "_section_ranking": {
+    "description": "══════ v3.11 排行榜隐私 ══════",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "rank_privacy_mode": {
+    "description": "排行榜隐私模式",
+    "hint": "self_only=仅显示自己排名；anonymous_top=匿名化显示；full=显示全部",
+    "type": "enum",
+    "default": "self_only",
+    "enum": ["self_only", "anonymous_top", "full"]
   }
 }

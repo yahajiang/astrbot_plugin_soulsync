@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v3.10 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v3.11 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -1331,6 +1331,37 @@ class SoulSyncPro(Star):
             except ValueError:
                 pass
         n = max(1, min(20, n))
+
+        # ── 排行隐私模式（v3.11）──
+        rank_privacy = self.config.get("rank_privacy_mode", "self_only")
+        user_id = self._get_user_id(event)
+
+        if rank_privacy == "self_only":
+            # 仅显示自己排名
+            profile = self.profiles.get(user_id)
+            if not profile:
+                yield event.plain_result("暂无情感数据。")
+                return
+            all_sorted = sorted(
+                self.profiles.values(), key=lambda p: p.favorability, reverse=positive
+            )
+            rank = next((i + 1 for i, p in enumerate(all_sorted) if p.user_id == user_id), None)
+            if rank is None:
+                yield event.plain_result("暂无情感数据。")
+                return
+            stage = self._get_stage_label(profile) if positive else self._get_negative_stage_label(profile.favorability)
+            title = "🏆 好感度排名" if positive else "💀 负好感排名"
+            lines = [
+                title, "━" * 20,
+                f"你在排行榜中排名第 {rank} 位",
+                f"好感：{profile.favorability:+.1f} · 亲密：{profile.intimacy:.1f}",
+                f"阶段：{stage}",
+                f"共 {len(self.profiles)} 位用户",
+            ]
+            yield event.plain_result("\n".join(lines))
+            return
+
+        # full 或 anonymous_top 模式
         if positive:
             sorted_profiles = sorted(
                 self.profiles.values(), key=lambda p: p.favorability, reverse=True
@@ -1339,7 +1370,6 @@ class SoulSyncPro(Star):
                 yield event.plain_result("暂无情感数据。")
                 return
             title = f"🏆 好感度排行榜 TOP {n}"
-            lines = [title, "━" * 24]
         else:
             sorted_profiles = sorted(
                 self.profiles.values(), key=lambda p: p.favorability
@@ -1348,11 +1378,16 @@ class SoulSyncPro(Star):
                 yield event.plain_result("暂无负好感数据。")
                 return
             title = f"💀 负好感排行榜 BOTTOM {n}"
-            lines = [title, "━" * 24]
+
+        lines = [title, "━" * 24]
         entries = []
         for i, p in enumerate(sorted_profiles, 1):
             stage = self._get_stage_label(p) if positive else self._get_negative_stage_label(p.favorability)
-            name = p.user_name or p.user_id
+            # anonymous_top 模式匿名化
+            if rank_privacy == "anonymous_top" and p.user_id != user_id:
+                name = "***"
+            else:
+                name = p.user_name or p.user_id
             desc = f"好感 {p.favorability:+.1f} | 亲密 {p.intimacy:.1f} | {stage}" if positive \
                 else f"好感 {p.favorability:+.1f} | {stage}"
             if positive:
@@ -3330,6 +3365,152 @@ class SoulSyncPro(Star):
             f"执行压缩：{'✅ 已执行' if compressed else '❌ 未达到压缩阈值（>20条）'}",
         ]
         yield event.plain_result("\n".join(lines))
+
+    # ═══════════════════════════════════════════════════════════════
+    #  v3.11 统一管理员命令
+    # ═══════════════════════════════════════════════════════════════
+
+    async def cmd_admin_set(self, event: AstrMessageEvent):
+        """管理员：统一设置入口。用法：/心管 设置 <ID> <字段> <值>
+        字段：favor / intimacy / attitude / relationship / role / image_mode
+        """
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 权限不足，仅管理员可用")
+            return
+        parts = self._sub_parts(event)
+        if len(parts) < 4:
+            yield event.plain_result(
+                "用法：/心管 设置 <用户ID> <字段> <值>\n"
+                "字段：favor(好感) / intimacy(亲密) / attitude(态度) / relationship(关系) / role(角色) / image_mode(图片模式)"
+            )
+            return
+        user_id, field, value = parts[1], parts[2].lower(), " ".join(parts[3:])
+        if field in ("favor", "好感"):
+            for res in self._set_user_text(event, "favor", "好感"):
+                yield res
+            return
+        elif field in ("intimacy", "亲密"):
+            yield event.plain_result(f"ℹ️ 亲密度已改为按好感度百分比派生，请使用 /心管 设置 {user_id} favor <值>")
+            return
+        elif field in ("attitude", "态度"):
+            self._set_user_text.__func__(self, event, "attitude", "态度")
+            return
+        elif field in ("relationship", "关系"):
+            self._set_user_text.__func__(self, event, "relationship", "关系")
+            return
+        elif field in ("role", "关系角色"):
+            for res in self._set_relationship_role(event):
+                yield res
+            return
+        elif field in ("image_mode", "图片模式"):
+            cur = bool(self.config.get("image_output_global", False))
+            self.config["image_output_global"] = not cur
+            yield event.plain_result(f"{'✅ 全局图片模式已开启' if not cur else '❌ 全局图片模式已关闭'}")
+            return
+        else:
+            yield event.plain_result(f"❌ 未知字段：{field}\n可选：favor/intimacy/attitude/relationship/role/image_mode")
+
+    async def cmd_admin_skip(self, event: AstrMessageEvent):
+        """管理员：统一跳跃入口。用法：/心管 跳跃 <ID> <天数>（天数=0 重置）"""
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 权限不足，仅管理员可用")
+            return
+        parts = self._sub_parts(event)
+        if len(parts) < 3:
+            yield event.plain_result("用法：/心管 跳跃 <用户ID> <天数>\n天数=0 重置跳跃状态")
+            return
+        user_id = parts[1]
+        try:
+            days = int(parts[2])
+        except ValueError:
+            yield event.plain_result("❌ 天数必须为整数")
+            return
+        if days == 0:
+            # 重置跳跃
+            for res in self._cmd_tpd_reset_skip_impl(event, user_id):
+                yield res
+        else:
+            # 强制跳跃
+            for res in self._cmd_tpd_force_skip_impl(event, user_id, days):
+                yield res
+
+    async def cmd_admin_debug(self, event: AstrMessageEvent):
+        """管理员：综合诊断。用法：/心管 调试 [ID]"""
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 权限不足，仅管理员可用")
+            return
+        parts = self._sub_parts(event)
+        uid = parts[1] if len(parts) >= 2 else self._state_key(self._get_user_id(event))
+        lines = ["🔍 综合诊断", "━" * 20, f"用户：{uid}", ""]
+
+        # 基础信息
+        profile = self.profiles.get(uid)
+        if profile:
+            lines.append(f"好感：{profile.favorability:+.1f} · 亲密：{profile.intimacy:.0f} · 阶段：{self._get_stage_label(profile)}")
+            lines.append(f"互动：{profile.total_interactions} 次 · 对话：{profile.conversation_turns} 轮")
+        else:
+            lines.append("⚠️ 无情感档案")
+
+        # 行为档案
+        bp = self.behavior_profiles.get(uid)
+        if bp:
+            lines.append(f"势头：{bp.current_streak_type} ×{bp.current_streak_count} · 冷落天数：{bp.cold_days}")
+
+        # 环境感知
+        try:
+            panel = self.tpd_orchestrator.environment_panel_data()
+            env = panel.get("environment") or {}
+            if env.get("weather"):
+                lines.append(f"天气：{env.get('weather')} {env.get('weather_emoji', '')} · 温度：{env.get('temperature', '?')}℃")
+        except Exception:
+            pass
+
+        # 记忆
+        ltm = self.long_memory.get_summary(uid)
+        if ltm and ltm != "暂无长期记忆。":
+            mem_count = len(self.long_memory.get_events(uid, 100))
+            lines.append(f"长期记忆：{mem_count} 条")
+
+        # 冷落状态
+        if bp and bp.cold_days > 0:
+            lines.append(f"❄️ 冷落状态：{bp.cold_days} 天未互动")
+
+        yield event.plain_result("\n".join(lines))
+
+    def _set_relationship_role(self, event):
+        """内部方法：设置关系角色（供 cmd_admin_set 调用）"""
+        parts = self._sub_parts(event, maxsplit=2)
+        if len(parts) < 3:
+            yield "用法：/心管 设置 <用户ID> role <角色名>"
+            return
+        user_id, role_name = parts[1], parts[2]
+        self.relationship_manager.force_role(user_id, role_name)
+        yield f"✅ 已将 {user_id} 的关系角色设为「{role_name}」"
+
+    def _cmd_tpd_reset_skip_impl(self, event, user_id):
+        """内部方法：重置跳跃状态"""
+        target_uid = self._state_key(user_id)
+        state = self.tpd_orchestrator.skip_executor.get_state(target_uid)
+        state["offset_days"] = 0
+        self.tpd_orchestrator.skip_executor.save_state(target_uid, state)
+        yield f"✅ 已重置 {user_id} 的跳跃状态"
+
+    def _cmd_tpd_force_skip_impl(self, event, user_id, days):
+        """内部方法：强制跳跃"""
+        target_uid = self._state_key(user_id)
+        state = self.tpd_orchestrator.skip_executor.get_state(target_uid)
+        state["offset_days"] = days
+        self.tpd_orchestrator.skip_executor.save_state(target_uid, state)
+        yield f"✅ 已将 {user_id} 的时间跳跃设为 {days} 天"
+
+    # ═══════════════════════════════════════════════════════════════
+    #  迁移提示（v3.11 已移除的命令）
+    # ═══════════════════════════════════════════════════════════════
+
+    async def cmd_migrated(self, event: AstrMessageEvent):
+        """已迁移至 WebUI 的命令，返回引导文案"""
+        from .command_router import migrated_hint
+        yield event.plain_result(migrated_hint())
 
     # ═══════════════════════════════════════════════════════════════
     #  LLM 请求钩子（注入情感上下文 + 触发更新 + 惩罚奖励）
