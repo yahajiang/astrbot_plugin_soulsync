@@ -606,6 +606,7 @@ function ptSwitch(tab,idx){
   const panels=tab.parentElement.parentElement.querySelectorAll('.pt-panel');
   panels.forEach((p,i)=>{p.classList.toggle('on',i===idx)});
 }
+window.ptSwitch=ptSwitch;
 
 function lb(neg){
   const sorted=neg?[...P].sort((a,b)=>a.favorability-b.favorability).slice(0,15):[...P].sort((a,b)=>b.favorability-a.favorability).slice(0,15);
