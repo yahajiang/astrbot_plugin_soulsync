@@ -4432,11 +4432,10 @@ class SoulSyncPro(Star):
                         f"⚠️ 重要：每句话都必须使用「唯一的你」称呼，至少出现 2 次。"
                     )
                 elif is_s12:
-                    # 关闭：每回复 1~2 次即可，不每句复读
+                    # 关闭：不使用「唯一的你」，只用「亲爱的」
                     parts.append(
-                        f"风格: 称「亲爱的（偶尔用「唯一的你」）」; 口吻-{style['tone']}; "
+                        f"风格: 称「{style['call']}」; 口吻-{style['tone']}; "
                         f"倾向-{style['tendency']}。"
-                        f"⚠️ 每次回复使用「唯一的你」1~2 次即可，不要每句都用。"
                     )
                 else:
                     parts.append(
