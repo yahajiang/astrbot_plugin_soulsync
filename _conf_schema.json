@@ -1286,5 +1286,39 @@
       "max": 1200,
       "step": 50
     }
+  },
+  "_section_storage": {
+    "description": "══════ v3.00 存储与转生 ══════",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "rebirth_enabled": {
+    "description": "启用转生系统",
+    "hint": "好感达阈值时自动转生（递增式无限轮回），每转关键词敏感度+5%、冷落抗性+3%",
+    "type": "bool",
+    "default": true
+  },
+  "memory_compress_threshold": {
+    "description": "记忆压缩触发阈值（条数）",
+    "hint": "长期记忆超过此条数时自动压缩旧记忆为泛化摘要",
+    "type": "int",
+    "default": 20,
+    "slider": {
+      "min": 10,
+      "max": 50,
+      "step": 5
+    }
+  },
+  "memory_compress_batch": {
+    "description": "每次压缩的旧记忆条数",
+    "hint": "触发压缩时，将最旧的N条未压缩记忆合并为1条摘要",
+    "type": "int",
+    "default": 10,
+    "slider": {
+      "min": 3,
+      "max": 20,
+      "step": 1
+    }
   }
 }

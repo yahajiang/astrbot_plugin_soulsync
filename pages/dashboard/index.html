@@ -183,6 +183,7 @@ textarea.fld{min-height:56px;resize:vertical}
             <button class="act-btn hot" id="bRde">🌐 RDE 关系演进<div class="d">阶段叙事 / 危机记录 / 角色关系网</div></button>
             <button class="act-btn hot" id="bTra">🎯 个性化训练<div class="d">人格/知识/风格/记忆 四模块面板</div></button>
             <button class="act-btn hot" id="bTpd">🌤️ 时间感知<div class="d">环境/倒计时/跳跃 三系统面板</div></button>
+            <button class="act-btn hot" id="bSto">💾 存储与转生<div class="d">SQLite 状态 / 转生轮回 / 记忆压缩</div></button>
             <button class="act-btn" id="bAdm">🔧 管理员工具<div class="d">设置好感/亲密/重置</div></button>
           </div>
         </div>
@@ -219,6 +220,12 @@ textarea.fld{min-height:56px;resize:vertical}
   <div class="cs"><div class="cs-t">🌍 环境感知</div><div id="tpdEnv"><div class="empty">加载中…</div></div></div>
   <div class="cs"><div class="cs-t">📅 倒计时事件</div><div id="tpdCd"><div class="empty">请先选择用户</div></div></div>
   <div class="cs"><div class="cs-t">⏰ 时间跳跃</div><div id="tpdSkip"><div class="empty">请先选择用户</div></div></div>
+</div></div></div>
+
+<div class="ov" id="oSto"><div class="modal"><div class="modal-hd"><h3>💾 存储与转生（v3.00）</h3><div style="display:flex;gap:8px;align-items:center"><select class="fld" id="stoUser" style="min-width:150px"><option value="">— 选择用户 —</option></select><button class="btn" id="stoCan">关闭</button></div></div><div class="modal-bd">
+  <div class="cs"><div class="cs-t">🗄️ SQLite 存储状态</div><div id="stoDb"><div class="empty">加载中…</div></div></div>
+  <div class="cs"><div class="cs-t">✨ 转生系统</div><div id="stoRebirth"><div class="empty">请先选择用户</div></div></div>
+  <div class="cs"><div class="cs-t">📦 记忆压缩</div><div id="stoCompress"><div class="empty">请先选择用户</div></div></div>
 </div></div></div>
 
 <script type="module">
@@ -654,7 +661,7 @@ async function openCfg(){
 }
 function renderCfg(){
   const f=$('cForm');f.innerHTML='';
-  const secs={'⚡ 功能开关':["enable_attitude_system", "enable_ai_text_generation", "enable_secondary_llm", "enable_smart_update", "show_status_default", "enable_stage_styles", "enable_s12_forced_address", "enable_multi_role", "enable_intent_router", "enable_hooks"], '🌐 RDE 深度演进':["enable_rde", "rde_stage_inject_every_n", "enable_crisis_system", "enable_network", "crisis_trigger_probability", "crisis_max_probability", "crisis_min_stage", "crisis_min_cold_penalties", "crisis_min_rounds_secret", "crisis_protection_hours", "network_transmission_delay_turns", "social_event_cooldown_rounds", "jealousy_gap_threshold", "assist_min_fav", "competition_gap_threshold"], '💝 情感参数':["default_favorability", "keyword_sensitivity", "fav_growth_rate", "micro_change_favorability", "micro_change_intimacy", "enable_emotion_contagion", "tension_accumulate_rate", "tension_release_rate", "tension_threshold", "tension_release_per_day", "eruption_fav_penalty"], '🧠 智能更新':["force_update_interval", "keyword_update_threshold", "time_update_threshold_sec"], '🤖 辅助 LLM':["llm_provider_id", "llm_weight", "llm_call_timeout_sec", "llm_recent_messages_count"], '💾 记忆':["emotional_significance_threshold", "max_long_term_events", "auto_save_interval_sec", "enable_memory_recall", "memory_half_life_days", "memory_recall_bonus"], '🧬 个性化训练':["enable_personalization", "personalization_static_every_n", "persona_implicit_training", "persona_explicit_panel", "persona_stability_enabled", "knowledge_enabled", "knowledge_auto_capture", "knowledge_max_tokens_per_turn", "style_training_enabled", "style_collection_turns", "style_adoption_turns", "private_memory_enabled", "private_memory_proactive_chance", "private_memory_token_budget", "personalization_total_token_budget"], '🔒 隐私':["global_privacy_level", "session_based", "anti_manipulation_prompt", "admin_ids"], '🎯 惩罚奖励':["pr_enable_momentum", "pr_enable_cold_penalty", "pr_enable_comeback_reward", "pr_enable_milestone_reward", "pr_enable_betrayal_penalty", "pr_enable_apology_recovery", "pr_cold_threshold_hours", "pr_comeback_threshold_hours", "pr_decay_half_life_hours", "pr_momentum_reward_per_level", "pr_momentum_penalty_per_level", "pr_weight", "enable_crisis_events", "crisis_threshold", "crisis_probability", "crisis_cooldown_days", "crisis_pass_reward", "crisis_fail_penalty", "crisis_timeout_hours", "crisis_step_down"], '📅 纪念日/节日':["enable_anniversary_system", "anniv_fav_bonus", "anniv_int_bonus", "festival_fav_bonus", "festival_int_bonus", "anniv_inject_context", "enable_countdown_events", "countdown_window_days", "countdown_probability", "enable_monthly_report", "enable_role_report", "role_report_interval_days", "report_window_days"], '⏰ 时间感知':["timezone", "enable_time_perception", "enable_holiday_perception", "enable_lunar_perception", "enable_weather_perception", "enable_time_jump", "time_jump_interval_days", "time_jump_probability", "holiday_country"], '🌦️ TPD 环境深化':["tpd_enabled", "tpd_env_inject_every_n", "tpd_weather_enabled", "tpd_weather_api_provider", "tpd_weather_api_key", "tpd_weather_api_city", "tpd_weather_cache_minutes", "tpd_weather_mood_strength", "tpd_season_mood_strength", "tpd_moonphase_enabled", "tpd_moonphase_mood_strength", "tpd_aqi_enabled"], '⏳ TPD 倒计时/跳跃':["tpd_countdown_enabled", "tpd_countdown_mention_start_days", "tpd_countdown_mention_freq_days", "tpd_countdown_max_per_turn", "tpd_countdown_auto_greet", "tpd_skip_enabled", "tpd_skip_max_days", "tpd_skip_freeze_penalty", "tpd_skip_emotion_drift", "tpd_passive_gap_threshold_hours", "tpd_return_narrative_enabled"], '📈 数据统计':["enable_stats_tracking", "stats_history_days", "trend_default_days"], '🎭 关系角色':["enable_relationship_roles", "relationship_auto_assign"], '🖼️ 图片输出':["enable_image_output", "image_output_default", "image_output_global"]};
+  const secs={'⚡ 功能开关':["enable_attitude_system", "enable_ai_text_generation", "enable_secondary_llm", "enable_smart_update", "show_status_default", "enable_stage_styles", "enable_s12_forced_address", "enable_multi_role", "enable_intent_router", "enable_hooks"], '🌐 RDE 深度演进':["enable_rde", "rde_stage_inject_every_n", "enable_crisis_system", "enable_network", "crisis_trigger_probability", "crisis_max_probability", "crisis_min_stage", "crisis_min_cold_penalties", "crisis_min_rounds_secret", "crisis_protection_hours", "network_transmission_delay_turns", "social_event_cooldown_rounds", "jealousy_gap_threshold", "assist_min_fav", "competition_gap_threshold"], '💝 情感参数':["default_favorability", "keyword_sensitivity", "fav_growth_rate", "micro_change_favorability", "micro_change_intimacy", "enable_emotion_contagion", "tension_accumulate_rate", "tension_release_rate", "tension_threshold", "tension_release_per_day", "eruption_fav_penalty"], '🧠 智能更新':["force_update_interval", "keyword_update_threshold", "time_update_threshold_sec"], '🤖 辅助 LLM':["llm_provider_id", "llm_weight", "llm_call_timeout_sec", "llm_recent_messages_count"], '💾 记忆':["emotional_significance_threshold", "max_long_term_events", "auto_save_interval_sec", "enable_memory_recall", "memory_half_life_days", "memory_recall_bonus"], '🧬 个性化训练':["enable_personalization", "personalization_static_every_n", "persona_implicit_training", "persona_explicit_panel", "persona_stability_enabled", "knowledge_enabled", "knowledge_auto_capture", "knowledge_max_tokens_per_turn", "style_training_enabled", "style_collection_turns", "style_adoption_turns", "private_memory_enabled", "private_memory_proactive_chance", "private_memory_token_budget", "personalization_total_token_budget"], '🔒 隐私':["global_privacy_level", "session_based", "anti_manipulation_prompt", "admin_ids"], '🎯 惩罚奖励':["pr_enable_momentum", "pr_enable_cold_penalty", "pr_enable_comeback_reward", "pr_enable_milestone_reward", "pr_enable_betrayal_penalty", "pr_enable_apology_recovery", "pr_cold_threshold_hours", "pr_comeback_threshold_hours", "pr_decay_half_life_hours", "pr_momentum_reward_per_level", "pr_momentum_penalty_per_level", "pr_weight", "enable_crisis_events", "crisis_threshold", "crisis_probability", "crisis_cooldown_days", "crisis_pass_reward", "crisis_fail_penalty", "crisis_timeout_hours", "crisis_step_down"], '📅 纪念日/节日':["enable_anniversary_system", "anniv_fav_bonus", "anniv_int_bonus", "festival_fav_bonus", "festival_int_bonus", "anniv_inject_context", "enable_countdown_events", "countdown_window_days", "countdown_probability", "enable_monthly_report", "enable_role_report", "role_report_interval_days", "report_window_days"], '⏰ 时间感知':["timezone", "enable_time_perception", "enable_holiday_perception", "enable_lunar_perception", "enable_weather_perception", "enable_time_jump", "time_jump_interval_days", "time_jump_probability", "holiday_country"], '🌦️ TPD 环境深化':["tpd_enabled", "tpd_env_inject_every_n", "tpd_weather_enabled", "tpd_weather_api_provider", "tpd_weather_api_key", "tpd_weather_api_city", "tpd_weather_cache_minutes", "tpd_weather_mood_strength", "tpd_season_mood_strength", "tpd_moonphase_enabled", "tpd_moonphase_mood_strength", "tpd_aqi_enabled"], '⏳ TPD 倒计时/跳跃':["tpd_countdown_enabled", "tpd_countdown_mention_start_days", "tpd_countdown_mention_freq_days", "tpd_countdown_max_per_turn", "tpd_countdown_auto_greet", "tpd_skip_enabled", "tpd_skip_max_days", "tpd_skip_freeze_penalty", "tpd_skip_emotion_drift", "tpd_passive_gap_threshold_hours", "tpd_return_narrative_enabled"], '📈 数据统计':["enable_stats_tracking", "stats_history_days", "trend_default_days"], '🎭 关系角色':["enable_relationship_roles", "relationship_auto_assign"], '🖼️ 图片输出':["enable_image_output", "image_output_default", "image_output_global"], '💾 v3.00 存储与转生':["rebirth_enabled", "memory_compress_threshold", "memory_compress_batch"]};
   for(const[t,keys]of Object.entries(secs)){
     const sec=document.createElement('div');sec.className='cs';
     sec.innerHTML=`<div class="cs-t">${t}</div>`;
@@ -794,6 +801,65 @@ async function tpdLoad(){
     $('tpdEnv').innerHTML=`<div class="empty">⚠️ ${esc(e.message||e)}</div>`;
   }
 }
+
+// ── v3.00 存储与转生面板 ──
+$('bSto').onclick=stoPanel;
+$('stoCan').onclick=()=>$('oSto').classList.remove('on');
+async function stoPanel(){
+  const ov=$('oSto');ov.classList.add('on');
+  const prev=$('stoUser').value;
+  $('stoUser').innerHTML='<option value="">— 选择用户 —</option>'+[...P].sort((a,b)=>b.favorability-a.favorability).map(p=>`<option value="${esc(p.state_key)}">${esc(p.user_name||p.state_key)}</option>`).join('');
+  $('stoUser').value=prev;
+  $('stoUser').onchange=stoLoad;
+  await stoLoad();
+}
+async function stoLoad(){
+  const uid=$('stoUser').value;
+  $('stoDb').innerHTML='<div class="empty">⏳ 加载中…</div>';
+  $('stoRebirth').innerHTML='<div class="empty">请先选择用户</div>';
+  $('stoCompress').innerHTML='<div class="empty">请先选择用户</div>';
+  try{
+    const r=await B.apiGet('/data',{});
+    // SQLite 状态
+    const dbMode=r.db_fallback?'JSON 降级模式':'SQLite 分片存储';
+    const dbIcon=r.db_fallback?'⚠️':'✅';
+    let dbHtml=`<div style="font-size:13px">`;
+    dbHtml+=`<div>${dbIcon} 存储模式: <b>${esc(dbMode)}</b></div>`;
+    if(r.profiles_count!=null)dbHtml+=`<div>📊 用户档案: <b>${r.profiles_count}</b></div>`;
+    if(r.memory_users!=null)dbHtml+=`<div>🧠 记忆用户: <b>${r.memory_users}</b></div>`;
+    dbHtml+=`</div>`;
+    $('stoDb').innerHTML=dbHtml;
+    // 转生状态
+    if(uid){
+      const rp=P.find(x=>x.state_key===uid||x.user_id===uid);
+      if(rp){
+        const fav=rp.favorability||0;
+        const level=rp.rebirth_level||0;
+        const required=200+level*50;
+        const remaining=Math.max(0,required-fav);
+        let rh=`<div style="font-size:13px">`;
+        rh+=`<div>✨ 转生等级: <b>轮回·${level}</b></div>`;
+        rh+=`<div>💝 当前好感: <b>${fav.toFixed(1)}</b> / 阈值: <b>${required}</b></div>`;
+        rh+=`<div>📈 距下次转生: <b>${remaining.toFixed(1)}</b> 好感</div>`;
+        if(level>0){
+          const sens=((level*5)||0).toFixed(0);
+          const cold=((level*3)||0).toFixed(0);
+          rh+=`<div style="margin-top:4px;font-size:11px;color:var(--dim)">关键词敏感度 +${sens}% · 冷落抗性 +${cold}%</div>`;
+        }
+        rh+=`</div>`;
+        $('stoRebirth').innerHTML=rh;
+      }else{
+        $('stoRebirth').innerHTML='<div class="empty">该用户无档案数据</div>';
+      }
+    }
+    // 记忆压缩状态
+    if(uid){
+      $('stoCompress').innerHTML=`<div style="font-size:13px"><div>📦 记忆压缩: 需通过 /心管 压缩 ${esc(uid)} 操作</div></div>`;
+    }
+  }catch(e){
+    $('stoDb').innerHTML=`<div class="empty">⚠️ ${esc(e.message||e)}</div>`;
+  }
+}
 function fillAdmUsers(){
   const sel=$('aUser');const cur=sel.value;
   sel.innerHTML='<option value="">— 选择或手动输入下方 ID —</option>'+[...P].sort((a,b)=>b.favorability-a.favorability).map(p=>`<option value="${esc(p.user_id)}">${esc(p.user_name||p.user_id)} · ${stg(p)}</option>`).join('');
@@ -825,7 +891,7 @@ for(const b of document.querySelectorAll('#oAdm button[data-d]'))b.onclick=()=>{
   if(!p){tst('aTst','⚠️ 该用户无档案，无法增减',true);return}
   adm('set_favorability',id,p.favorability+d);
 };
-for(const id of['oCfg','oDet','oLB','oFest','oRole','oAdm','oRde','oTpd']){$(id).onclick=e=>{if(e.target===$(id))$(id).classList.remove('on')}}
+for(const id of['oCfg','oDet','oLB','oFest','oRole','oAdm','oRde','oTpd','oSto']){$(id).onclick=e=>{if(e.target===$(id))$(id).classList.remove('on')}}
 
 // ── Minimal Modern 滚动条滑块：原生滚动 + 自定义滑块（静止0.4/悬停0.7/拖动1.0 透明度、150ms淡入、200ms宽度渐变、停止1s淡出）──
 function mmScroll(el,fixed){
