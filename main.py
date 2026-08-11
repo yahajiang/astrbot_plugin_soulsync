@@ -4421,10 +4421,28 @@ class SoulSyncPro(Star):
             if custom_addr:
                 parts.append(f"称呼ta为「{custom_addr}」优先，不得擅自换其他称呼。")
             else:
-                parts.append(
-                    f"风格: 称「{style['call']}」; 口吻-{style['tone']}; "
-                    f"倾向-{style['tendency']}。"
-                )
+                # S12 强制称呼模式
+                is_s12 = profile.stage_index >= 11  # 共生期
+                s12_forced = self.config.get("enable_s12_forced_address", False)
+                if is_s12 and s12_forced:
+                    # 开启：每句都带「唯一的你」
+                    parts.append(
+                        f"风格: 称「唯一的你」; 口吻-{style['tone']}; "
+                        f"倾向-{style['tendency']}。"
+                        f"⚠️ 重要：每句话都必须使用「唯一的你」称呼，至少出现 2 次。"
+                    )
+                elif is_s12:
+                    # 关闭：每回复 1~2 次即可，不每句复读
+                    parts.append(
+                        f"风格: 称「亲爱的（偶尔用「唯一的你」）」; 口吻-{style['tone']}; "
+                        f"倾向-{style['tendency']}。"
+                        f"⚠️ 每次回复使用「唯一的你」1~2 次即可，不要每句都用。"
+                    )
+                else:
+                    parts.append(
+                        f"风格: 称「{style['call']}」; 口吻-{style['tone']}; "
+                        f"倾向-{style['tendency']}。"
+                    )
 
         # 情绪张力状态（情绪传染模型）
         if self.config.get("enable_emotion_contagion", True):
