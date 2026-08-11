@@ -1,6 +1,6 @@
 {
   "_info_header": {
-    "description": "══════ 心旅知音 (SoulSync) v3.00 配置 ══════",
+    "description": "══════ 心旅知音 (SoulSync) v3.10 配置 ══════",
     "type": "string",
     "default": "",
     "invisible": true
@@ -1319,6 +1319,62 @@
       "min": 3,
       "max": 20,
       "step": 1
+    }
+  },
+  "_section_prometheus": {
+    "description": "══════ v3.10 Prometheus 沟通感知 ══════",
+    "type": "string",
+    "default": "",
+    "invisible": true
+  },
+  "prometheus_enabled": {
+    "description": "启用 Prometheus 沟通感知系统",
+    "hint": "实时感知用户沟通习惯（25窗滑动权重漂移）+ 离线灵魂素描（棱镜生成），动态调整 LLM 分析权重",
+    "type": "bool",
+    "default": false
+  },
+  "prometheus_window_size": {
+    "description": "滑动窗口大小（条数）",
+    "hint": "消息长度评分的环形队列容量，越大越稳定但响应越慢",
+    "type": "int",
+    "default": 25,
+    "slider": {
+      "min": 10,
+      "max": 50,
+      "step": 5
+    }
+  },
+  "prometheus_momentum": {
+    "description": "动量因子",
+    "hint": "权重漂移的平滑惯性（0~1），越小越平滑，越大越灵敏",
+    "type": "float",
+    "default": 0.15,
+    "slider": {
+      "min": 0.05,
+      "max": 0.5,
+      "step": 0.05
+    }
+  },
+  "prometheus_sketch_interval_days": {
+    "description": "灵魂素描间隔（天）",
+    "hint": "两次素描生成的最小间隔天数",
+    "type": "int",
+    "default": 5,
+    "slider": {
+      "min": 3,
+      "max": 14,
+      "step": 1
+    }
+  },
+  "prometheus_sketch_min_turns": {
+    "description": "素描最低互动轮次",
+    "hint": "近7天互动轮次低于此值不生成素描",
+    "type": "int",
+    "default": 50,
+    "slider": {
+      "min": 20,
+      "max": 100,
+      "step": 10
     }
   }
 }

@@ -146,6 +146,18 @@ CREATE TABLE IF NOT EXISTS characters (
 );
 """
 
+_USER_PSYCH_PROFILE_DDL = """
+CREATE TABLE IF NOT EXISTS user_psych_profile (
+    user_id     TEXT NOT NULL,
+    version     INTEGER NOT NULL,
+    prism_json  TEXT DEFAULT '[]',
+    comm_style  TEXT DEFAULT '',
+    generated_at REAL DEFAULT 0,
+    baseline    REAL DEFAULT 0.4,
+    PRIMARY KEY (user_id, version)
+);
+"""
+
 _LEADERBOARD_CACHE_DDL = """
 CREATE TABLE IF NOT EXISTS leaderboard_cache (
     rank_type   TEXT NOT NULL,   -- 'favorability' | 'negative_favorability'
@@ -210,6 +222,7 @@ def init_schema(conn: sqlite3.Connection):
         _ANNIVERSARY_DDL,
         _RELATIONSHIP_ROLE_DDL,
         _CHARACTER_DDL,
+        _USER_PSYCH_PROFILE_DDL,
         _LEADERBOARD_CACHE_DDL,
         _SYSTEM_STATS_DDL,
     ]:

@@ -1,6 +1,21 @@
 # 心旅知音 (SoulSync) 更新日志
 
-### v3.00 Project Hermes — SQLite 分片存储 + 转生系统（当前版本）
+### v3.10 Prometheus 沟通感知系统（当前版本）
+- **25窗滑动权重漂移**（`prometheus/sliding_window.py`）：
+  - 实时感知用户沟通习惯，消息长度评分（≤10字→0.1 / 11-30→0.5 / ≥31→0.9）
+  - S型长尾加权：近5条[1.0→0.9] / 中15条[0.85→0.6] / 旧5条[0.5→0.3]
+  - 离群值剔除 ±2σ，动量平滑因子 0.15
+  - 权重漂移公式：目标 = 基准线 + (L - 0.5) × 1.2，截断 [0.25, 0.75]
+  - 填充期(<25条)用默认 0.4，离线48h+回归衰减30%+前5条2倍权重
+- **离线灵魂素描**（`prometheus/soul_sketch.py`）：
+  - 三重过滤触发：离线≥4h + 距上次≥5天 + 近7天≥50轮
+  - LLM推理生成10条灵魂棱镜（≤15字人格矛盾/深层信念/防御机制）+ 1项沟通建议
+  - 保留最近3个历史版本，供WebUI回溯人格演变
+- **单闭环反馈**：素描 comm_style → 基准线修正（共情+0.15/逻辑-0.15），棱镜注入LLM上下文
+- **配置项**：`prometheus_enabled` / `prometheus_window_size` / `prometheus_momentum` / `prometheus_sketch_interval_days` / `prometheus_sketch_min_turns`
+- **版本号**：metadata 3.00 → 3.10，`_info_header` 同步
+
+### v3.00 Project Hermes — SQLite 分片存储 + 转生系统（上一版本）
 - **S12 满分之爱强制称谓修复**：`enable_s12_forced_address` 开启时无视用户自定义称谓，强制每句使用「唯一的你」至少 2 次；关闭时不注入称呼，使用用户规定的专属称谓
 - **SQLite 分片引擎**：JSON 落盘全面替换为 SQLite（WAL 模式，单例连接池，10s 超时），支持 2 万轮对话无感知卡顿
   - `storage/pool.py` 连接池（WAL + busy_timeout 10s）

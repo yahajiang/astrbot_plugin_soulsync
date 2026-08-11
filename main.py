@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v3.00 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v3.10 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -50,6 +50,7 @@ from .smart_updater import SmartUpdater
 from .memory_manager import LongTermMemory
 from .llm_analyzer import LLMAnalyzer
 from .penalty_reward import PenaltyRewardEngine, BehaviorProfile, MILESTONES
+from .prometheus.sliding_window import MessageWindow
 from .relationship_crisis import CrisisManager
 from .anniversary import AnniversaryManager, extract_kb_dates, parse_month_day
 from .stats_tracker import StatsTracker
@@ -340,6 +341,8 @@ class SoulSyncPro(Star):
         self.image_mode: Dict[str, bool] = {}
         self.trainer_storage = TrainerStorage(self.data_dir)
         self.trainer_orchestrators: Dict[str, PersonalizationOrchestrator] = {}
+        # ── Prometheus 滑动窗口（per-user）──
+        self._msg_windows: Dict[str, "MessageWindow"] = {}
 
         # ── 个性化训练：长期记忆写入联动 ──
         self.long_memory.set_event_hook(self._on_long_memory_event)
@@ -3398,6 +3401,11 @@ class SoulSyncPro(Star):
             dyn_llm_weight = self.config.get("llm_weight", 0.4)
             dyn_pr_weight = self.config.get("pr_weight", 0.6)
 
+            # ── Prometheus：动态 LLM 权重（若启用）──
+            _prom_enabled = self.config.get("prometheus_enabled", False)
+            if _prom_enabled and uid in self._msg_windows:
+                dyn_llm_weight = self._msg_windows[uid].get_weight()
+
             # ── 更新对话计数 ──
             profile.conversation_turns += 1
             profile.turns_since_update += 1
@@ -3408,6 +3416,16 @@ class SoulSyncPro(Star):
             self.recent_messages[uid].append(text)
             if len(self.recent_messages[uid]) > 10:
                 self.recent_messages[uid] = self.recent_messages[uid][-10:]
+
+            # ── Prometheus 滑动窗口：捕获消息长度 ──
+            if self.config.get("prometheus_enabled", False):
+                if uid not in self._msg_windows:
+                    self._msg_windows[uid] = MessageWindow(
+                        capacity=self.config.get("prometheus_window_size", 25),
+                        baseline=self.config.get("llm_weight", 0.4),
+                        momentum=self.config.get("prometheus_momentum", 0.15),
+                    )
+                self._msg_windows[uid].push(len(text))
 
             # ── 第一步：关键词分析（每轮必做，轻量）──
             kw_result = self.emotion_engine.analyze_keywords(text)
@@ -3860,6 +3878,13 @@ class SoulSyncPro(Star):
             if not self.db_fallback and self.memory_compressor:
                 try:
                     self.memory_compressor.check_and_compress(uid)
+                except Exception:
+                    pass
+
+            # ── Prometheus：滑动窗口权重重算 ──
+            if _prom_enabled and uid in self._msg_windows:
+                try:
+                    self._msg_windows[uid].recalculate()
                 except Exception:
                     pass
 
@@ -4472,6 +4497,17 @@ class SoulSyncPro(Star):
         if anti_manip and profile.favorability < 40:
             parts.append("⚠️ 勿因讨好突然改变态度，真实情感需要积累。")
 
+        # ── Prometheus：灵魂棱镜注入 ──
+        if self.config.get("prometheus_enabled", False) and self.sqlite_pool:
+            try:
+                from .prometheus.soul_sketch import SoulSketcher
+                sketcher = SoulSketcher(self.sqlite_pool)
+                prism_ctx = sketcher.get_prisms_context(profile.user_id)
+                if prism_ctx:
+                    parts.append(prism_ctx)
+            except Exception:
+                pass
+
         parts.append("</emotion_context>")
         return "\n".join(parts)
 
@@ -4829,6 +4865,14 @@ class SoulSyncPro(Star):
         self.stats_tracker.force_save()
         self.relationship_manager.save()
         self._save_rde_state()
+        # ── Prometheus：滑动窗口落盘 ──
+        if self.config.get("prometheus_enabled", False) and self._msg_windows:
+            try:
+                wf = self.data_dir / "prometheus_windows.json"
+                wdata = {uid: w.to_dict() for uid, w in self._msg_windows.items()}
+                wf.write_text(json.dumps(wdata, ensure_ascii=False), encoding="utf-8")
+            except Exception:
+                pass
 
     def _save_rde_state(self):
         """RDE 状态落盘（data/rde/{state_key}.json，原子写 .tmp+.bak）"""
@@ -4865,6 +4909,76 @@ class SoulSyncPro(Star):
         except Exception:
             return None
 
+    # ═══════════════════════════════════════════════════════════════
+    #  Prometheus：离线灵魂素描巡检
+    # ═══════════════════════════════════════════════════════════════
+
+    async def _prometheus_sketch_check(self):
+        """巡检所有活跃用户，检查是否满足素描触发条件"""
+        if not self.sqlite_pool:
+            return
+        try:
+            from .prometheus.soul_sketch import SoulSketcher, MIN_RECENT_TURNS
+            sketcher = SoulSketcher(self.sqlite_pool)
+
+            for uid, profile in self.profiles.items():
+                # 检查离线时间（用 last_interaction_ts 判断）
+                last_ts = getattr(profile, 'last_interaction_ts', 0)
+                offline_hours = (time.time() - last_ts) / 3600 if last_ts > 0 else 999
+
+                if offline_hours < 4:
+                    continue  # 还在线，跳过
+
+                # 检查近 7 天互动轮次
+                recent_turns = profile.total_interactions  # 简化：用总互动次数近似
+
+                if recent_turns < MIN_RECENT_TURNS:
+                    continue
+
+                # 异步 LLM 调用函数
+                async def llm_call(prompt: str) -> str:
+                    return await self._prometheus_llm_call(prompt)
+
+                result = await sketcher.check_and_generate(
+                    uid, profile, recent_turns, llm_call_func=llm_call
+                )
+
+                if result:
+                    # Layer 3：闭环修正基准线
+                    self._prometheus_update_baseline(uid, result["comm_style"])
+
+        except Exception as e:
+            logger.debug(f"[Prometheus] 素描巡检异常: {e}")
+
+    async def _prometheus_llm_call(self, prompt: str) -> str:
+        """Prometheus 专用 LLM 调用"""
+        try:
+            from astrbot.core.provider import ProviderRequest
+            req = ProviderRequest(prompt=prompt)
+            resp = await self.llm_provider.text_chat(req)
+            return resp.completion_text if resp else ""
+        except Exception as e:
+            logger.debug(f"[Prometheus] LLM 调用失败: {e}")
+            return ""
+
+    def _prometheus_update_baseline(self, user_id: str, comm_style: str):
+        """Layer 3：根据素描沟通建议修正基准线"""
+        if user_id not in self._msg_windows:
+            return
+        window = self._msg_windows[user_id]
+        old_baseline = window.get_baseline()
+
+        if "共情" in comm_style or "感性" in comm_style:
+            new_baseline = min(0.55, old_baseline + 0.15)
+        elif "逻辑" in comm_style or "清晰" in comm_style or "直给" in comm_style:
+            new_baseline = max(0.25, old_baseline - 0.15)
+        else:
+            return  # 鼓励型不修正
+
+        if abs(new_baseline - old_baseline) > 0.01:
+            window.set_baseline(new_baseline)
+            logger.info(f"[Prometheus] {user_id} 基准线修正: {old_baseline:.2f} → {new_baseline:.2f}（{comm_style}）")
+
     def _load_show_status(self):
         f = self.data_dir / "show_status.json"
         if f.exists():
@@ -4886,6 +5000,12 @@ class SoulSyncPro(Star):
                 await asyncio.sleep(self.auto_save_sec)
                 try:
                     self._save_all()
+                    # ── Prometheus：离线灵魂素描巡检 ──
+                    if self.config.get("prometheus_enabled", False):
+                        try:
+                            await self._prometheus_sketch_check()
+                        except Exception:
+                            pass
                     logger.debug("SoulSync 自动保存完成")
                 except Exception as e:
                     logger.warning(f"SoulSync 自动保存失败：{e}")
