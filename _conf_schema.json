@@ -1386,8 +1386,8 @@
   "rank_privacy_mode": {
     "description": "排行榜隐私模式",
     "hint": "self_only=仅显示自己排名；anonymous_top=匿名化显示；full=显示全部",
-    "type": "enum",
+    "type": "list",
     "default": "self_only",
-    "enum": ["self_only", "anonymous_top", "full"]
+    "list": ["self_only", "anonymous_top", "full"]
   }
 }
