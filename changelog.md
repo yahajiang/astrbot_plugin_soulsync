@@ -1,6 +1,30 @@
 # 心旅知音 (SoulSync) 更新日志
 
-### v2.23 命令总览权限过滤与帮助说明扩充（当前版本）
+### v3.00 Project Hermes — SQLite 分片存储 + 转生系统（当前版本）
+- **SQLite 分片引擎**：JSON 落盘全面替换为 SQLite（WAL 模式，单例连接池，10s 超时），支持 2 万轮对话无感知卡顿
+  - `storage/pool.py` 连接池（WAL + busy_timeout 10s）
+  - `storage/schema.py` 9 张主表 + 月度分表 `daily_snapshot_YYYYMM` + 复合索引
+  - `storage/memory_store.py` 长期记忆存储（INSERT/SELECT 替代 JSON，内存缓存加速）
+  - `storage/stats_store.py` 每日快照存储（月度分表 + 窗口函数优化）
+- **排行榜缓存**：`storage/leaderboard_cache.py` 好感变更后异步刷新（3s 最小间隔），/排行 命令优先读缓存，连续 10 次查询均 <30ms
+- **降级熔断开关**：`SOULSYNC_DB_FALLBACK=true` 环境变量一键回退 JSON 模式，用户无感知
+- **全量数据迁移**：`db_migration/migrate_json_to_sqlite.py` 批量迁移脚本（每 500 条 commit，防内存溢出），10 万条记录 <5 分钟
+- **数据校验**：`db_migration/validator.py` JSON vs SQLite 一致性校验（差异阈值 <0.1%）
+- **渐进式摘要压缩**（Sprint 3）：
+  - `compressor/keyword_extractor.py` 轻量级 TF-IDF 关键词提取（纯统计，<10ms）
+  - `compressor/memory_compressor.py` 记忆压缩器（>20 条时旧 10 条→1 条泛化摘要，权重 0.3）
+  - `/心管 压缩 <用户ID>` 管理员手动触发记忆压缩
+- **转生系统**（Sprint 4）：
+  - `rebirth/rebirth_engine.py` 递增式无限轮回（好感阈值 200+转生数×50）
+  - 转生后好感重置 20+段位×5，每转关键词敏感度 +5%、冷落抗性 +3%
+  - `/心声 转生` 显示轮回数、累计奖励、下一转生进度
+- **压测与测试**：
+  - `tests/stress_test.py` 2000 轮压力测试（50 用户，验证写入 <5ms、读取 <2ms）
+  - `tests/test_migration_roundtrip.py` 迁移回环测试（JSON→SQLite→校验，核心字段差异为 0）
+- **升级指南**：`docs/UPGRADE_GUIDE.md` 30 分钟内完成升级（备份→迁移→校验→切流）
+- **版本号**：metadata 2.23 → 3.00，`_info_header` 同步
+
+### v2.23 命令总览权限过滤与帮助说明扩充（上一版本）
 - **命令总览按权限过滤**：`/心助` 普通用户不再显示管理员命令——隐藏纪念·节日添加/节日删除、人格·设置/重置/锁定、独立命令·/心管；管理员仍显示全部（图片卡片与文本版同步，按 `_is_admin` 判定）
 - **帮助说明全面扩充**：`/心助` 图片帮助各子命令说明按 README 权威措辞细化（8 维情感/关系六维对比/分类枚举/权限标注/默认值说明），人格节补充「查看」项，独立命令说明同步
 - **版本号**：metadata 2.22 → 2.23，`_info_header` 同步

@@ -1,7 +1,7 @@
 name: astrbot_plugin_soulsync
 display_name: "心旅知音 (SoulSync) - 融合版情感智能插件"
-desc: "心旅知音（SoulSync）：融合 EmotionAI 与 FavourPro 精华的情感智能插件。8 维情感模型、十二阶段关系演进（RDE，含危机系统与多角色关系网）、复合评分（综合契合度 0~100 归一化展示）、长期记忆与私人记忆库、知识库与人格微调、语言风格训练、纪念日/节日系统、时间感知（天气×节气×月相→心情映射、倒计时叙事、时间跳跃）、自然语言意图识别、图片卡片输出与 WebUI 控制台。"
-version: "2.23"
+desc: "心旅知音（SoulSync）：融合 EmotionAI 与 FavourPro 精华的情感智能插件。8 维情感模型、十二阶段关系演进（RDE，含危机系统与多角色关系网）、复合评分（综合契合度 0~100 归一化展示）、长期记忆与私人记忆库、知识库与人格微调、语言风格训练、纪念日/节日系统、时间感知（天气×节气×月相→心情映射、倒计时叙事、时间跳跃）、自然语言意图识别、图片卡片输出与 WebUI 控制台。v3.00 新增 SQLite 分片存储、转生系统、记忆压缩。"
+version: "3.00"
 author: "Yahajiang"
 repo: "https://github.com/yahajiang/astrbot_plugin_soulsync"
 pages:

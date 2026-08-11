@@ -1,4 +1,4 @@
-"""心旅知音 (SoulSync) v2.20 - 融合版情感智能插件 (AstrBot)
+"""心旅知音 (SoulSync) v3.00 - 融合版情感智能插件 (AstrBot)
 
 融合 EmotionAI 与 FavourPro 精华，支持：
 - 8 维情感模型 + 好感/亲密度双核
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import random
 import time
 from pathlib import Path
@@ -135,7 +136,7 @@ def should_inject_stage_ctx(round_no: int, last_round: int, every_n: int = 3) ->
 
 
 class SoulSyncPro(Star):
-    """心旅知音 (SoulSync) v2.16 - 融合版情感智能插件（含惩罚奖励机制、关系角色、情感深化）"""
+    """心旅知音 (SoulSync) v3.00 - 融合版情感智能插件（含惩罚奖励机制、关系角色、情感深化、SQLite 存储、转生系统）"""
 
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -257,14 +258,60 @@ class SoulSyncPro(Star):
         self.data_dir = Path(get_astrbot_data_path()) / "plugin_data" / "astrbot_plugin_soulsync"
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        # ── 存储 ──
+        # ── 降级熔断开关 ──
+        self.db_fallback = os.environ.get("SOULSYNC_DB_FALLBACK", "false").lower() == "true"
+        if self.db_fallback:
+            logger.warning("[SoulSync] ⚠️ 降级模式：SOULSYNC_DB_FALLBACK=true，使用旧版 JSON 存储")
+        else:
+            logger.info("[SoulSync] SQLite 模式就绪（默认）")
+
+        # ── SQLite 存储引擎（Sprint 1-2）──
+        self.sqlite_pool = None
+        self.sqlite_memory = None
+        self.sqlite_stats = None
+        self.leaderboard_cache = None
+        self.memory_compressor = None
+        self.rebirth_engine = None
+        if not self.db_fallback:
+            try:
+                from storage.pool import ConnectionPool
+                from storage.schema import init_schema
+                from storage.memory_store import SQLiteMemoryManager
+                from storage.stats_store import SQLiteStatsTracker
+                from storage.leaderboard_cache import LeaderboardCache
+                from compressor.memory_compressor import MemoryCompressor
+                from rebirth.rebirth_engine import RebirthEngine
+
+                self.sqlite_pool = ConnectionPool.get_instance(self.data_dir)
+                with self.sqlite_pool.connect() as conn:
+                    init_schema(conn)
+                self.sqlite_memory = SQLiteMemoryManager(
+                    self.sqlite_pool,
+                    max_events_per_user=self.max_ltm_events,
+                    half_life_days=self.memory_half_life_days,
+                )
+                self.sqlite_stats = SQLiteStatsTracker(
+                    self.sqlite_pool, max_days=self.stats_history_days
+                )
+                self.leaderboard_cache = LeaderboardCache(self.sqlite_pool)
+                self.memory_compressor = MemoryCompressor(self.sqlite_pool)
+                self.rebirth_engine = RebirthEngine(self.sqlite_pool)
+                logger.info("[SoulSync] SQLite 存储引擎初始化完成")
+            except Exception as e:
+                logger.error(f"[SoulSync] SQLite 初始化失败，回退 JSON: {e}")
+                self.db_fallback = True
+
+        # ── 存储（JSON 模式或 SQLite 模式的统一接口）──
         self.profiles: Dict[str, EmotionProfile] = {}
         self.behavior_profiles: Dict[str, BehaviorProfile] = {}
-        self.long_memory = LongTermMemory(
-            self.data_dir,
-            max_events_per_user=self.max_ltm_events,
-            half_life_days=self.memory_half_life_days,
-        )
+        if self.db_fallback:
+            self.long_memory = LongTermMemory(
+                self.data_dir,
+                max_events_per_user=self.max_ltm_events,
+                half_life_days=self.memory_half_life_days,
+            )
+        else:
+            self.long_memory = self.sqlite_memory  # 使用 SQLite 版本
         self.show_status: Dict[str, bool] = {}
 
         # ── 近期对话缓存（用于辅助 LLM 分析）──
@@ -272,7 +319,10 @@ class SoulSyncPro(Star):
 
         # ── 新功能管理器 ──
         self.anniversary_manager = AnniversaryManager(self.data_dir)
-        self.stats_tracker = StatsTracker(self.data_dir, max_days=self.stats_history_days)
+        if self.db_fallback:
+            self.stats_tracker = StatsTracker(self.data_dir, max_days=self.stats_history_days)
+        else:
+            self.stats_tracker = self.sqlite_stats  # 使用 SQLite 版本
         self.relationship_manager = RelationshipRoleManager(self.data_dir)
 
         # ── TPD 时间感知深化系统 ──
@@ -318,8 +368,9 @@ class SoulSyncPro(Star):
         self._setup_webui()
 
         # ── 启动日志 ──
+        storage_mode = "JSON" if self.db_fallback else "SQLite"
         logger.info(
-            f"SoulSync v2.16 已加载 | "
+            f"SoulSync v3.00 已加载 | 存储={storage_mode} | "
             f"智能更新={self.enable_smart_update} | "
             f"辅助LLM={self.enable_secondary_llm} | "
             f"态度系统={self.enable_attitude} | "
@@ -341,7 +392,7 @@ class SoulSyncPro(Star):
         if self._save_task and not self._save_task.done():
             self._save_task.cancel()
         self._save_all()
-        logger.info("SoulSync v2.16 已停止，数据已保存")
+        logger.info("SoulSync v3.00 已停止，数据已保存")
 
     # ═══════════════════════════════════════════════════════════════
     #  WebUI
@@ -3247,6 +3298,32 @@ class SoulSyncPro(Star):
         else:
             yield event.plain_result("\n".join(lines))
 
+    @filter.command("压缩", desc="<用户ID> 手动触发记忆压缩")
+    async def cmd_admin_compress(self, event: AstrMessageEvent):
+        """管理员：手动触发指定用户记忆压缩（Sprint 3）"""
+        if not self._is_admin(event):
+            yield event.plain_result("⛔ 权限不足，仅管理员可用")
+            return
+        if self.db_fallback or not self.memory_compressor:
+            yield event.plain_result("⚠️ SQLite 模式未启用，记忆压缩不可用")
+            return
+        parts = self._sub_parts(event)
+        if len(parts) < 2:
+            yield event.plain_result("用法：/心管 压缩 <用户ID>")
+            return
+        uid = parts[1]
+        stats = self.memory_compressor.get_compression_stats(uid)
+        compressed = self.memory_compressor.check_and_compress(uid)
+        new_stats = self.memory_compressor.get_compression_stats(uid)
+        lines = [
+            "📦 记忆压缩", "━" * 20,
+            f"用户：{uid}",
+            f"压缩前：{stats['total']} 条（活跃 {stats['active']}，已压缩 {stats['compressed']}）",
+            f"压缩后：{new_stats['total']} 条（活跃 {new_stats['active']}，已压缩 {new_stats['compressed']}）",
+            f"执行压缩：{'✅ 已执行' if compressed else '❌ 未达到压缩阈值（>20条）'}",
+        ]
+        yield event.plain_result("\n".join(lines))
+
     # ═══════════════════════════════════════════════════════════════
     #  LLM 请求钩子（注入情感上下文 + 触发更新 + 惩罚奖励）
     # ═══════════════════════════════════════════════════════════════
@@ -3747,6 +3824,40 @@ class SoulSyncPro(Star):
                     negative=profile.negative_interactions,
                     conversation_turns=profile.conversation_turns,
                 )
+
+            # ── 排行榜缓存刷新（Sprint 2）──
+            if not self.db_fallback and self.leaderboard_cache:
+                try:
+                    self.leaderboard_cache.refresh(self.profiles)
+                except Exception:
+                    pass
+
+            # ── 转生系统检查（Sprint 4）──
+            if not self.db_fallback and self.rebirth_engine and self.config.get("rebirth_enabled", True):
+                try:
+                    rebirth_result = self.rebirth_engine.check_and_rebirth(
+                        uid, profile.favorability
+                    )
+                    if rebirth_result:
+                        profile.favorability = rebirth_result["new_favor"]
+                        self.long_memory.add_event(uid, {
+                            "favorability": round(profile.favorability, 1),
+                            "stage": self._get_stage_label(profile),
+                            "description": f"✨ 转生！{rebirth_result['title']}（好感重置为 {rebirth_result['new_favor']:.0f}）",
+                            "message": "",
+                            "emotions": dict(profile.emotions),
+                            "fav_delta": round(rebirth_result["new_favor"] - rebirth_result["old_favor"], 1),
+                        })
+                        logger.info(f"[SoulSync] {uid} 转生至 {rebirth_result['title']}")
+                except Exception as e:
+                    logger.debug(f"转生检查失败: {e}")
+
+            # ── 记忆压缩（Sprint 3，每轮检查）──
+            if not self.db_fallback and self.memory_compressor:
+                try:
+                    self.memory_compressor.check_and_compress(uid)
+                except Exception:
+                    pass
 
             # ── 关系角色：聊天内容自动判定 + 注入角色人设到系统提示词 ──
             if self.config.get("enable_relationship_roles", True):

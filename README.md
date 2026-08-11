@@ -20,7 +20,7 @@
 | 8 维情感 + 好感/亲密 | 喜悦/悲伤/愤怒/恐惧/惊讶/厌恶/信任/期待；好感 -100~200，亲密按好感派生 |
 | 十二阶段演进 | 复合评分 12 阶段（15~200）带过渡缓冲，负好感走独立路线 |
 | 惩罚奖励 | 行为势头/冷落惩罚（每日结算）/回归奖励/背叛/道歉/里程碑，效果 72h 半衰期衰减 |
-| 四层记忆 | 近期对话 → 长期记忆 → 行为档案 → 每日快照 |
+| 四层记忆 | 近期对话 → 长期记忆（SQLite + 摘要压缩）→ 行为档案 → 每日快照（月度分表） |
 | 关系角色 | 39 个内置角色：内容自动判定 / 用户解锁一次性锁定 / 管理员调整 |
 | 纪念日节日 | 农历换算 + 认识里程碑 + 生日 + 27+ 传统节日 |
 | 时间感知深化（TPD） | 天气×节气×月相→心情映射 + 倒计时六阶段叙事 + 时间跳跃 |
@@ -28,6 +28,9 @@
 | WebUI 控制台 | 仪表盘 / 自画像 / 141 项配置 · 16 模块组热更新 / 排行榜 / 管理员工具 |
 | 个性化训练 | 人格微调（20 参数+护栏）· 知识库（6 类）· 语言风格（三阶段+快照）· 私人记忆（4 类型）；四模块联动，注入优先级 人格>知识>记忆>风格（450 token 预算）；人格护栏：50 轮稳定自动锁定 / 24h 3 次剧变回滚 / 背叛·冷落≥3 天自动解锁 |
 | RDE 关系深度演进 | 十二阶段叙事注入（按 `rde_stage_inject_every_n` 轮间隔，跃迁强制）· 关系危机（7 类型 14 事件）· 多角色关系网（39 角色跨角色传导，5 类社交事件） |
+| SQLite 分片存储（v3.00） | WAL 模式连接池 · 月度分表 · 排行榜缓存 · `SOULSYNC_DB_FALLBACK=true` 一键回退 JSON |
+| 渐进式摘要压缩（v3.00） | 记忆 >20 条自动压缩旧记忆为泛化摘要（权重 0.3）· TF-IDF 关键词提取 · `/心管 压缩` 手动触发 |
+| 转生系统（v3.00） | 好感达阈值自动转生（递增式无限轮回）· 每转关键词敏感度 +5%、冷落抗性 +3% |
 | v2.20 架构 | 命令路由（10 父命令+`/心管`）· 事件总线 · 人格护栏 · 意图识别 · 前后置钩子 |
 
 ---
@@ -334,22 +337,40 @@ astrbot_plugin_soulsync/
 ├── hook_bus.py            # 前后置钩子注册表
 ├── emotion_engine.py      # 8 维情感 + 好感/亲密度引擎
 ├── smart_updater.py       # 四维智能更新决策器
-├── memory_manager.py      # 长期记忆管理器
+├── memory_manager.py      # 长期记忆管理器（JSON 后端，降级模式用）
 ├── llm_analyzer.py        # 辅助 LLM 情感分析
 ├── penalty_reward.py      # 惩罚奖励引擎（含冷落冻结）
 ├── anniversary.py         # 纪念日/节日系统（农历 1900-2100）
-├── stats_tracker.py       # 每日快照与趋势统计
+├── stats_tracker.py       # 每日快照与趋势统计（JSON 后端，降级模式用）
 ├── relationship_roles.py  # 关系角色系统（39 角色）
 ├── relationship_crisis.py # 关系危机事件
 ├── character_manager.py   # 多角色并行关系
 ├── time_perception.py     # 时间/节假日/农历感知
 ├── image_renderer.py      # 图片卡片渲染（Pillow，可选）
 ├── report.py              # 报告生成（月报/回顾/趋势等）
+├── storage/               # v3.00 SQLite 存储引擎
+│   ├── pool.py            #   连接池（WAL 模式，单例，10s 超时）
+│   ├── schema.py          #   表结构定义（9 主表 + 月度分表）
+│   ├── memory_store.py    #   长期记忆（替代 JSON）
+│   ├── stats_store.py     #   每日快照（月度分表）
+│   └── leaderboard_cache.py # 排行榜缓存
+├── compressor/            # v3.00 渐进式摘要压缩
+│   ├── keyword_extractor.py   # TF-IDF 关键词提取
+│   └── memory_compressor.py   # 记忆压缩器
+├── rebirth/               # v3.00 转生系统
+│   └── rebirth_engine.py      # 递增式无限轮回
+├── db_migration/          # v3.00 数据迁移工具
+│   ├── validator.py           # JSON vs SQLite 校验
+│   └── migrate_json_to_sqlite.py # 全量迁移脚本
 ├── trainer/               # 个性化训练：人格 / 知识 / 风格 / 记忆 + 护栏
 ├── rde/                   # 关系深度演进：narrative / crisis / network
 ├── tpd/                   # 时间感知深化：天气 / 倒计时 / 跳跃
 ├── pages/dashboard/       # WebUI 控制台
-└── tests/                 # 26 个测试文件
+├── docs/                  # 文档
+│   └── UPGRADE_GUIDE.md   #   v3.00 升级指南
+└── tests/                 # 测试文件
+    ├── stress_test.py     #   2000 轮压力测试
+    └── test_migration_roundtrip.py # 迁移回环测试
 ```
 
 ---
@@ -362,7 +383,8 @@ astrbot_plugin_soulsync/
 
 | 版本 | 摘要 |
 |------|------|
-| **v2.23**（当前） | `/心助` 命令总览按权限过滤 · 帮助说明全面扩充 |
+| **v3.00**（当前） | Project Hermes：SQLite 分片存储 · 转生系统 · 记忆压缩 · 降级熔断 · 排行榜缓存 · 压测 |
+| **v2.23** | `/心助` 命令总览按权限过滤 · 帮助说明全面扩充 |
 | **v2.22** | 帮助图片排版重构 · 张力种子增强 · 关键词上限翻倍 |
 | **v2.21** | RDE 叙事频控 · WebUI 16 模块组 141 键全量可视化 · 命令换词 |
 | **v2.20** | 轻量化重构：10 父命令 + EventBus + 人格护栏 + 意图识别 + HookBus |
