@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260812T081113591Z-77528-bdd5833d0f54",
+  "runId": "20260812T081113591Z-77528-bdd5833d0f54",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "4c8a448b68e9e0dbbfd4101d2416418d0583d9fb",
+  "diffHash": "ffcd0c03d6fcea143f8f77b6d6a0838f4e761171c3c96e9393ea72e7fba3c8e6",
+  "rulesVersion": "unavailable",
+  "sessionHash": "bd69481e43a77d8ddeb7f9c84c1f5e04e46943d01d993482186d89df2d8050b9",
+  "reportRef": ".mimosa/reports/task-review-sess_e2bae03a-1e49-472e-8e38-5b05decc3ec9-20260812T081113591Z-77528-bdd5833d0f54.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "safety.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "postprocessor.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "prompts.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "session.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "profile_generator.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-12T08:11:13.996Z"
+}

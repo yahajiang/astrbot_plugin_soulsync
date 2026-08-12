@@ -113,6 +113,24 @@ class SoulMirror(Star):
         )
 
         for msg in reply:
+            # 退出标记：生成轮廓卡
+            if msg == "__EXIT__":
+                session = self._get_session(user_id)
+                if getattr(session, '_exit_with_profile', False) and self.enable_profile_on_end:
+                    profile = await self._generate_profile(session)
+                    if self.image_renderer.available:
+                        img_path = self.image_renderer.render_profile_card(profile)
+                        if img_path:
+                            yield event.image_result(img_path)
+                        else:
+                            yield event.plain_result(profile)
+                    else:
+                        yield event.plain_result(profile)
+                    session._exit_with_profile = False
+                session.reset()
+                yield event.plain_result("镜子已收起。")
+                return
+
             # 列表命令：尝试渲染为图片
             if command_text == "列表" and self.image_renderer.available:
                 img_path = self.image_renderer.render_guide_list(
@@ -349,7 +367,7 @@ class SoulMirror(Star):
             return None
 
         except asyncio.TimeoutError:
-            logger.warning("LLM 超时（10s）")
+            logger.warning(f"LLM 超时（{self.llm_timeout}s）")
             return None
         except Exception as e:
             logger.warning(f"LLM 调用失败: {e}")
@@ -419,8 +437,10 @@ def handle_message(
         if not enable_illuminate:
             return ["启明模式未启用。输入 /心镜 帮助 查看命令。"]
         if session.mode in (SessionMode.GENERAL, SessionMode.GUIDE):
-            session.reset()
-            return ["镜子已收起。"]
+            # 退出时如果在图鉴模式且有对话，标记需要生成轮廓卡
+            if session.mode == SessionMode.GUIDE and len(session.history) > 0:
+                session._exit_with_profile = True
+            return ["__EXIT__"]
         else:
             session.activate_general()
             return ["启明镜已亮。请随意聊聊你的感受。"]
