@@ -454,7 +454,7 @@ def handle_message(
     fallback_to_general: bool = True,
     end_keywords: Optional[List[str]] = None,
     guide_max_rounds: int = 6,
-    session_timeout_minutes: int = 10,
+    session_timeout_minutes: int = 30,
 ) -> List[str]:
     """主消息处理入口（文档 5.4）"""
     session = session_getter(user_id)
