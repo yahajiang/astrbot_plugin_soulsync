@@ -413,6 +413,17 @@ def handle_message(
             # 显示图鉴列表
             return [generate_guide_list(max_aliases=list_max_aliases)]
 
+    # 图鉴探索中：禁止切换图鉴/查看列表，只允许退出
+    if session.mode == SessionMode.GUIDE:
+        if command_text == "列表":
+            return ["正在探索图鉴中，退出后才能查看列表。输入 /心镜 退出。"]
+        guide_key = match_guide(command_text)
+        if guide_key:
+            guide = GUIDE_REGISTRY.get(guide_key)
+            name = guide["name"] if guide else command_text
+            return [f"正在探索当前图鉴，无法切换。如需切换，请先 /心镜 退出，再进入「{name}」。"]
+        return [f"正在探索图鉴中。输入 /心镜 退出，或直接聊天继续探索。"]
+
     # /心镜 列表
     if command_text == "列表":
         if not enable_guide_list:
