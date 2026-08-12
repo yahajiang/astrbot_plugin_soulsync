@@ -262,7 +262,7 @@ class ImageRenderer:
             pass
 
     # ═══════════════════════════════════════════════════════════════
-    #  图鉴列表卡片
+    #  图鉴列表卡片（三列紧凑排版）
     # ═══════════════════════════════════════════════════════════════
     def render_guide_list(
         self,
@@ -272,38 +272,50 @@ class ImageRenderer:
         total: int,
         file_name: str = "guide_list.png",
     ) -> Optional[str]:
-        """渲染图鉴列表卡片，返回 PNG 路径；失败返回 None"""
+        """渲染图鉴列表卡片（三列紧凑排版），返回 PNG 路径；失败返回 None"""
         if not self.available:
             return None
         try:
             from PIL import ImageDraw
 
-            width = 800
-            pad = 34
-            title_h = 104
-            cat_h = 48
-            row_h = 38
-            footer_h = 80
+            width = 900
+            pad = 28
+            title_h = 90
+            cat_h = 44
+            col_count = 3
+            col_gap = 16
+            footer_h = 60
             body_w = width - pad * 2
+            col_w = (body_w - col_gap * (col_count - 1)) // col_count
 
-            title_font = self._font(27, bold=True)
-            cat_font = self._font(21, bold=True)
-            guide_font = self._font(17)
-            alias_font = self._font(15)
-            footer_font = self._font(14)
-            date_font = self._font(14)
+            title_font = self._font(26, bold=True)
+            cat_font = self._font(18, bold=True)
+            guide_font = self._font(14)
+            alias_font = self._font(12)
+            footer_font = self._font(13)
+            date_font = self._font(13)
 
-            # 预计算高度
+            # 分类颜色
+            accent_colors = {
+                "科学量表": (91, 141, 239),
+                "关系情感": (240, 101, 149),
+                "情绪状态": (247, 183, 49),
+                "社交与职场": (80, 200, 180),
+                "网络玩梗与趣味": (167, 139, 250),
+            }
+
+            # 预计算每个分类的高度
             categories_data = []
             for cat in category_order:
                 items = [g for g in guide_data.values() if g["category"] == cat]
                 categories_data.append((cat, items))
 
-            height = title_h + pad * 2
+            # 计算总高度
+            height = title_h + pad
             for cat, items in categories_data:
                 height += cat_h
-                height += len(items) * row_h
-                height += 8  # category bottom margin
+                rows = (len(items) + col_count - 1) // col_count
+                height += rows * 28 + 12  # 每行28px + 间距
             height += footer_h
 
             img = self._paint_background(self._new_image(width, height), accent=(91, 141, 239))
@@ -315,77 +327,75 @@ class ImageRenderer:
                 t = i / max(1, body_w - 1)
                 c = (round(91 + 120 * t), round(141 - 30 * t), round(239 - 80 * t))
                 draw.line([pad + i, 6, pad + i, 8], fill=c)
-            draw.rounded_rectangle([pad - 14, 30, pad - 8, 66], radius=3, fill=(91, 141, 239))
-            draw.text((pad + 1, 27), "心镜 · 启明", font=title_font, fill=(0, 0, 0))
-            draw.text((pad, 26), "心镜 · 启明", font=title_font, fill=(255, 236, 190))
-            subtitle = f"可用图鉴（{total}个）"
-            draw.text((pad, 62), subtitle, font=footer_font, fill=(150, 160, 186))
+            draw.rounded_rectangle([pad - 14, 26, pad - 8, 58], radius=3, fill=(91, 141, 239))
+            draw.text((pad + 1, 23), "心镜 · 启明", font=title_font, fill=(0, 0, 0))
+            draw.text((pad, 22), "心镜 · 启明", font=title_font, fill=(255, 236, 190))
+            subtitle = f"可用图鉴（{total}个）· 5大分类"
+            draw.text((pad, 56), subtitle, font=footer_font, fill=(150, 160, 186))
             date_str = time.strftime("%Y-%m-%d %H:%M")
-            draw.text((width - pad - date_font.getlength(date_str), title_h - 26),
+            draw.text((width - pad - date_font.getlength(date_str), title_h - 24),
                       date_str, font=date_font, fill=(140, 152, 180))
 
-            y = title_h + 20
+            y = title_h + 16
 
-            # 分类渲染
-            accent_colors = {
-                "科学量表": (91, 141, 239),
-                "关系情感": (240, 101, 149),
-                "情绪状态": (247, 183, 49),
-                "社交与职场": (80, 200, 180),
-                "网络玩梗与趣味": (167, 139, 250),
-            }
-
+            # 分类渲染（三列）
             for cat, items in categories_data:
                 accent = accent_colors.get(cat, (91, 141, 239))
                 label = _CATEGORY_LABELS.get(cat, cat)
-                cat_text = f"{label} {cat} ({len(items)})"
+                cat_text = f"{label} {cat}（{len(items)}个）"
                 cat_text = sanitize_text(cat_text)
                 seg_w = cat_font.getlength(cat_text)
 
                 # 分类徽章
                 draw.rounded_rectangle(
-                    [pad, y, pad + seg_w + 36, y + 36], radius=8,
+                    [pad, y, pad + seg_w + 32, y + 32], radius=8,
                     fill=accent + (60,))
                 draw.rounded_rectangle(
-                    [pad + 8, y + 6, pad + 12, y + 30], radius=2, fill=accent)
-                draw.text((pad + 20, y + 5), cat_text, font=cat_font,
+                    [pad + 6, y + 5, pad + 10, y + 27], radius=2, fill=accent)
+                draw.text((pad + 16, y + 4), cat_text, font=cat_font,
                           fill=(255, 214, 130))
                 y += cat_h
 
-                # 图鉴行
-                for item in items:
-                    name = sanitize_text(item["name"])
-                    aliases = item.get("aliases", [])[:3]
-                    alias_str = " / ".join(sanitize_text(a) for a in aliases)
+                # 三列排布
+                for idx, item in enumerate(items):
+                    col = idx % col_count
+                    row = idx // col_count
+                    x = pad + col * (col_w + col_gap)
+                    cy = y + row * 28
 
-                    draw.text((pad + 16, y + 6), name, font=guide_font,
-                              fill=(226, 232, 244))
+                    name = sanitize_text(item["name"])
+                    aliases = item.get("aliases", [])[:2]
+                    alias_str = "/".join(sanitize_text(a) for a in aliases)
+
+                    # 图鉴名
+                    draw.text((x, cy), name, font=guide_font, fill=(226, 232, 244))
+                    # 别名（灰色小字）
                     if alias_str:
                         name_w = guide_font.getlength(name)
-                        draw.text((pad + 24 + name_w, y + 8), alias_str,
-                                  font=alias_font, fill=(150, 160, 186))
-                    y += row_h
+                        draw.text((x + name_w + 4, cy + 2), alias_str,
+                                  font=alias_font, fill=(130, 140, 160))
 
-                y += 8
+                rows = (len(items) + col_count - 1) // col_count
+                y += rows * 28 + 12
 
             # 底部分隔线
             cx = pad + body_w // 2
-            for i in range(-10, 11):
-                a = max(20, 130 - abs(i) * 10)
+            for i in range(-8, 9):
+                a = max(20, 120 - abs(i) * 10)
                 draw.rounded_rectangle(
-                    [cx + i * 6, y + 3, cx + i * 6 + 4, y + 5],
+                    [cx + i * 6, y + 2, cx + i * 6 + 4, y + 4],
                     radius=2, fill=(91, 141, 239, a))
-            y += 14
+            y += 12
 
             # 底部提示
             tips = [
-                "输入 /心镜 [名称] 直接开启对应图鉴（不区分大小写）",
+                "输入 /心镜 [名称] 开启图鉴（不区分大小写）",
                 "例如：/心镜 mbti、/心镜 攻受、/心镜 班味",
             ]
             for tip in tips:
                 draw.text((pad + 6, y), sanitize_text(tip), font=footer_font,
                           fill=(160, 170, 196))
-                y += 22
+                y += 20
 
             rounded = self._round_corners(img)
             return self._save(self._add_shadow(rounded), file_name)
