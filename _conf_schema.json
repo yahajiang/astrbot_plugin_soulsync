@@ -61,9 +61,9 @@
   },
   "max_output_length_ratio": {
     "description": "最大输出长度比例",
-    "hint": "反问回复字数不超过用户输入的此倍数",
+    "hint": "反问回复字数不超过用户输入的此倍数（0=不限制）",
     "type": "float",
-    "default": 1.5
+    "default": 0
   },
   "end_keywords": {
     "description": "结束词列表",

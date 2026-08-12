@@ -25,8 +25,10 @@ def ensure_question_mark(reply: str) -> str:
     return reply + "？"
 
 
-def truncate(reply: str, user_input: str, max_ratio: float = 1.5) -> str:
-    """截断回复（不超过用户输入的 max_ratio 倍）"""
+def truncate(reply: str, user_input: str, max_ratio: float = 0) -> str:
+    """截断回复（max_ratio=0 时不限制）"""
+    if max_ratio <= 0:
+        return reply
     max_len = int(len(user_input) * max_ratio)
     if len(reply) <= max_len:
         return reply
@@ -53,7 +55,7 @@ def process(
     reply: str,
     user_input: str,
     safety_manager: SafetyManager,
-    max_output_ratio: float = 1.5,
+    max_output_ratio: float = 0,
 ) -> str:
     """后处理管道（文档 6.4 完整流程）"""
     if not reply:

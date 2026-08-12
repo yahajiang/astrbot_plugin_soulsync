@@ -54,7 +54,7 @@ class SoulMirror(Star):
         self.list_max_aliases: int = config.get("list_max_aliases_display", 3)
         self.history_max_rounds: int = config.get("history_max_rounds", 6)
         self.session_timeout_minutes: int = config.get("session_timeout_minutes", 30)
-        self.max_output_ratio: float = config.get("max_output_length_ratio", 1.5)
+        self.max_output_ratio: float = config.get("max_output_length_ratio", 0)
         self.end_keywords: List[str] = config.get(
             "end_keywords",
             ["结束", "再见", "拜拜", "就到这", "走了", "今天就到这"],
