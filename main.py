@@ -135,7 +135,13 @@ class SoulMirror(Star):
                 if self.enable_profile_on_end and len(session.history) > 0:
                     profile = await self._generate_profile(session)
                     if self.image_renderer.available:
-                        img_path = self.image_renderer.render_profile_card(profile)
+                        guide = GUIDE_REGISTRY.get(session.guide_key)
+                        img_path = self.image_renderer.render_profile_card(
+                            profile,
+                            guide_name=guide["name"] if guide else "",
+                            round_count=session.guide_round,
+                            signal_count=len(session.signals),
+                        )
                         if img_path:
                             yield event.image_result(img_path)
                         else:
@@ -271,7 +277,13 @@ class SoulMirror(Star):
         if self.enable_profile_on_end and len(session.history) > 0:
             profile = await self._generate_profile(session)
             if self.image_renderer.available:
-                img_path = self.image_renderer.render_profile_card(profile)
+                guide = GUIDE_REGISTRY.get(session.guide_key)
+                img_path = self.image_renderer.render_profile_card(
+                    profile,
+                    guide_name=guide["name"] if guide else "",
+                    round_count=session.guide_round,
+                    signal_count=len(session.signals),
+                )
                 if img_path:
                     await event.send(event.image_result(img_path))
                     session.reset()

@@ -423,6 +423,9 @@ class ImageRenderer:
         self,
         content: str,
         file_name: str = "profile.png",
+        guide_name: str = "",
+        round_count: int = 0,
+        signal_count: int = 0,
     ) -> Optional[str]:
         """渲染轮廓卡（增强版），返回 PNG 路径；失败返回 None"""
         if not self.available:
@@ -500,6 +503,17 @@ class ImageRenderer:
             draw.text((pad, 24), "镜面轮廓 · 回响", font=title_font, fill=(255, 236, 190))
             # 副标题
             draw.text((pad, 64), "仅供自我探索，不替代诊断", font=sub_font, fill=(130, 140, 170))
+            # 图鉴信息标签
+            if guide_name:
+                info_parts = []
+                if guide_name:
+                    info_parts.append(guide_name)
+                if round_count > 0:
+                    info_parts.append(f"{round_count}轮对话")
+                if signal_count > 0:
+                    info_parts.append(f"{signal_count}个信号")
+                info_text = " · ".join(info_parts)
+                draw.text((pad, 84), info_text, font=sub_font, fill=(91, 141, 239, 180))
             # 日期
             date_str = time.strftime("%Y-%m-%d %H:%M")
             draw.text((width - pad - date_font.getlength(date_str), title_h - 24),
