@@ -449,7 +449,7 @@ class ImageRenderer:
                     guide: str = "",
                     tips: Optional[List[str]] = None,
                     file_name: str = "help.png") -> Optional[str]:
-        """渲染命令总览：顶部引导框 + 分节徽章 + 两列子命令网格（命令蓝粗/说明灰小）+ 每节示例条 + 底部提示"""
+        """渲染命令总览：顶部引导框 + 分节徽章 + 三列子命令网格（命令蓝粗+说明灰小同排）+ 每节示例条 + 底部提示"""
         if not self.available:
             return None
         try:
@@ -459,7 +459,8 @@ class ImageRenderer:
             pad = 30
             title_h = 92
             body_w = width - pad * 2
-            cell_w = (body_w - 16) // 2
+            col_gap = 12
+            col_w = (body_w - col_gap * 2) // 3
             accent = (232, 96, 140)
 
             title_font = self._font(25, bold=True)
@@ -477,7 +478,7 @@ class ImageRenderer:
             guide_lines = self._wrap_text(guide, guide_font, body_w - 44) if guide else []
             guide_h = 10 + len(guide_lines) * 26 + 10 if guide_lines else 0
 
-            # 预计算每个分节的子命令行（两列）与行高
+            # 预计算每个分节的子命令行（三列同排）与行高
             blocks: List[Tuple[str, List[Tuple[List[Tuple[str, str, List[str]]], int]],
                                Optional[str]]] = []
             for sec in sections:
@@ -488,14 +489,19 @@ class ImageRenderer:
                     example = None
                 cells = [(sanitize_text(c), sanitize_text(d)) for c, d in cmds]
                 rows = []
-                for i in range(0, len(cells), 2):
-                    pair = cells[i:i + 2]
+                for i in range(0, len(cells), 3):
+                    trio = cells[i:i + 3]
                     row_cells = []
-                    h = 44
-                    for c, d in pair:
-                        dl = self._wrap_text(d, desc_font, cell_w - 2)
-                        h = max(h, 44 + (len(dl) - 1) * 19)
-                        row_cells.append((c, d, dl))
+                    h = 36
+                    for c, d in trio:
+                        cw = cmd_font.getlength(c)
+                        first = self._wrap_text(d, desc_font, max(30, col_w - cw - 12))
+                        if len(first) == 1:
+                            dl, inline = first, True
+                        else:
+                            dl, inline = self._wrap_text(d, desc_font, col_w - 2), False
+                        h = max(h, 36 if inline else 24 + len(dl) * 19)
+                        row_cells.append((c, d, dl, inline, cw))
                     rows.append((row_cells, h))
                 blocks.append((sanitize_text(name), rows,
                                sanitize_text(example) if example else None))
@@ -526,7 +532,7 @@ class ImageRenderer:
             draw.text((pad, 22), sanitize_text(title), font=title_font, fill=(255, 236, 190))
             date_str = time.strftime("%Y-%m-%d %H:%M")
             draw.text((width - pad - date_font.getlength(date_str), title_h - 24),
-                      date_str, font=date_font, fill=(140, 152, 180))
+                      date_str, font=date_font, fill=(154, 166, 194))
 
             y = title_h + 14
 
@@ -534,7 +540,7 @@ class ImageRenderer:
             if guide_lines:
                 gh = 10 + len(guide_lines) * 26 + 10
                 draw.rounded_rectangle([pad, y, pad + body_w, y + gh], radius=10,
-                                       fill=(247, 183, 49, 30))
+                                       fill=(247, 183, 49, 38))
                 draw.rounded_rectangle([pad, y + 7, pad + 4, y + gh - 7], radius=2,
                                        fill=(247, 183, 49))
                 for i, ln in enumerate(guide_lines):
@@ -542,27 +548,33 @@ class ImageRenderer:
                               fill=(255, 214, 130))
                 y += gh + 14
 
-            # ── 分节：徽章 + 两列子命令网格 + 示例条 ──
+            # ── 分节：徽章 + 三列子命令网格 + 示例条 ──
             for name, rows, example in blocks:
                 seg_w = badge_font.getlength(name)
                 draw.rounded_rectangle([pad, y, pad + seg_w + 36, y + 32], radius=8,
-                                       fill=accent + (46,))
+                                       fill=accent + (60,))
                 draw.rounded_rectangle([pad + 8, y + 6, pad + 12, y + 26], radius=2,
                                        fill=accent)
                 draw.text((pad + 20, y + 3), name, font=badge_font, fill=(255, 214, 130))
                 y += 40
                 for row_cells, h in rows:
-                    for i, (c, d, dl) in enumerate(row_cells):
-                        cx = pad + i * (cell_w + 16)
+                    for i, (c, d, dl, inline, cw) in enumerate(row_cells):
+                        cx = pad + i * (col_w + col_gap)
                         draw.text((cx, y + 4), c, font=cmd_font, fill=(122, 192, 255))
-                        for j, ln in enumerate(dl):
-                            draw.text((cx, y + 27 + j * 19), ln, font=desc_font,
-                                      fill=(150, 160, 186))
+                        if inline:
+                            draw.text((cx + cw + 10, y + 6), dl[0], font=desc_font,
+                                      fill=(172, 182, 206))
+                        else:
+                            for j, ln in enumerate(dl):
+                                draw.text((cx, y + 27 + j * 19), ln, font=desc_font,
+                                          fill=(172, 182, 206))
+                    draw.line([pad, y + h - 1, pad + body_w, y + h - 1],
+                              fill=(255, 255, 255, 10))
                     y += h
                 if example:
                     y += 5
                     draw.rounded_rectangle([pad, y, pad + body_w, y + 30], radius=8,
-                                           fill=(247, 183, 49, 24))
+                                           fill=(247, 183, 49, 32))
                     draw.rounded_rectangle([pad, y + 8, pad + 3, y + 22], radius=2,
                                            fill=(247, 183, 49))
                     draw.text((pad + 14, y + 5), "例：" + example, font=cmd_font,
@@ -580,7 +592,7 @@ class ImageRenderer:
                 y += 14
                 for tip in tips:
                     draw.text((pad + 6, y), "· " + sanitize_text(tip), font=tip_font,
-                              fill=(140, 152, 180))
+                              fill=(160, 170, 196))
                     y += 22
 
             rounded = self._round_corners(img)
