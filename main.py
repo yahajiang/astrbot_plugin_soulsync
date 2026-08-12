@@ -31,6 +31,11 @@ from .profile_generator import (
 )
 from .image_renderer import ImageRenderer
 
+# 加载配置 schema
+_CONF_SCHEMA = json.loads(
+    (Path(__file__).parent / "_conf_schema.json").read_text(encoding="utf-8")
+)
+
 
 class SoulMirror(Star):
     """心镜 · 启明 v2.0 - 反问镜对话插件"""
@@ -88,6 +93,22 @@ class SoulMirror(Star):
         """插件卸载/停用时调用"""
         self._save_all()
         logger.info("SoulMirror v2.0 已停止，数据已保存")
+
+    def _config_schema_for_page(self) -> dict:
+        """为 WebUI 提供动态配置 schema（注入 LLM 服务商选项）"""
+        schema = json.loads(json.dumps(_CONF_SCHEMA, ensure_ascii=False))
+        provider_options = self._provider_options()
+        schema["llm_provider"]["options"] = [item["id"] for item in provider_options]
+        schema["llm_provider"]["option_labels"] = [item["label"] for item in provider_options]
+        return schema
+
+    def _provider_options(self) -> list:
+        """获取可用的 LLM 服务商列表"""
+        providers = self.context.get_all_providers()
+        return [
+            {"id": p["id"], "label": f"{p['id']} - {p.get('type', '')} / {p.get('model', '')}"}
+            for p in providers
+        ]
 
     # ═══════════════════════════════════════════════════════════════
     #  命令处理

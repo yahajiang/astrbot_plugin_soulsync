@@ -78,10 +78,11 @@
     "default": true
   },
   "llm_provider": {
-    "description": "LLM 服务商 ID",
+    "description": "LLM 服务商",
     "hint": "指定使用的 LLM 服务商，留空则使用当前会话默认服务商",
     "type": "string",
-    "default": ""
+    "default": "",
+    "_special": "select_provider"
   },
   "llm_timeout": {
     "description": "LLM 调用超时时间（秒）",
