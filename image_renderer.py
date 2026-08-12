@@ -417,14 +417,14 @@ class ImageRenderer:
             return None
 
     # ═══════════════════════════════════════════════════════════════
-    #  轮廓卡卡片
+    #  轮廓卡卡片（增强版）
     # ═══════════════════════════════════════════════════════════════
     def render_profile_card(
         self,
         content: str,
         file_name: str = "profile.png",
     ) -> Optional[str]:
-        """渲染轮廓卡，返回 PNG 路径；失败返回 None"""
+        """渲染轮廓卡（增强版），返回 PNG 路径；失败返回 None"""
         if not self.available:
             return None
         try:
@@ -432,16 +432,18 @@ class ImageRenderer:
 
             width = 800
             pad = 34
-            title_h = 104
+            title_h = 120
             line_h = 44
             body_w = width - pad * 2
 
-            title_font = self._font(25, bold=True)
+            title_font = self._font(26, bold=True)
+            sub_font = self._font(13)
             dim_font = self._font(19, bold=True)
             body_font = self._font(17)
             arrow_font = self._font(17, bold=True)
             footer_font = self._font(15)
-            date_font = self._font(14)
+            date_font = self._font(13)
+            tag_font = self._font(11, bold=True)
 
             # 预分类行
             body_lines = []
@@ -471,30 +473,40 @@ class ImageRenderer:
                 elif kind == "div":
                     height += line_h // 2 + 6
                 elif kind == "dimension":
-                    height += line_h + 4
+                    height += line_h + 8
                 elif kind == "arrow":
                     height += line_h
                 elif kind == "footer":
-                    height += line_h + 8
+                    height += line_h + 12
+                elif kind == "quote":
+                    height += line_h + 14
                 else:
                     height += line_h
 
             img = self._paint_background(self._new_image(width, height), accent=(91, 141, 239))
             draw = ImageDraw.Draw(img)
 
-            # 标题区
-            draw.rectangle([0, 0, width, title_h], fill=(24, 30, 46))
+            # ── 标题区 ──
+            draw.rectangle([0, 0, width, title_h], fill=(20, 26, 42))
+            # 顶部渐变线
             for i in range(body_w):
                 t = i / max(1, body_w - 1)
                 c = (round(91 + 120 * t), round(141 - 30 * t), round(239 - 80 * t))
                 draw.line([pad + i, 6, pad + i, 8], fill=c)
-            draw.rounded_rectangle([pad - 14, 30, pad - 8, 66], radius=3, fill=(91, 141, 239))
-            draw.text((pad + 1, 27), "镜面轮廓 · 回响", font=title_font, fill=(0, 0, 0))
-            draw.text((pad, 26), "镜面轮廓 · 回响", font=title_font, fill=(255, 236, 190))
-            draw.text((pad, 62), "仅供自我探索，不替代诊断", font=footer_font, fill=(150, 160, 186))
+            # 标题装饰条
+            draw.rounded_rectangle([pad - 14, 28, pad - 8, 66], radius=3, fill=(91, 141, 239))
+            # 标题文字（双层阴影）
+            draw.text((pad + 1, 25), "镜面轮廓 · 回响", font=title_font, fill=(0, 0, 0))
+            draw.text((pad, 24), "镜面轮廓 · 回响", font=title_font, fill=(255, 236, 190))
+            # 副标题
+            draw.text((pad, 64), "仅供自我探索，不替代诊断", font=sub_font, fill=(130, 140, 170))
+            # 日期
             date_str = time.strftime("%Y-%m-%d %H:%M")
-            draw.text((width - pad - date_font.getlength(date_str), title_h - 26),
-                      date_str, font=date_font, fill=(140, 152, 180))
+            draw.text((width - pad - date_font.getlength(date_str), title_h - 24),
+                      date_str, font=date_font, fill=(120, 130, 158))
+            # 右上角装饰点
+            for dx, dy in [(width - pad - 8, 30), (width - pad - 8, 42), (width - pad - 8, 54)]:
+                draw.ellipse([dx, dy, dx + 4, dy + 4], fill=(91, 141, 239, 60))
 
             y = title_h + 20
 
@@ -505,62 +517,79 @@ class ImageRenderer:
 
                 if kind == "div":
                     cx = pad + body_w // 2
-                    for i in range(-10, 11):
-                        a = max(20, 130 - abs(i) * 10)
+                    for i in range(-12, 13):
+                        a = max(15, 120 - abs(i) * 8)
                         draw.rounded_rectangle(
-                            [cx + i * 6, y + line_h // 2 - 1, cx + i * 6 + 4, y + line_h // 2 + 1],
-                            radius=2, fill=(91, 141, 239, a))
+                            [cx + i * 5, y + line_h // 2 - 1, cx + i * 5 + 3, y + line_h // 2 + 1],
+                            radius=1, fill=(91, 141, 239, a))
                     y += line_h // 2 + 6
                     continue
 
                 if kind == "dimension":
-                    # 维度标题：蓝色背景 + 白色文字
                     dim_text = sanitize_text(text.lstrip("● ").strip())
+                    # 维度卡片背景
                     draw.rounded_rectangle(
-                        [pad, y, pad + body_w, y + line_h], radius=10,
-                        fill=(91, 141, 239, 30))
-                    draw.rounded_rectangle(
-                        [pad, y + 6, pad + 4, y + line_h - 6], radius=2,
-                        fill=(91, 141, 239))
+                        [pad, y, pad + body_w, y + line_h + 4], radius=10,
+                        fill=(30, 38, 58))
+                    # 左侧彩色竖条（渐变效果）
+                    for dy in range(line_h + 4):
+                        t = dy / max(1, line_h + 4)
+                        c = (round(91 + 20 * t), round(141 - 20 * t), round(239 - 40 * t))
+                        draw.line([pad + 2, y + dy, pad + 4, y + dy], fill=c)
+                    # 维度标题
                     draw.text((pad + 16, y + 10), dim_text, font=dim_font,
                               fill=(200, 220, 255))
-                    y += line_h + 4
+                    # 右侧装饰圆点
+                    draw.ellipse([pad + body_w - 16, y + 14, pad + body_w - 8, y + 22],
+                                 fill=(91, 141, 239, 50))
+                    y += line_h + 8
                     continue
 
                 if kind == "arrow":
                     arrow_text = sanitize_text(text)
-                    draw.text((pad + 16, y + 8), arrow_text, font=arrow_font,
+                    # 箭头背景
+                    draw.rounded_rectangle(
+                        [pad + 8, y + 4, pad + body_w - 8, y + line_h - 4], radius=8,
+                        fill=(40, 50, 72, 60))
+                    draw.text((pad + 20, y + 8), arrow_text, font=arrow_font,
                               fill=(122, 192, 255))
                     y += line_h
                     continue
 
                 if kind == "footer":
                     footer_text = sanitize_text(text)
-                    # 琥珀色背景
+                    # 琥珀色卡片背景
                     draw.rounded_rectangle(
-                        [pad, y, pad + body_w, y + line_h + 8], radius=10,
-                        fill=(247, 183, 49, 26))
-                    draw.rounded_rectangle(
-                        [pad, y + 8, pad + 4, y + line_h], radius=2,
-                        fill=(247, 183, 49))
+                        [pad, y, pad + body_w, y + line_h + 12], radius=10,
+                        fill=(50, 42, 28, 80))
+                    # 左侧装饰条
+                    for dy in range(line_h + 12):
+                        t = dy / max(1, line_h + 12)
+                        c = (round(247 - 20 * t), round(183 - 30 * t), round(49 + 20 * t))
+                        draw.line([pad + 2, y + dy, pad + 4, y + dy], fill=c)
                     # 按行绘制
                     flines = self._wrap_text(footer_text, footer_font, body_w - 30)
                     for i, fl in enumerate(flines):
                         draw.text((pad + 16, y + 10 + i * 24), fl, font=footer_font,
                                   fill=(255, 214, 130))
-                    y += line_h + 8 + max(0, len(flines) - 1) * 24
+                    y += line_h + 12 + max(0, len(flines) - 1) * 24
                     continue
 
                 if kind == "quote":
                     quote_text = sanitize_text(text)
-                    qh = line_h + 4
+                    qh = line_h + 6
+                    # 引用卡片背景
                     draw.rounded_rectangle(
-                        [pad, y, pad + body_w, y + qh], radius=10,
-                        fill=(91, 141, 239, 26))
+                        [pad + 8, y, pad + body_w - 8, y + qh], radius=10,
+                        fill=(35, 42, 62, 80))
+                    # 左侧装饰条
                     draw.rounded_rectangle(
-                        [pad, y + 6, pad + 4, y + qh - 6], radius=2,
-                        fill=(91, 141, 239))
-                    draw.text((pad + 16, y + 8), quote_text, font=body_font,
+                        [pad + 8, y + 6, pad + 12, y + qh - 6], radius=2,
+                        fill=(91, 141, 239, 120))
+                    # 引号装饰
+                    draw.text((pad + 20, y + 4), "\u201C", font=footer_font,
+                              fill=(91, 141, 239, 80))
+                    draw.text((pad + 20, y + 8), quote_text, font=body_font,
                               fill=(222, 230, 246))
                     y += qh + 10
                     continue
@@ -570,6 +599,13 @@ class ImageRenderer:
                 draw.text((pad + 16, y + 8), plain_text, font=body_font,
                           fill=(226, 232, 244))
                 y += line_h
+
+            # ── 底部装饰 ──
+            # 渐隐高光
+            for i in range(body_w):
+                t = abs(i - body_w / 2) / max(1, body_w / 2)
+                a = int(30 * (1 - t * 0.6))
+                draw.line([pad + i, height - 2, pad + i, height - 2], fill=(91, 141, 239, a))
 
             rounded = self._round_corners(img)
             return self._save(self._add_shadow(rounded), file_name)
