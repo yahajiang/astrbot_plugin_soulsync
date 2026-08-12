@@ -29,6 +29,7 @@ from .profile_generator import (
     render_profile,
     generate_fallback_profile,
 )
+from .image_renderer import ImageRenderer
 
 
 class SoulMirror(Star):
@@ -62,6 +63,9 @@ class SoulMirror(Star):
         from astrbot.core.utils.astrbot_path import get_astrbot_data_path
         self.data_dir = Path(get_astrbot_data_path()) / "plugin_data" / "astrbot_plugin_soulsync_mirror"
         self.data_dir.mkdir(parents=True, exist_ok=True)
+
+        # ── 图片渲染器 ──
+        self.image_renderer = ImageRenderer(data_dir=self.data_dir)
 
         # ── 会话状态缓存 ──
         self.sessions: Dict[str, UserSession] = {}
@@ -106,6 +110,17 @@ class SoulMirror(Star):
         )
 
         for msg in reply:
+            # 列表命令：尝试渲染为图片
+            if command_text == "列表" and self.image_renderer.available:
+                img_path = self.image_renderer.render_guide_list(
+                    guide_data=GUIDE_REGISTRY,
+                    category_order=CATEGORY_ORDER,
+                    category_icons=CATEGORY_ICONS,
+                    total=len(GUIDE_REGISTRY),
+                )
+                if img_path:
+                    yield event.image_result(img_path)
+                    return
             yield event.plain_result(msg)
 
     # ═══════════════════════════════════════════════════════════════
@@ -248,6 +263,13 @@ class SoulMirror(Star):
         if session.mode == SessionMode.GUIDE and self.enable_profile_on_end:
             # 图鉴模式：出轮廓卡
             profile = await self._generate_profile(session)
+            # 尝试渲染为图片
+            if self.image_renderer.available:
+                img_path = self.image_renderer.render_profile_card(profile)
+                if img_path:
+                    await event.send(event.image_result(img_path))
+                    session.reset()
+                    return
             await event.send(event.plain_result(profile))
         elif session.mode == SessionMode.GENERAL:
             # 通用模式：出总结
