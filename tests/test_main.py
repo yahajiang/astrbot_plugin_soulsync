@@ -57,7 +57,7 @@ class TestHandleMessage:
         s = sessions.setdefault("u1", UserSession(user_id="u1"))
         s.activate_general()
         msgs = handle_message("", "u1", getter)
-        assert "收起" in msgs[0]
+        assert "__EXIT__" in msgs[0]
 
     def test_guide_list(self):
         """列表命令"""

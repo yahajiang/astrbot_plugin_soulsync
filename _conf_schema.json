@@ -57,7 +57,7 @@
     "description": "会话超时时间（分钟）",
     "hint": "用户无输入超过此时间，自动重置",
     "type": "int",
-    "default": 10
+    "default": 30
   },
   "max_output_length_ratio": {
     "description": "最大输出长度比例",

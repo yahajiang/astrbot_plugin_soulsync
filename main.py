@@ -48,7 +48,7 @@ class SoulMirror(Star):
         self.enable_guide_list: bool = config.get("enable_guide_list", True)
         self.list_max_aliases: int = config.get("list_max_aliases_display", 3)
         self.history_max_rounds: int = config.get("history_max_rounds", 6)
-        self.session_timeout_minutes: int = config.get("session_timeout_minutes", 10)
+        self.session_timeout_minutes: int = config.get("session_timeout_minutes", 30)
         self.max_output_ratio: float = config.get("max_output_length_ratio", 1.5)
         self.end_keywords: List[str] = config.get(
             "end_keywords",
@@ -117,15 +117,21 @@ class SoulMirror(Star):
             if msg == "__EXIT__":
                 session = self._get_session(user_id)
                 if getattr(session, '_exit_with_profile', False) and self.enable_profile_on_end:
-                    profile = await self._generate_profile(session)
-                    if self.image_renderer.available:
-                        img_path = self.image_renderer.render_profile_card(profile)
-                        if img_path:
-                            yield event.image_result(img_path)
+                    if session.mode == SessionMode.GUIDE:
+                        # 图鉴模式：出轮廓卡
+                        profile = await self._generate_profile(session)
+                        if self.image_renderer.available:
+                            img_path = self.image_renderer.render_profile_card(profile)
+                            if img_path:
+                                yield event.image_result(img_path)
+                            else:
+                                yield event.plain_result(profile)
                         else:
                             yield event.plain_result(profile)
-                    else:
-                        yield event.plain_result(profile)
+                    elif session.mode == SessionMode.GENERAL:
+                        # 通用模式：出总结
+                        summary = _generate_general_summary(session)
+                        yield event.plain_result(summary)
                     session._exit_with_profile = False
                 session.reset()
                 yield event.plain_result("镜子已收起。")
@@ -437,8 +443,8 @@ def handle_message(
         if not enable_illuminate:
             return ["启明模式未启用。输入 /心镜 帮助 查看命令。"]
         if session.mode in (SessionMode.GENERAL, SessionMode.GUIDE):
-            # 退出时如果在图鉴模式且有对话，标记需要生成轮廓卡
-            if session.mode == SessionMode.GUIDE and len(session.history) > 0:
+            # 退出时如果有对话，标记需要生成输出（图鉴→轮廓卡，通用→总结）
+            if len(session.history) > 0:
                 session._exit_with_profile = True
             return ["__EXIT__"]
         else:
