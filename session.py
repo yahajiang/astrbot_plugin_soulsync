@@ -1,4 +1,4 @@
-"""会话状态管理模块（文档 6.6）"""
+"""会话状态管理模块"""
 
 from __future__ import annotations
 
@@ -11,13 +11,12 @@ from typing import Dict, List, Optional, Tuple
 class SessionMode(Enum):
     """会话模式"""
     OFF = "off"
-    GENERAL = "general"
     GUIDE = "guide"
 
 
 @dataclass
 class UserSession:
-    """用户会话（文档 6.6）"""
+    """用户会话"""
     user_id: str
 
     # ── 模式状态 ──
@@ -49,13 +48,8 @@ class UserSession:
         """添加维度信号"""
         self.signals[dim] = signal
 
-    def get_context(self) -> str:
-        """获取最近 3 轮对话摘要（用于 Prompt 1）"""
-        recent = self.history[-3:] if len(self.history) >= 3 else self.history
-        return "\n".join([f"用户：{u}\n镜子：{a}" for u, a in recent])
-
     def get_full_history_text(self) -> str:
-        """获取完整对话记录文本（用于 Prompt 3）"""
+        """获取完整对话记录文本（用于轮廓卡生成）"""
         return "\n".join([f"用户：{u}\n镜子：{a}" for u, a in self.history])
 
     def get_signals_text(self) -> str:
@@ -71,12 +65,6 @@ class UserSession:
         self.guide_key = None
         self.guide_round = 0
         self.signals.clear()
-        self.last_activity = time.time()
-
-    def activate_general(self):
-        """激活通用模式"""
-        self.reset()
-        self.mode = SessionMode.GENERAL
         self.last_activity = time.time()
 
     def activate_guide(self, guide_key: str):

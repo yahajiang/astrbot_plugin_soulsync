@@ -14,12 +14,6 @@ class TestUserSession:
         assert s.guide_key is None
         assert s.guide_round == 0
 
-    def test_activate_general(self):
-        """激活通用模式"""
-        s = UserSession(user_id="u1")
-        s.activate_general()
-        assert s.mode == SessionMode.GENERAL
-
     def test_activate_guide(self):
         """激活图鉴模式"""
         s = UserSession(user_id="u1")
@@ -48,15 +42,21 @@ class TestUserSession:
         s.add_signal("E/I", "偏 I")
         assert s.signals["E/I"] == "偏 I"
 
-    def test_get_context(self):
-        """获取最近3轮上下文"""
+    def test_get_full_history_text(self):
+        """获取完整对话记录"""
         s = UserSession(user_id="u1")
         s.add_turn("q1", "a1")
         s.add_turn("q2", "a2")
-        s.add_turn("q3", "a3")
-        ctx = s.get_context()
-        assert "q1" in ctx
-        assert "q3" in ctx
+        text = s.get_full_history_text()
+        assert "q1" in text
+        assert "q2" in text
+
+    def test_get_signals_text(self):
+        """获取信号文本"""
+        s = UserSession(user_id="u1")
+        assert s.get_signals_text() == "暂无"
+        s.add_signal("E/I", "偏 I")
+        assert "E/I" in s.get_signals_text()
 
     def test_reset(self):
         """重置清空所有状态"""
@@ -73,11 +73,11 @@ class TestUserSession:
     def test_to_dict_and_load(self):
         """序列化与反序列化"""
         s = UserSession(user_id="u1")
-        s.activate_general()
+        s.activate_guide("mbti_16")
         s.add_turn("q", "a")
         d = s.to_dict()
 
         s2 = UserSession(user_id="u1")
         s2.load_from_dict(d)
-        assert s2.mode == SessionMode.GENERAL
+        assert s2.mode == SessionMode.GUIDE
         assert len(s2.history) == 1
