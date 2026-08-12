@@ -147,7 +147,7 @@ class SoulMirror(Star):
                 return
 
             # 列表命令：尝试渲染为图片
-            if command_text == "列表" and self.image_renderer.available:
+            if (command_text == "列表" or command_text == "") and self.image_renderer.available:
                 img_path = self.image_renderer.render_guide_list(
                     guide_data=GUIDE_REGISTRY,
                     category_order=CATEGORY_ORDER,
