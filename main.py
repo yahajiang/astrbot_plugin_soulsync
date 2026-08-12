@@ -439,7 +439,8 @@ def handle_message(
             f"已进入【{guide['name']}】图鉴模式。\n"
             f"我会通过聊天帮你探索这个话题，大概需要{guide_max_rounds}轮。\n"
             f"直接说你想说的就好，结束时我会生成一张「轮廓卡」给你参考。\n"
-            f"输入 /心镜 随时退出。"
+            f"输入 /心镜 随时退出。\n\n"
+            f"隐私提示：对话内容仅用于生成轮廓卡，不会分享给第三方。退出后数据仅保留在本地。"
         )
         return [declaration, guide["opening"]]
 
