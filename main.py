@@ -435,10 +435,13 @@ def handle_message(
     if guide_key:
         guide = GUIDE_REGISTRY[guide_key]
         session.activate_guide(guide_key)
-        return [
-            f"已进入【{guide['name']}】图鉴模式。",
-            guide["opening"],
-        ]
+        declaration = (
+            f"已进入【{guide['name']}】图鉴模式。\n"
+            f"我会通过聊天帮你探索这个话题，大概需要{guide_max_rounds}轮。\n"
+            f"直接说你想说的就好，结束时我会生成一张「轮廓卡」给你参考。\n"
+            f"输入 /心镜 随时退出。"
+        )
+        return [declaration, guide["opening"]]
 
     return [f"未找到图鉴「{command_text}」。输入 /心镜 列表 查看所有图鉴。"]
 
