@@ -29,8 +29,12 @@ _TYPE_REF_PATTERN = re.compile(r"隐约指向[：:](.+)")
 _CLOSING_QUESTION = re.compile(r"✦\s*.+[？?]$")
 
 
-def validate_profile(content: str, max_length: int = 150) -> dict:
+def validate_profile(content: str, max_length: int = 0) -> dict:
     """校验轮廓卡内容
+
+    Args:
+        content: 轮廓卡文本
+        max_length: 最大字数限制，0=不限制
 
     Returns:
         {"valid": bool, "errors": list[str]}
@@ -42,10 +46,11 @@ def validate_profile(content: str, max_length: int = 150) -> dict:
         if pattern.search(content):
             errors.append(f"包含禁止词：{pattern.pattern}")
 
-    # 检查字数
-    clean = re.sub(r"[╔╗║╚═●✦→\s\n]", "", content)
-    if len(clean) > max_length:
-        errors.append(f"字数超限：{len(clean)} > {max_length}")
+    # 检查字数（0=不限制）
+    if max_length > 0:
+        clean = re.sub(r"[╔╗║╚═●✦→\s\n]", "", content)
+        if len(clean) > max_length:
+            errors.append(f"字数超限：{len(clean)} > {max_length}")
 
     # 检查是否有维度
     if not _DIMENSION_PATTERN.search(content):

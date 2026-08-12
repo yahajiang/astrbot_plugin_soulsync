@@ -56,7 +56,7 @@ class SoulMirror(Star):
         )
         self.safe_mode: bool = config.get("safe_mode", True)
         self.llm_provider: str = config.get("llm_provider", "")
-        self.profile_max_length: int = config.get("profile_max_length", 180)
+        self.profile_max_length: int = config.get("profile_max_length", 0)
 
         # ── 核心引擎 ──
         self.safety_manager = SafetyManager()

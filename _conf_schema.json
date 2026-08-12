@@ -85,8 +85,8 @@
   },
   "profile_max_length": {
     "description": "轮廓卡最大字数",
-    "hint": "LLM 生成的轮廓卡内容字数上限（字符数）",
+    "hint": "LLM 生成的轮廓卡内容字数上限（0=不限制）",
     "type": "int",
-    "default": 180
+    "default": 0
   }
 }
