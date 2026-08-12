@@ -33,18 +33,35 @@ _CATEGORY_LABELS = {
 }
 
 _FONT_CANDIDATES: List[Tuple[str, str]] = [
+    # Windows
     (r"C:/Windows/Fonts/msyh.ttc", r"C:/Windows/Fonts/msyhbd.ttc"),
     (r"C:/Windows/Fonts/simhei.ttf", r"C:/Windows/Fonts/simhei.ttf"),
     (r"C:/Windows/Fonts/simsun.ttc", r"C:/Windows/Fonts/simhei.ttf"),
+    # Linux - Noto CJK
     (r"/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
      r"/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"),
     (r"/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
      r"/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc"),
+    (r"/usr/share/fonts/noto/NotoSansCJK-Regular.ttc",
+     r"/usr/share/fonts/noto/NotoSansCJK-Bold.ttc"),
+    # Linux - WenQuanYi
     (r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
      r"/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
+    (r"/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+     r"/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"),
+    (r"/usr/share/fonts/wqy-microhei/wqy-microhei.ttc",
+     r"/usr/share/fonts/wqy-microhei/wqy-microhei.ttc"),
+    # Linux - Droid Sans
+    (r"/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+     r"/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf"),
+    # Linux - Arphic
+    (r"/usr/share/fonts/truetype/arphic/uming.ttc",
+     r"/usr/share/fonts/truetype/arphic/uming.ttc"),
+    # macOS
     (r"/System/Library/Fonts/PingFang.ttc", r"/System/Library/Fonts/PingFang.ttc"),
     (r"/System/Library/Fonts/Hiragino Sans GB.ttc",
      r"/System/Library/Fonts/Hiragino Sans GB.ttc"),
+    (r"/Library/Fonts/Arial Unicode.ttf", r"/Library/Fonts/Arial Unicode.ttf"),
 ]
 
 
@@ -72,12 +89,42 @@ class ImageRenderer:
             from PIL import Image, ImageDraw, ImageFont  # noqa: F401
         except ImportError:
             return
+
+        # 1. 检查插件自带字体
+        plugin_font = Path(__file__).parent / "fonts" / "NotoSansSC-Regular.ttf"
+        plugin_font_bold = Path(__file__).parent / "fonts" / "NotoSansSC-Bold.ttf"
+        if plugin_font.exists():
+            self._font_path = str(plugin_font)
+            self._font_bold_path = str(plugin_font_bold) if plugin_font_bold.exists() else str(plugin_font)
+            self.available = True
+            return
+
+        # 2. 检查系统字体
         for regular, bold in _FONT_CANDIDATES:
             if Path(regular).exists():
                 self._font_path = regular
                 self._font_bold_path = bold if Path(bold).exists() else regular
                 self.available = True
                 return
+
+        # 3. 动态搜索（fc-list）
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["fc-list", ":lang=zh", "file"],
+                capture_output=True, text=True, timeout=5
+            )
+            for line in result.stdout.strip().split("\n"):
+                path = line.split(":")[0].strip()
+                if path and Path(path).exists():
+                    self._font_path = path
+                    self._font_bold_path = path
+                    self.available = True
+                    return
+        except Exception:
+            pass
+
+        # 字体不存在时仍尝试渲染（中文字符会显示为方块，但功能可用）
         self.available = True
 
     def _font(self, size: int, bold: bool = False):
