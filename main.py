@@ -55,6 +55,8 @@ class SoulMirror(Star):
             ["结束", "再见", "拜拜", "就到这", "走了", "今天就到这"],
         )
         self.safe_mode: bool = config.get("safe_mode", True)
+        self.llm_provider: str = config.get("llm_provider", "")
+        self.profile_max_length: int = config.get("profile_max_length", 180)
 
         # ── 核心引擎 ──
         self.safety_manager = SafetyManager()
@@ -296,12 +298,14 @@ class SoulMirror(Star):
 
         reply = await self._call_llm(prompt, session.user_id)
         if reply:
-            # 校验
-            validation = validate_profile(reply)
+            # 校验（使用配置的字数限制）
+            validation = validate_profile(reply, max_length=self.profile_max_length)
             if validation["valid"]:
                 return render_profile(reply)
             else:
                 logger.warning(f"轮廓卡校验失败: {validation['errors']}")
+                # 校验失败但内容可用，仍返回（降级处理）
+                return render_profile(reply)
 
         # 降级：模板轮廓卡
         fallback = generate_fallback_profile(
@@ -312,12 +316,17 @@ class SoulMirror(Star):
         return render_profile(fallback)
 
     async def _call_llm(self, prompt: str, umo: str) -> Optional[str]:
-        """统一 LLM 调用（复用现有协议：provider + 超时 + None 降级）"""
+        """统一 LLM 调用（支持 provider 选择 + 超时 + None 降级）"""
         if not self.context:
             return None
 
         try:
-            provider_id = await self.context.get_current_chat_provider_id(umo=umo)
+            # 优先使用配置的 provider，否则获取当前会话的 provider
+            if self.llm_provider:
+                provider_id = self.llm_provider
+            else:
+                provider_id = await self.context.get_current_chat_provider_id(umo=umo)
+
             if not provider_id:
                 logger.warning("LLM: 无法获取 provider ID")
                 return None
