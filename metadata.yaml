@@ -2,5 +2,5 @@ name: astrbot_plugin_soulsync_mirror
 display_name: "心镜 · 启明 (SoulMirror - Illuminate)"
 desc: "心镜 · 启明 v2.0：一面能帮你照出自己"类型轮廓"的反问镜。反问中自然映射图鉴维度，不贴标签、不给结论。157 个图鉴覆盖 5 大分类。红线：不给建议、不共情、不复述、不诊断。命令：/心镜（通用模式）/ /心镜 [名称]（图鉴模式）/ /心镜 列表（查看图鉴）。"
 version: "2.0.0"
-author: "Yahajiang"
+author: "yahajiang"
 repo: "https://github.com/yahajiang/astrbot_plugin_soulsync/tree/soulsync_mirror"
