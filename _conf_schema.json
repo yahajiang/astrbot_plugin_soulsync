@@ -83,6 +83,12 @@
     "type": "string",
     "default": ""
   },
+  "llm_timeout": {
+    "description": "LLM 调用超时时间（秒）",
+    "hint": "LLM 响应超时时间，建议 30-60 秒",
+    "type": "int",
+    "default": 30
+  },
   "profile_max_length": {
     "description": "轮廓卡最大字数",
     "hint": "LLM 生成的轮廓卡内容字数上限（0=不限制）",

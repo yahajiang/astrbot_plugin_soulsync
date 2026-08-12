@@ -56,6 +56,7 @@ class SoulMirror(Star):
         )
         self.safe_mode: bool = config.get("safe_mode", True)
         self.llm_provider: str = config.get("llm_provider", "")
+        self.llm_timeout: int = config.get("llm_timeout", 30)
         self.profile_max_length: int = config.get("profile_max_length", 0)
 
         # ── 核心引擎 ──
@@ -340,7 +341,7 @@ class SoulMirror(Star):
                     prompt=prompt,
                     system_prompt=system_prompt,
                 ),
-                timeout=10,
+                timeout=self.llm_timeout,
             )
 
             if resp and resp.completion_text:
