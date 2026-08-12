@@ -1,90 +1,83 @@
-"""会话状态管理测试"""
+"""会话管理测试"""
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from astrbot_plugin_soulmirror.session import UserSession, SessionState, DialogueEntry
+from astrbot_plugin_soulsync_mirror.session import UserSession, SessionMode
 
 
-def test_session_creation():
-    """测试会话创建"""
-    session = UserSession(user_id="test_user")
-    assert session.user_id == "test_user"
-    assert session.state == SessionState.IDLE
-    assert session.nickname == ""
-    assert session.current_round == 0
+class TestUserSession:
+    """会话状态测试"""
 
+    def test_default_state(self):
+        """默认状态为 OFF"""
+        s = UserSession(user_id="u1")
+        assert s.mode == SessionMode.OFF
+        assert s.history == []
+        assert s.guide_key is None
+        assert s.guide_round == 0
 
-def test_session_reset():
-    """测试会话重置"""
-    session = UserSession(user_id="test_user")
-    session.nickname = "小明"
-    session.current_round = 5
-    session.reset()
+    def test_activate_general(self):
+        """激活通用模式"""
+        s = UserSession(user_id="u1")
+        s.activate_general()
+        assert s.mode == SessionMode.GENERAL
 
-    assert session.state == SessionState.DECLARATION
-    assert session.nickname == ""
-    assert session.current_round == 0
+    def test_activate_guide(self):
+        """激活图鉴模式"""
+        s = UserSession(user_id="u1")
+        s.activate_guide("mbti_16")
+        assert s.mode == SessionMode.GUIDE
+        assert s.guide_key == "mbti_16"
 
+    def test_add_turn(self):
+        """添加对话轮次"""
+        s = UserSession(user_id="u1")
+        s.add_turn("hello", "hi")
+        assert len(s.history) == 1
+        assert s.history[0] == ("hello", "hi")
 
-def test_add_dialogue():
-    """测试添加对话"""
-    session = UserSession(user_id="test_user")
-    entry = DialogueEntry(
-        user_input="我好累",
-        mirror_response="你说你好累。",
-        timestamp=1234567890.0,
-        sharpness_level=2,
-        reflection_type="repetition",
-        mirror_type="plane",
-    )
-    session.add_dialogue(entry)
+    def test_history_limit(self):
+        """历史轮次限制"""
+        s = UserSession(user_id="u1")
+        for i in range(10):
+            s.add_turn(f"q{i}", f"a{i}", max_rounds=6)
+        assert len(s.history) == 6
+        assert s.history[0] == ("q4", "a4")
 
-    assert session.current_round == 1
-    assert len(session.dialogue_history) == 1
-    assert session.dialogue_history[0].user_input == "我好累"
+    def test_add_signal(self):
+        """添加维度信号"""
+        s = UserSession(user_id="u1")
+        s.add_signal("E/I", "偏 I")
+        assert s.signals["E/I"] == "偏 I"
 
+    def test_get_context(self):
+        """获取最近3轮上下文"""
+        s = UserSession(user_id="u1")
+        s.add_turn("q1", "a1")
+        s.add_turn("q2", "a2")
+        s.add_turn("q3", "a3")
+        ctx = s.get_context()
+        assert "q1" in ctx
+        assert "q3" in ctx
 
-def test_word_frequency():
-    """测试词频统计"""
-    session = UserSession(user_id="test_user")
-    session.update_word_frequency(["累", "烦", "累"])
+    def test_reset(self):
+        """重置清空所有状态"""
+        s = UserSession(user_id="u1")
+        s.activate_guide("mbti_16")
+        s.add_turn("q", "a")
+        s.add_signal("dim", "sig")
+        s.reset()
+        assert s.mode == SessionMode.OFF
+        assert s.history == []
+        assert s.guide_key is None
+        assert s.signals == {}
 
-    assert session.word_frequency["累"] == 2
-    assert session.word_frequency["烦"] == 1
+    def test_to_dict_and_load(self):
+        """序列化与反序列化"""
+        s = UserSession(user_id="u1")
+        s.activate_general()
+        s.add_turn("q", "a")
+        d = s.to_dict()
 
-
-def test_to_dict():
-    """测试序列化"""
-    session = UserSession(user_id="test_user")
-    session.nickname = "小明"
-    data = session.to_dict()
-
-    assert data["user_id"] == "test_user"
-    assert data["nickname"] == "小明"
-
-
-def test_load_from_dict():
-    """测试反序列化"""
-    data = {
-        "user_id": "test_user",
-        "state": "idle",
-        "nickname": "小明",
-        "current_round": 5,
-    }
-    session = UserSession(user_id="test_user")
-    session.load_from_dict(data)
-
-    assert session.nickname == "小明"
-    assert session.current_round == 5
-
-
-if __name__ == "__main__":
-    test_session_creation()
-    test_session_reset()
-    test_add_dialogue()
-    test_word_frequency()
-    test_to_dict()
-    test_load_from_dict()
-    print("All session tests passed!")
+        s2 = UserSession(user_id="u1")
+        s2.load_from_dict(d)
+        assert s2.mode == SessionMode.GENERAL
+        assert len(s2.history) == 1

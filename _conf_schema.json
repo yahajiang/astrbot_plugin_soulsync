@@ -1,98 +1,80 @@
 {
   "_info_header": {
-    "description": "══════ 心镜 (SoulMirror) v1.0.0 配置 ══════",
+    "description": "══════ 心镜 · 启明 v2.0 配置 ══════",
     "type": "string",
     "default": "",
     "invisible": true
   },
-  "enable_sharpness_auto": {
-    "description": "启用自动调锐",
-    "hint": "镜子根据对话深度、情绪信号自动调整反射锐度。关闭后使用手动设定的锐度值",
+  "enable_illuminate_mode": {
+    "description": "是否启用启明反问模式",
+    "hint": "关闭后 /心镜 命令不可用",
     "type": "bool",
     "default": true
   },
-  "enable_repeat_detection": {
-    "description": "启用重复词检测",
-    "hint": "检测同一实义词在5轮内出现超过3次的情况，并轻提示用户",
-    "type": "bool",
-    "default": true
-  },
-  "enable_conflict_detection": {
-    "description": "启用矛盾检测",
-    "hint": "检测用户话语中的意愿矛盾、情感矛盾、自我矛盾、时序矛盾，并呈现给用户",
-    "type": "bool",
-    "default": true
-  },
-  "enable_quote_storage": {
-    "description": "启用金句存储",
-    "hint": "用户主动说「记住」时，保存高密度表达到本地。下次进入可引用",
-    "type": "bool",
-    "default": true
-  },
-  "silent_mode": {
-    "description": "静默模式",
-    "hint": "开启后：重复词检测关闭，退出时不生成总结直接收起",
-    "type": "bool",
-    "default": false
-  },
-  "max_quote_count": {
-    "description": "最大金句数量",
-    "hint": "每个用户最多保存的金句数量",
+  "guide_max_rounds": {
+    "description": "图鉴模式最大反问轮数",
+    "hint": "达到后自动输出轮廓卡并退出",
     "type": "int",
-    "default": 10
+    "default": 6
+  },
+  "guide_auto_exit": {
+    "description": "图鉴模式达到最大轮数后是否自动退出",
+    "hint": "关闭后需用户主动 /心镜 退出",
+    "type": "bool",
+    "default": true
+  },
+  "fallback_to_general": {
+    "description": "图鉴匹配失败时是否降级到通用模式",
+    "hint": "关闭后匹配失败仅提示未找到",
+    "type": "bool",
+    "default": true
+  },
+  "enable_profile_on_end": {
+    "description": "结束时是否生成轮廓卡",
+    "hint": "图鉴模式结束时生成结构化轮廓卡",
+    "type": "bool",
+    "default": true
+  },
+  "enable_guide_list": {
+    "description": "是否启用 /心镜 列表 命令",
+    "hint": "关闭后无法查看图鉴列表",
+    "type": "bool",
+    "default": true
+  },
+  "list_max_aliases_display": {
+    "description": "列表中每个图鉴最多展示的别名数量",
+    "hint": "1-5，默认3",
+    "type": "int",
+    "default": 3
+  },
+  "history_max_rounds": {
+    "description": "对话历史保留轮数",
+    "hint": "用于上下文避免重复",
+    "type": "int",
+    "default": 6
   },
   "session_timeout_minutes": {
     "description": "会话超时时间（分钟）",
-    "hint": "用户无输入超过此时间，自动缓存当前会话",
+    "hint": "用户无输入超过此时间，自动重置",
     "type": "int",
     "default": 10
-  },
-  "max_dialogue_history": {
-    "description": "最大对话历史轮数",
-    "hint": "用于矛盾检测和重复词检测的对话历史长度",
-    "type": "int",
-    "default": 20
-  },
-  "sharpness_default": {
-    "description": "默认锐度等级",
-    "hint": "新会话的初始锐度（1=水面，2=静镜，3=聚焦，4=锐面，5=深渊）",
-    "type": "int",
-    "default": 2
-  },
-  "sharpness_max_change_per_turn": {
-    "description": "单轮最大锐度变化",
-    "hint": "自动调锐时，单轮锐度变化不超过此值",
-    "type": "int",
-    "default": 1
-  },
-  "sharpness_consecutive_limit": {
-    "description": "连续升锐限制",
-    "hint": "连续升锐达到此轮数后，强制暂停1轮维持当前锐度",
-    "type": "int",
-    "default": 3
-  },
-  "repeat_threshold": {
-    "description": "重复词触发阈值",
-    "hint": "同一实义词在N轮内出现超过此次数时触发检测",
-    "type": "int",
-    "default": 3
-  },
-  "repeat_window": {
-    "description": "重复词检测窗口",
-    "hint": "检测最近N轮内的重复词",
-    "type": "int",
-    "default": 5
   },
   "max_output_length_ratio": {
     "description": "最大输出长度比例",
-    "hint": "镜像回复字数不超过用户输入的此倍数",
+    "hint": "反问回复字数不超过用户输入的此倍数",
     "type": "float",
     "default": 1.5
   },
-  "icebreaker_timeout_minutes": {
-    "description": "破冰超时时间（分钟）",
-    "hint": "破冰阶段用户无输入超过此时间，自动跳过剩余问题",
-    "type": "int",
-    "default": 10
+  "end_keywords": {
+    "description": "结束词列表",
+    "hint": "用户输入这些词时结束对话并生成轮廓卡",
+    "type": "string",
+    "default": "结束,再见,拜拜,就到这,走了,今天就到这"
+  },
+  "safe_mode": {
+    "description": "是否启用安全红线",
+    "hint": "检测危机关键词时输出安全话术",
+    "type": "bool",
+    "default": true
   }
 }

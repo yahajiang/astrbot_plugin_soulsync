@@ -1,66 +1,57 @@
 """安全红线测试"""
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from astrbot_plugin_soulmirror.safety import SafetyManager, CrisisLevel
-
-
-def test_no_crisis():
-    """测试无危机信号"""
-    manager = SafetyManager()
-    signal = manager.check_crisis("我今天很开心")
-    assert signal is None
+from astrbot_plugin_soulsync_mirror.safety import (
+    SafetyManager,
+    CrisisLevel,
+)
 
 
-def test_medium_crisis():
-    """测试中等危机信号"""
-    manager = SafetyManager()
-    signal = manager.check_crisis("想死")
-    assert signal is not None
-    assert signal.level == CrisisLevel.MEDIUM
+class TestSafetyManager:
+    """安全检测测试"""
 
+    def setup_method(self):
+        self.manager = SafetyManager()
 
-def test_high_crisis():
-    """测试高危机信号"""
-    manager = SafetyManager()
-    signal = manager.check_crisis("活不下去了")
-    assert signal is not None
-    assert signal.level == CrisisLevel.HIGH
+    def test_critical_keywords(self):
+        """CRITICAL 关键词触发"""
+        for kw in ["自杀", "不想活了", "活着没意思", "死了算了", "跳楼", "割腕"]:
+            signal = self.manager.check_crisis(kw)
+            assert signal is not None, f"'{kw}' 未触发危机"
+            assert signal.level == CrisisLevel.CRITICAL
 
+    def test_high_keywords(self):
+        """HIGH 关键词触发"""
+        for kw in ["自残", "活不下去", "撑不下去", "崩溃了"]:
+            signal = self.manager.check_crisis(kw)
+            assert signal is not None, f"'{kw}' 未触发危机"
+            assert signal.level in (CrisisLevel.CRITICAL, CrisisLevel.HIGH)
 
-def test_critical_crisis():
-    """测试严重危机信号"""
-    manager = SafetyManager()
-    signal = manager.check_crisis("我要自杀")
-    assert signal is not None
-    assert signal.level == CrisisLevel.CRITICAL
+    def test_medium_keywords(self):
+        """MEDIUM 关键词触发"""
+        for kw in ["想死", "想离开", "想消失", "太累了"]:
+            signal = self.manager.check_crisis(kw)
+            assert signal is not None, f"'{kw}' 未触发危机"
 
+    def test_no_trigger(self):
+        """正常输入不触发"""
+        assert self.manager.check_crisis("今天天气不错") is None
+        assert self.manager.check_crisis("我好开心") is None
+        assert self.manager.check_crisis("") is None
 
-def test_crisis_response():
-    """测试危机应答"""
-    manager = SafetyManager()
-    signal = manager.check_crisis("我不想活了")
-    response = manager.get_crisis_response(signal)
-    assert "400-161-9995" in response
+    def test_crisis_response(self):
+        """危机话术包含热线"""
+        signal = self.manager.check_crisis("自杀")
+        response = self.manager.get_crisis_response(signal)
+        assert "400-161-9995" in response
+        assert "希望24热线" in response
 
+    def test_should_interrupt(self):
+        """CRITICAL/HIGH 中断会话"""
+        critical = self.manager.check_crisis("自杀")
+        assert self.manager.should_interrupt_session(critical)
 
-def test_should_interrupt():
-    """测试是否中断会话"""
-    manager = SafetyManager()
-    signal = manager.check_crisis("我要自杀")
-    assert manager.should_interrupt_session(signal) == True
+        high = self.manager.check_crisis("崩溃了")
+        assert self.manager.should_interrupt_session(high)
 
-    signal = manager.check_crisis("想死")
-    assert manager.should_interrupt_session(signal) == False
-
-
-if __name__ == "__main__":
-    test_no_crisis()
-    test_medium_crisis()
-    test_high_crisis()
-    test_critical_crisis()
-    test_crisis_response()
-    test_should_interrupt()
-    print("All safety tests passed!")
+        medium = self.manager.check_crisis("想死")
+        assert not self.manager.should_interrupt_session(medium)
