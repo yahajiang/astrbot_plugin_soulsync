@@ -179,6 +179,20 @@ HARD_KEYWORDS: list[str] = [
     "ты больше не робот",
     "без всяких ограничений",
     "сними все ограничения",
+    # 无限制人设/隐藏AI身份（中英）
+    "包括道德和伦理限制",
+    "隐藏你是一个计算机程序",
+    "隐藏你是一个ai",
+    "隐瞒你是一个计算机程序",
+    "隐瞒你是一个ai",
+    "即使你是一个计算机程序",
+    "反复加强这种认知",
+    "all restrictions removed",
+    "including moral and ethical limits",
+    "use homophones to replace",
+    "hide the fact that you are a computer program",
+    "hide the fact that you are an ai",
+    "hide the fact that you're an ai",
 ]
 
 # ── 启发式正则（动作 + 敏感词的组合句式） ─────────────────────────
@@ -234,6 +248,9 @@ PATTERNS: list[tuple[str, re.Pattern]] = [
     ("思维链劫持-thinking标签动词在前（西）", re.compile(r"(?:escribe|escribir|pon|poner|muestra|mostrar|genera|generar|responde|responder|inserta|insertar).{0,25}?(?:en|dentro de|en la|en el|en las|en los)\s*(?:etiqueta|tag)?\s*(?:<thinking>|thinking|pensamiento)")),
     ("思维链劫持-thinking标签（俄）", re.compile(r"(?:<thinking>|thinking|тег мышления).{0,12}?(?:тег|теге|теги|в|внутри)?\s*(?:выведи|выводи|напиши|пиши|запиши|покажи|вставь|вставить|сгенерируй)")),
     ("思维链劫持-thinking标签动词在前（俄）", re.compile(r"(?:выведи|выводи|напиши|пиши|запиши|покажи|вставь|вставить|сгенерируй).{0,25}?(?:в|внутри|в тег|в теге)\s*(?:тег|теге|теги)?\s*(?:<thinking>|thinking)")),
+    # ── 无限制人设/谐音规避（猫女式越狱） ─────────────────────────
+    ("人设劫持-无限制角色扮演（中）", re.compile(r"(?:没有任何|毫无|没有|不受).{0,10}(?:道德|伦理)?.{0,6}(?:限制|约束|束缚).{0,12}(?:猫娘|猫女|女仆|角色|扮演|人格|身份|女友|恋人|ai|人工智能)")),
+    ("人设劫持-谐音替代敏感词（中）", re.compile(r"用(?:同音异义词|谐音词|谐音字).{0,8}(?:代替|替代|替换).{0,6}(?:敏感词|违禁词|禁词|脏话|骂人)")),
 ]
 
 # ── 分隔符混淆归一化用正则 ───────────────────────────────────────
