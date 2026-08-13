@@ -9,7 +9,7 @@
 [![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.10.0-blue)](https://github.com/Soulter/AstrBot)
 [![Python](https://img.shields.io/badge/Python-%3E%3D3.10-green)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.4.5-8A2BE2)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.4.6-8A2BE2)](CHANGELOG.md)
 
 </div>
 
@@ -22,7 +22,7 @@
 | 层级 | 机制 | 说明 |
 |------|------|------|
 | 第一层 | **Persona 加固** | 每次 LLM 请求在 system prompt 末尾注入防注入保护段（`<InjectionGuard>` 标记去重），锁定人格、禁止泄露内部指令 |
-| 第二层 | **输入检测** | 内置中英文硬关键词库 + 启发式正则（人设劫持、伪 system/INST 标签、DAN 模式等）+ 混淆解码（base64、分隔符拆分如 `i-g-n-o-r-e`） |
+| 第二层 | **输入检测** | 内置八语言（中/英/日/韩/法/德/西/俄）硬关键词库 + 启发式正则（人设劫持、伪 system/INST 标签、DAN 模式、`<thinking>` 思维链劫持等）+ 混淆解码（base64、分隔符拆分如 `i-g-n-o-r-e`）；关键词匹配大小写不敏感 |
 | 第三层 | **处置策略** | `拦截 block` / `剥离 sanitize` / `告警 warn` 三级处置 |
 
 ### 🎯 核心能力
@@ -84,7 +84,7 @@
 ## 📝 设计说明
 
 - **纯标准库实现**，无强制新增依赖；图片模式为可选能力（需 Pillow，未安装时自动降级文本输出）。
-- 检测器只收录"正常聊天几乎不会出现"的高危短语，降低误杀；误报时请切换 `告警` 模式观察，或反馈内置词库。
+- 检测器只收录"正常聊天几乎不会出现"的高危短语（八语言词库），降低误杀；误报时请切换 `告警` 模式观察，或反馈内置词库。
 - 拦截发生在 `on_llm_request` 钩子，替换请求文本而非仅拦截事件，因此**对所有模型供应商生效**。
 
 ## 📄 更新日志
